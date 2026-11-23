@@ -7,7 +7,7 @@ Estado documentado: 23 de noviembre de 2026. Este archivo permite retomar el des
 - Proyecto personal independiente. No usar información, código, credenciales ni integraciones laborales o de otros proyectos.
 - Juego de navegador para escritorio, con interfaz en inglés. La conversación y documentación de continuidad pueden estar en español.
 - El usuario quiere construir mediante vibecoding, con buenas prácticas, seguridad, pruebas y agentes con responsabilidades separadas.
-- Trabajar localmente. El único remoto es el repo privado https://github.com/brugnoni/catacomb-cats: hacer push solo después de un commit que pasó `pnpm check` y solo si el usuario lo aprueba en el chat. Nunca force-push ni publicar o desplegar. El agente principal integra y revisa; los agentes de módulos no hacen commits independientes.
+- Trabajar localmente. El único remoto es el repo público https://github.com/brugnoni/catacomb-cats: hacer push solo después de un commit que pasó `pnpm check` y solo si el usuario lo aprueba en el chat. Nunca force-push. El juego se despliega únicamente en GitHub Pages (https://brugnoni.github.io/catacomb-cats/) mediante `.github/workflows/pages.yml` en cada push a `main`; no desplegar en ningún otro sitio. Al ser público, nunca subir secretos ni datos personales. El agente principal integra y revisa; los agentes de módulos no hacen commits independientes.
 - Leer `AGENTS.md` y `README.md` antes de cambiar cosas. Usar las dos skills locales de `.agents/skills/` cuando corresponda.
 - Antes de cada commit, ejecutar `pnpm check`; no saltarse hooks ni ocultar errores.
 - No generar más imágenes hasta que el usuario vuelva a pedirlo. Se rechazó expresamente la estética genérica de dashboard y los gatos dibujados con CSS.
@@ -114,7 +114,7 @@ Stack: React, TypeScript estricto y Vite. Node 24 LTS es el objetivo; `package.j
 
 Comandos desde la raíz: `pnpm install --frozen-lockfile`, `pnpm exec playwright install chromium`, `pnpm dev` y `pnpm check`. Con dependencias ya instaladas, `npm run dev` también arranca el juego. No asumir que pnpm está en el PATH de otra máquina: en el entorno original solo estaba expuesto internamente a Codex.
 
-`pnpm check` ejecuta formato, lint, tipos, pruebas unitarias, build y E2E. `pnpm install` configura el hook si hay `.git`; en una copia sin `.git` revisar la guía de traslado para inicializarlo. CI incluye auditoría, secretos, CodeQL y Dependabot, pero todavía necesita habilitarse y verificarse en el alojamiento futuro. No publicar para probarlo sin permiso.
+`pnpm check` ejecuta formato, lint, tipos, pruebas unitarias, build y E2E. `pnpm install` configura el hook si hay `.git`; en una copia sin `.git` revisar la guía de traslado para inicializarlo. CI incluye auditoría, secretos, CodeQL y Dependabot, pero todavía necesita habilitarse y verificarse en el alojamiento futuro. Pages usa `base: "./"` en `vite.config.ts` para funcionar bajo `/catacomb-cats/`; el progreso del juego es `localStorage` de ese origen, separado del local.
 
 Verificación repetida al preparar el traslado: **71 pruebas de motor/progresión/balance y 21 de navegador pasaron**, además de formato, lint, tipos y build, mediante la ruta npm/pnpm documentada. El archivo `outputs/VALIDACION-TRASLADO.md` describe el alcance de la comprobación y del paquete.
 

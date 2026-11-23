@@ -52,3 +52,7 @@ The healer is displayed as Mei. Her internal `clover` ID remains stable to prese
 Start with [docs/TRANSFERENCIA.md](docs/TRANSFERENCIA.md) to move the project to another computer, install without global pnpm and transfer browser progress. [docs/HANDOFF.md](docs/HANDOFF.md) records the design, final decisions and next requested iterations. The portable ZIP and SHA-256 manifest are under `outputs/transfer/`.
 
 The project-owned skills, hidden workflow/hook configuration, final assets, initial character draft, font licenses, tests and documentation are included. No global Codex configuration or company data is required. Tool availability in a new Codex installation is separate from project files.
+
+## Play online
+
+The game is deployed to GitHub Pages on every push to `main`: https://brugnoni.github.io/catacomb-cats/. Progress is stored in each visitor's own browser (`localStorage`) and is not shared between devices.
