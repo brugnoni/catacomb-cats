@@ -10,6 +10,7 @@ import {
   damagePreview,
   buildCat,
   buyUpgrade,
+  CATS,
   claimRewards,
   createRun,
   currentUnit,
@@ -771,46 +772,56 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r = nextRoom(clear(r));
     expect(r.party.find((c) => c.id === "clover")!.cooldowns).toEqual({});
   });
-  it("Ember attacks each skip the next own turn and have independent cooldowns", () => {
+  it("Ember Claw strike never has a cooldown and Flame paw waits two own turns", () => {
     let r = trained("ember");
-    r.enemies[0]!.hp = 100;
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
+    const claw = r.party[0]!.abilities[0]!;
     const slam = r.party[0]!.abilities.find((a) => a.id === "slam")!;
-    const cleave = r.party[0]!.abilities.find((a) => a.id === "cleave")!;
+    expect(claw.id).toBe("strike");
+    expect(claw.cooldownTurns).toBeUndefined();
+    r = act(r, "strike", "e0");
+    expect(cooldownRemaining(r.party[0]!, claw)).toBe(0);
+    expect(abilityUnavailableReason(r, claw)).toBeUndefined();
+    r = act(r, "strike", "e0");
+    expect(abilityUnavailableReason(r, claw)).toBeUndefined();
+    r = onlyOwnTurns(r, "ember");
+    expect(abilityUnavailableReason(r, claw)).toBeUndefined();
     r = act(r, "slam", "e0");
-    expect(cooldownRemaining(r.party[0]!, slam)).toBe(2);
-    expect(abilityUnavailableReason(r, cleave)).toBeUndefined();
+    expect(cooldownRemaining(r.party[0]!, slam)).toBe(3);
+    expect(abilityUnavailableReason(r, claw)).toBeUndefined();
+  });
+  it("Ember Flame paw is blocked for two own turns and returns on the third", () => {
+    let r = trained("ember");
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
+    const slam = r.party[0]!.abilities.find((a) => a.id === "slam")!;
+    r = act(r, "slam", "e0");
+    expect(cooldownRemaining(r.party[0]!, slam)).toBe(3);
     r = onlyOwnTurns(r, "ember");
     expect(abilityUnavailableReason(r, slam)).toContain("Cooldown");
-    expect(
-      abilityUnavailableReason(r, r.party[0]!.abilities[0]!),
-    ).toBeUndefined();
+    expect(act(r, "slam", "e0")).toBe(r);
+    r = onlyOwnTurns(r, "ember");
+    expect(abilityUnavailableReason(r, slam)).toContain("Cooldown");
     r = onlyOwnTurns(r, "ember");
     expect(abilityUnavailableReason(r, slam)).toBeUndefined();
-    const basic = r.party[0]!.abilities[0]!;
-    r = act(r, basic.id, "e0");
-    expect(act(r, basic.id, "e0")).toBe(r);
-    r = onlyOwnTurns(r, "ember");
-    expect(abilityUnavailableReason(r, basic)).toContain("Cooldown");
-    r = onlyOwnTurns(r, "ember");
-    expect(abilityUnavailableReason(r, basic)).toBeUndefined();
+    expect(act(r, "slam", "e0")).not.toBe(r);
   });
-  it.each(["strike", "slam", "cleave"])(
-    "Ember %s blocks the following own turn and returns on the one after",
-    (id) => {
-      let r = trained("ember");
-      r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
-      const ability = r.party[0]!.abilities.find((a) => a.id === id)!;
-      const target = ability.target === "all-enemies" ? "ember" : "e0";
-      r = act(r, id, target);
-      expect(cooldownRemaining(r.party[0]!, ability)).toBe(2);
-      r = onlyOwnTurns(r, "ember");
-      expect(abilityUnavailableReason(r, ability)).toContain("Cooldown");
-      expect(act(r, id, target)).toBe(r);
-      r = onlyOwnTurns(r, "ember");
-      expect(abilityUnavailableReason(r, ability)).toBeUndefined();
-      expect(act(r, id, target)).not.toBe(r);
-    },
-  );
+  it("Ember Sweeping embers keeps its own one-turn cooldown", () => {
+    let r = trained("ember");
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
+    const cleave = r.party[0]!.abilities.find((a) => a.id === "cleave")!;
+    r = act(r, "cleave", "ember");
+    expect(cooldownRemaining(r.party[0]!, cleave)).toBe(2);
+    r = onlyOwnTurns(r, "ember");
+    expect(abilityUnavailableReason(r, cleave)).toContain("Cooldown");
+    r = onlyOwnTurns(r, "ember");
+    expect(abilityUnavailableReason(r, cleave)).toBeUndefined();
+  });
+  it("Flame paw out-damages spamming Claw strike for the same AP", () => {
+    const flame = CATS.find((c) => c.id === "ember")!.abilities;
+    const claw = flame[0]!;
+    const slam = flame[1]!;
+    expect(slam.power / slam.cost).toBeGreaterThan(claw.power / claw.cost);
+  });
   it("mastery improves native heal, Guard and blessing without changing revive percentage or AP", () => {
     const p = {
       ...initialProgress(),

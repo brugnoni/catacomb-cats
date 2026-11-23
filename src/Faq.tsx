@@ -78,7 +78,7 @@ const entries = [
   ],
   [
     "How do Mei and Ember cooldowns work?",
-    "Only Mei’s revival has a two-turn cooldown: revive on turn N, revival is unavailable on N+1 and N+2, and ready on N+3. Her rank-3 party heal and regular single-target heal have no multi-turn cooldown and remain available subject to AP and per-turn use limits. Using them does not change revival’s cooldown. Every Ember attack, including Claw strike, blocks that particular attack during his next turn and returns on the following turn. His attacks have separate cooldowns, so another ready attack can still be used. Cooldowns count only that cat’s turn starts, never other characters’ End turn clicks, and reset when entering a new room. Invalid casts do not start cooldowns or spend AP.",
+    "Only Mei’s revival has a two-turn cooldown: revive on turn N, revival is unavailable on N+1 and N+2, and ready on N+3. Her rank-3 party heal and regular single-target heal have no multi-turn cooldown and remain available subject to AP and per-turn use limits. Using them does not change revival’s cooldown. Ember’s Claw strike has no cooldown. Flame paw has a two-turn cooldown: use it on turn N, it is unavailable on N+1 and N+2, and ready on N+3. Sweeping embers keeps a one-turn cooldown. Each attack has its own cooldown, so another ready attack can still be used. Cooldowns count only that cat’s turn starts, never other characters’ End turn clicks, and reset when entering a new room. Invalid casts do not start cooldowns or spend AP.",
   ],
   [
     "What do the new rank passives do?",

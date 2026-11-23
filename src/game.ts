@@ -122,14 +122,14 @@ export const CATS: Cat[] = [
     hp: 32,
     initiative: 8,
     abilities: [
-      { ...strike, power: 5, cooldownTurns: 1 },
+      { ...strike, power: 5 },
       {
         id: "slam",
         name: "Flame paw",
         cost: 3,
-        power: 13,
+        power: 20,
         target: "enemy",
-        cooldownTurns: 1,
+        cooldownTurns: 2,
       },
     ],
   },

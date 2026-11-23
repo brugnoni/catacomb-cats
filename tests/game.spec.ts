@@ -571,7 +571,7 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
   );
 });
 
-test("Ember attacks have independent cooldowns and each skips his next turn", async ({
+test("Ember Flame paw has a two-turn cooldown while Claw strike has none", async ({
   page,
 }) => {
   await seedLegacySave(page, { catLevels: { ember: 3 } });
@@ -588,31 +588,27 @@ test("Ember attacks have independent cooldowns and each skips his next turn", as
   const flame = page.getByRole("button", { name: /^Flame paw/ });
   await flame.click();
   await expect(flame.locator(".ability-cooldown")).toContainText(
-    "Ready in 2 Ember turn starts",
+    "Ready in 3 Ember turn starts",
   );
+  const claw = page.getByRole("button", { name: /^Claw strike/ });
+  await expect(claw).toBeEnabled();
+  await expect(claw.locator(".ability-cooldown")).toHaveCount(0);
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await advanceToCat(page, "Ember");
   await page.getByLabel("Ability target").selectOption("e1");
   await expect(flame).toBeDisabled();
   await expect(flame.locator(".ability-cooldown")).toContainText(
-    "Ready in 1 Ember turn starts",
-  );
-  const claw = page.getByRole("button", { name: /^Claw strike/ });
-  await expect(claw).toBeEnabled();
-  await claw.click();
-  await expect(claw).toBeDisabled();
-  await expect(claw.locator(".ability-cooldown")).toContainText(
     "Ready in 2 Ember turn starts",
   );
-  await expect(
-    page.getByRole("button", { name: /^Sweeping embers/ }),
-  ).toBeEnabled();
+  await expect(claw).toBeEnabled();
+  await claw.click();
+  await expect(claw).toBeEnabled();
+  await expect(claw.locator(".ability-cooldown")).toHaveCount(0);
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await advanceToCat(page, "Ember");
   await page.getByLabel("Ability target").selectOption("e1");
-  await expect(flame).toBeEnabled();
-  await expect(claw).toBeDisabled();
-  await expect(claw.locator(".ability-cooldown")).toContainText(
+  await expect(flame).toBeDisabled();
+  await expect(flame.locator(".ability-cooldown")).toContainText(
     "Ready in 1 Ember turn starts",
   );
 });
