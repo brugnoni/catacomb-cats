@@ -1689,3 +1689,66 @@ hr {
   font-size: 24px;
   padding: 12px 18px;
 }
+
+/* Curse threads are violet: a spell, not a blow or a blessing */
+.intent-line.curse {
+  stroke: #b57cff;
+  filter: drop-shadow(0 0 3px #b57cff99);
+}
+.intent-dot.curse {
+  fill: #b57cff;
+}
+
+/* Critical hits and heals */
+.combatant.crit {
+  z-index: 25;
+}
+.crit-pop {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 1px 8px;
+  font-size: 18px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  color: #2a1700;
+  background: #ffd45c;
+  border: 2px solid #fff3b0;
+  box-shadow: 0 0 12px #ffd45ccc;
+  pointer-events: none;
+  animation: crit-pop 1s ease-out var(--flash-delay, 0s) both;
+}
+@keyframes crit-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -6px) scale(1.15);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -14px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -26px) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crit-pop {
+    animation-name: crit-fade;
+  }
+  @keyframes crit-fade {
+    0%,
+    70% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}

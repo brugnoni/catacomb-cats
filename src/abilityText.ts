@@ -1,4 +1,4 @@
-import type { Ability } from "./game";
+import { LINE_FALLOFF, type Ability } from "./game";
 import { identityT, plural, type Translate } from "./i18n";
 
 export type AbilityKind = "damage" | "heal" | "shield" | "buff" | "utility";
@@ -50,6 +50,7 @@ function kindLabel(kind: AbilityKind, t: Translate): string {
 function targetOf(ability: Ability, t: Translate): string {
   if (ability.effect === "heal-all") return t("All allies");
   if (ability.effect === "cleave") return t("All enemies");
+  if (ability.effect === "line") return t("Line of enemies");
   switch (ability.target) {
     case "enemy":
       return t("1 enemy");
@@ -73,7 +74,19 @@ function textOf(
   switch (ability.effect) {
     case "pierce":
       return {
-        text: t("Deal {power} damage to 1 enemy. Ignores armor.", { power }),
+        text: t("Deal {power} damage to 1 enemy.", { power }),
+        note: t("Ignores armor, shields and Ice Ward."),
+      };
+    case "line":
+      return {
+        text: t(
+          "Hit 1 enemy for {power}, the one behind it for {second} and the next for {third}.",
+          {
+            power,
+            second: Math.round(power * LINE_FALLOFF[1]),
+            third: Math.round(power * LINE_FALLOFF[2]),
+          },
+        ),
       };
     case "cleave":
       return { text: t("Deal {power} damage to all enemies.", { power }) };

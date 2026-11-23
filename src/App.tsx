@@ -52,6 +52,7 @@ import {
   parseProgress,
   type Run,
   type Progress,
+  isDamaging,
   type Ability,
 } from "./game";
 
@@ -67,10 +68,13 @@ declare global {
   interface Window {
     /** Optional fixed seed so browser tests get reproducible enemy marks. */
     __CATACOMB_SEED__?: number;
+    /** Browser tests: "off" disables critical hits, a number fixes the chance. */
+    __CATACOMB_CRIT__?: "off" | number;
   }
 }
 const runSeed = () =>
   window.__CATACOMB_SEED__ ?? crypto.getRandomValues(new Uint32Array(1))[0]!;
+const runCrit = () => window.__CATACOMB_CRIT__ ?? "on";
 const SAVE_KEY = "catacomb-cats.progress.v1";
 function loadProgress(): Progress {
   try {
@@ -146,11 +150,7 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   };
   const applyCombatAction = (next: Run, ability?: Ability) => {
     if (next === run) return;
-    const attacking =
-      ability &&
-      (!ability.effect ||
-        ability.effect === "pierce" ||
-        ability.effect === "cleave");
+    const attacking = ability && isDamaging(ability);
     const sameTurn =
       run &&
       next.status === "combat" &&
@@ -232,9 +232,16 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
     ),
   );
   // Units hit or healed by the last action, in order, so each flash starts in turn.
-  const flashes = new Map<string, { kind: "hit" | "heal"; index: number }>();
+  const flashes = new Map<
+    string,
+    { kind: "hit" | "heal"; index: number; crit: boolean }
+  >();
   run?.events.forEach((event, index) =>
-    flashes.set(event.targetId, { kind: event.type, index }),
+    flashes.set(event.targetId, {
+      kind: event.type,
+      index,
+      crit: Boolean(event.crit),
+    }),
   );
   const flashProps = (id: string) => {
     const flash = flashes.get(id);
@@ -247,8 +254,16 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   };
   const flashClass = (id: string) => {
     const flash = flashes.get(id);
-    return flash ? `${flash.kind} ${flash.kind}-${run!.eventId % 2}` : "";
+    return flash
+      ? `${flash.kind} ${flash.kind}-${run!.eventId % 2} ${flash.crit ? "crit" : ""}`
+      : "";
   };
+  const critPop = (id: string) =>
+    flashes.get(id)?.crit ? (
+      <span className="crit-pop" key={`crit-${run!.eventId}`}>
+        {t("CRITICAL!")}
+      </span>
+    ) : null;
   const hoverProps = (id: string) => ({
     onMouseEnter: () => setHovered(id),
     onMouseLeave: () => setHovered(""),
@@ -343,7 +358,9 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                 className="primary"
                 disabled={party.length !== 3}
                 onClick={() => {
-                  setRun(createRun(progress, party, runSeed()));
+                  setRun(
+                    createRun(progress, party, runSeed(), { crit: runCrit() }),
+                  );
                   setNotice("");
                 }}
               >
@@ -644,6 +661,7 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                       {...flashProps(unit.id)}
                       {...hoverProps(unit.id)}
                     >
+                      {critPop(unit.id)}
                       <UnitEffects
                         unit={unit}
                         units={units}
@@ -679,6 +697,7 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                       {...flashProps(unit.id)}
                       {...hoverProps(unit.id)}
                     >
+                      {critPop(unit.id)}
                       <UnitEffects
                         unit={unit}
                         units={units}

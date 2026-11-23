@@ -6,6 +6,7 @@ import {
   buyUpgrade,
   createRun,
   damagePreview,
+  isDamaging,
   currentUnit,
   endTurn,
   equip,
@@ -101,9 +102,7 @@ function simulate(
       }
     }
     if (!chosen) {
-      const attacks = legal.filter(
-        (a) => !a.effect || a.effect === "cleave" || a.effect === "pierce",
-      );
+      const attacks = legal.filter((a) => isDamaging(a));
       let bestScore = -1;
       for (const ability of attacks)
         for (const enemy of [...enemies].sort((a, b) => a.hp - b.hp)) {

@@ -10,6 +10,7 @@ import {
   type Ability,
 } from "./game";
 import {
+  BASE_CRIT_CHANCE,
   HEARTH_TRACK,
   MAX_TRAINING_RANK,
   masteryLevel,
@@ -59,7 +60,7 @@ function buildEntries(t: Translate): [string, string][] {
     [
       t("What do the other signature skills do?"),
       t(
-        "Mei’s rank-3 unlock offers two actions: heal all living allies, or revive one fallen ally at 60% of maximum HP (rounded up). Both cost 3 AP. Only revival has a two-turn cooldown; party healing remains available within its AP and per-turn limits. Click a fallen cat before reviving. A revived cat rejoins the initiative queue next round. Pip unlocks a 2 AP armor-piercing attack. Ember unlocks a 3 AP attack against every living enemy. The skill buttons show current power, usage limits and cooldowns.",
+        "Mei’s rank-3 unlock offers two actions: heal all living allies, or revive one fallen ally at 60% of maximum HP (rounded up). Both cost 3 AP. Only revival has a two-turn cooldown; party healing remains available within its AP and per-turn limits. Click a fallen cat before reviving. A revived cat rejoins the initiative queue next round. Pip unlocks a 2 AP attack that ignores armor, shields and Ice Ward. Ember unlocks a 3 AP attack against every living enemy. The skill buttons show current power, usage limits and cooldowns.",
       ),
     ],
     [
@@ -171,6 +172,13 @@ function buildEntries(t: Translate): [string, string][] {
       t("What happens when shared AP reaches zero?"),
       t(
         "The current cat’s turn ends automatically. Other cats with zero shared AP are skipped; enemies still take their turns in initiative order. A cat that still has AP but no usable skill (all at their limits, cooling down or too expensive) also passes its turn automatically. When a new round begins, shared AP refills to its current maximum (normally 6, or 8 with Moonwell), and control returns at the next living cat’s turn. This can change status durations when those particular units’ turns begin. Room victory or defeat stops the turn sequence immediately.",
+      ),
+    ],
+    [
+      t("How do critical hits work?"),
+      t(
+        "Every hit and every heal, from cats and from enemies, has a {base}% chance to be critical and deal 50% more damage or healing (rounded up). The chance is fixed: attack, healing and mastery bonuses do not change it. The Hearth blessing adds +5% critical chance for your cats at rank 6 and another +5% at rank 8. Area attacks and Dagger line roll separately for each target. A critical hit shows CRITICAL! over its target and is written in Field Notes.",
+        { base: BASE_CRIT_CHANCE },
       ),
     ],
     [

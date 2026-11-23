@@ -186,9 +186,11 @@ describe("translated helpers match the English rules text", () => {
     const d = getDifficulty({ wins: 3, spentGold: 0, xp: 0 });
     expect(difficultyLabel(d, es)).toBe("Ascensión 3");
     expect(nextTrainingText("miso", 0, es)).toBe(
-      "Rango 1 · Patas robustas: +3 PV máx.",
+      "Siguiente rango 1 · Patas robustas: +3 PV máx.",
     );
-    expect(nextHearthText(0, es)).toContain("Rango 1 · Brasas cálidas");
+    expect(nextHearthText(0, es)).toContain(
+      "Siguiente rango 1 · Brasas cálidas",
+    );
   });
 });
 

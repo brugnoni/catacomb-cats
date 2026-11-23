@@ -2,6 +2,9 @@
 export const MAX_TRAINING_RANK = 8;
 export const MAX_MASTERY_LEVEL = 10;
 export const XP_PER_MASTERY = 150;
+/** Critical hits: base chance in percent for every skill, and the damage and healing multiplier. */
+export const BASE_CRIT_CHANCE = 10;
+export const CRIT_MULTIPLIER = 1.5;
 export interface TrainingBonuses {
   hp: number;
   attack: number;
@@ -371,6 +374,8 @@ export interface HearthBonuses {
   secondWind: number;
   /** Extra shared AP in the first round of every room. */
   openingAp: number;
+  /** Extra critical chance, in percent, for every skill of every cat. */
+  crit: number;
 }
 export interface HearthRank {
   rank: number;
@@ -413,8 +418,8 @@ export const HEARTH_TRACK: HearthRank[] = [
   {
     rank: 6,
     title: "Hunter's focus",
-    description: "+1 attack power for every cat.",
-    bonuses: { attack: 1 },
+    description: "+1 attack power and +5% critical chance for every cat.",
+    bonuses: { attack: 1, crit: 5 },
   },
   {
     rank: 7,
@@ -425,8 +430,9 @@ export const HEARTH_TRACK: HearthRank[] = [
   {
     rank: 8,
     title: "Hearthlight",
-    description: "+1 AP in the first round of every room.",
-    bonuses: { openingAp: 1 },
+    description:
+      "+1 AP in the first round of every room and +5% critical chance for every cat.",
+    bonuses: { openingAp: 1, crit: 5 },
   },
 ];
 export function hearthBonuses(rank: number): HearthBonuses {
@@ -437,6 +443,7 @@ export function hearthBonuses(rank: number): HearthBonuses {
     support: 0,
     secondWind: 0,
     openingAp: 0,
+    crit: 0,
   };
   const capped = Math.min(MAX_TRAINING_RANK, whole(rank));
   for (const row of HEARTH_TRACK) {
@@ -453,7 +460,7 @@ export function nextHearthDescription(rank: number): string {
   const r = whole(rank);
   if (r >= MAX_TRAINING_RANK) return "Maximum Hearth rank reached.";
   const next = HEARTH_TRACK[r]!;
-  return `Rank ${next.rank} · ${next.title}: ${next.description}`;
+  return `Next rank ${next.rank} · ${next.title}: ${next.description}`;
 }
 export function masteryLevel(xp: number): number {
   return Math.min(MAX_MASTERY_LEVEL, Math.floor(whole(xp) / XP_PER_MASTERY));
@@ -473,7 +480,7 @@ export function nextTrainingDescription(catId: string, rank: number): string {
   if (r >= MAX_TRAINING_RANK) return "Maximum training rank reached.";
   const next = trainingTrack(catId)[r];
   return next
-    ? `Rank ${next.rank} · ${next.title}: ${next.description}`
+    ? `Next rank ${next.rank} · ${next.title}: ${next.description}`
     : "No training available.";
 }
 export interface DifficultyProgress {

@@ -6,6 +6,8 @@ import {
   getDifficulty,
   MAX_TRAINING_RANK,
   trainingPassives,
+  BASE_CRIT_CHANCE,
+  CRIT_MULTIPLIER,
 } from "./progression";
 export interface Ability {
   id: string;
@@ -23,12 +25,21 @@ export interface Ability {
     | "heal-all"
     | "cleave"
     | "pierce"
+    | "line"
     | "revive";
   turnLimit?: number;
   roomLimit?: number;
   cooldownTurns?: number;
   cooldownGroup?: string;
 }
+/** Attacks that hurt enemies: every skill without a support effect. */
+export const isDamaging = (ability: Ability): boolean =>
+  !ability.effect ||
+  ability.effect === "pierce" ||
+  ability.effect === "cleave" ||
+  ability.effect === "line";
+/** Damage shares of Dagger line: the target, the enemy behind it, and the next one. */
+export const LINE_FALLOFF = [1, 0.5, 0.35] as const;
 export interface Cat {
   id: string;
   name: string;
@@ -93,7 +104,16 @@ export const CATS: Cat[] = [
     initiative: 20,
     abilities: [
       strike,
-      { id: "pounce", name: "Pounce", cost: 2, power: 9, target: "enemy" },
+      {
+        id: "line",
+        name: "Dagger line",
+        cost: 2,
+        power: 8,
+        target: "enemy",
+        effect: "line",
+        turnLimit: 1,
+        cooldownTurns: 1,
+      },
     ],
   },
   {
@@ -250,8 +270,14 @@ export interface Unit {
 }
 /** What just happened in the last action; the interface replays these. */
 export type CombatEvent =
-  | { type: "hit"; targetId: string; damage: number; absorbed: number }
-  | { type: "heal"; targetId: string; amount: number };
+  | {
+      type: "hit";
+      targetId: string;
+      damage: number;
+      absorbed: number;
+      crit?: boolean;
+    }
+  | { type: "heal"; targetId: string; amount: number; crit?: boolean };
 export interface Run {
   id: string;
   /** State of the seeded random generator used for enemy target marks. */
@@ -281,6 +307,12 @@ export interface Run {
   secondWind: number;
   /** Hearth: extra shared AP in the first round of every room. */
   hearthAp: number;
+  /** Percent chance that a cat's hit or heal is critical. */
+  critChance: number;
+  /** Percent chance that an enemy's hit or heal is critical. */
+  enemyCritChance: number;
+  /** Separate generator for critical rolls, so marks never depend on them. */
+  critRng: number;
 }
 const clone = <T>(value: T): T => structuredClone(value);
 function statusFields() {
@@ -333,7 +365,7 @@ export function buildCat(progress: Progress, id: string): Unit {
       bonus = growth.guard + mastery.power + hearth.support;
     else if (a.effect === "fury")
       bonus = growth.fury + mastery.power + hearth.support;
-    else if (!a.effect || a.effect === "pierce" || a.effect === "cleave")
+    else if (isDamaging(a))
       bonus =
         growth.attack +
         mastery.power +
@@ -428,12 +460,27 @@ function random(run: Run): number {
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
+function critRandom(run: Run): number {
+  run.critRng = (run.critRng + 0x6d2b79f5) >>> 0;
+  let t = run.critRng;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+function rollCrit(run: Run, actor: Unit): boolean {
+  const chance = run.party.some((u) => u.id === actor.id)
+    ? run.critChance
+    : run.enemyCritChance;
+  return chance > 0 && critRandom(run) * 100 < chance;
+}
 function pickLiving(run: Run, group: Unit[]): Unit | undefined {
   const living = group.filter((u) => u.hp > 0);
   return living[Math.floor(random(run) * living.length)];
 }
 function markTarget(run: Run, enemy: Unit) {
-  const cat = pickLiving(run, run.party);
+  // While Taunt lasts, every enemy marks the taunting cat for its attacks.
+  const taunter = run.party.find((u) => u.hp > 0 && u.id === run.tauntId);
+  const cat = taunter ?? pickLiving(run, run.party);
   if (cat) enemy.mark = cat.id;
   else delete enemy.mark;
 }
@@ -494,9 +541,20 @@ function beginTurn(run: Run) {
   if (run.tauntId === actor.id) {
     delete run.tauntId;
     run.log.push(`${actor.name}'s taunt ends at the start of their turn.`);
+    // Marks forced by Taunt are rolled again once it is over.
+    markAll(run);
   }
 }
-export function createRun(progress: Progress, party: string[], seed = 1): Run {
+export interface RunOptions {
+  /** "off" (default) disables critical hits; "on" uses the base chance plus Hearth; a number fixes the chance. */
+  crit?: "off" | "on" | number;
+}
+export function createRun(
+  progress: Progress,
+  party: string[],
+  seed = 1,
+  options: RunOptions = {},
+): Run {
   if (
     party.length !== 3 ||
     new Set(party).size !== 3 ||
@@ -505,9 +563,19 @@ export function createRun(progress: Progress, party: string[], seed = 1): Run {
     throw new Error("Choose three different cats.");
   const difficulty = getDifficulty(progress);
   const hearth = hearthBonuses(progress.generalLevel);
+  const crit = options.crit ?? "off";
   const run: Run = {
     id: crypto.randomUUID(),
     rng: seed >>> 0,
+    critRng: (seed ^ 0x9e3779b9) >>> 0,
+    critChance:
+      crit === "off"
+        ? 0
+        : typeof crit === "number"
+          ? crit
+          : BASE_CRIT_CHANCE + hearth.crit,
+    enemyCritChance:
+      crit === "off" ? 0 : typeof crit === "number" ? crit : BASE_CRIT_CHANCE,
     events: [],
     eventId: 0,
     party: party.map((id) => buildCat(progress, id)),
@@ -624,19 +692,30 @@ export interface DamagePreview {
   damage: number;
   remainingHp: number;
 }
+/**
+ * What a hit would do. `scale` shrinks the hit (Dagger line) and `crit` makes it
+ * critical. Piercing hits ignore armor, Ice Ward and Guard shields entirely.
+ */
 export function damagePreview(
   run: Run,
   actor: Unit,
   ability: Ability,
   target: Unit,
+  scale = 1,
+  crit = false,
 ): DamagePreview {
-  const power = abilityPower(run, actor, ability);
-  const armor = ability.effect === "pierce" ? 0 : Math.min(target.armor, power);
+  const base = abilityPower(run, actor, ability);
+  const scaled = scale === 1 ? base : Math.round(base * scale);
+  const power = crit ? Math.ceil(scaled * CRIT_MULTIPLIER) : scaled;
+  const pierce = ability.effect === "pierce";
+  const armor = pierce ? 0 : Math.min(target.armor, power);
   const afterArmor = Math.max(0, power - armor);
   const iceBlocked =
-    target.iceCharges > 0 ? Math.min(target.iceArmor, afterArmor) : 0;
+    !pierce && target.iceCharges > 0
+      ? Math.min(target.iceArmor, afterArmor)
+      : 0;
   const afterIce = afterArmor - iceBlocked;
-  const blocked = Math.min(target.guard, afterIce);
+  const blocked = pierce ? 0 : Math.min(target.guard, afterIce);
   const damage = Math.min(target.hp, Math.max(0, afterIce - blocked));
   const healthAfterDamage = Math.max(0, target.hp - damage);
   const reactiveHealing =
@@ -668,7 +747,14 @@ function rescue(run: Run, unit: Unit) {
   );
   run.secondWind = 0;
 }
-function hurt(run: Run, actor: Unit, target: Unit, ability: Ability) {
+function hurt(
+  run: Run,
+  actor: Unit,
+  target: Unit,
+  ability: Ability,
+  scale = 1,
+) {
+  const crit = rollCrit(run, actor);
   const {
     power,
     armor,
@@ -677,8 +763,9 @@ function hurt(run: Run, actor: Unit, target: Unit, ability: Ability) {
     reactiveHealing,
     damage: dealt,
     remainingHp,
-  } = damagePreview(run, actor, ability, target);
-  if (target.iceCharges > 0 && power - armor > 0) target.iceCharges--;
+  } = damagePreview(run, actor, ability, target, scale, crit);
+  if (ability.effect !== "pierce" && target.iceCharges > 0 && power - armor > 0)
+    target.iceCharges--;
   target.guard -= blocked;
   if (target.guard === 0) {
     target.guardTurns = 0;
@@ -689,7 +776,10 @@ function hurt(run: Run, actor: Unit, target: Unit, ability: Ability) {
     targetId: target.id,
     damage: dealt,
     absorbed: armor + blocked + iceBlocked,
+    ...(crit ? { crit } : {}),
   });
+  if (crit)
+    run.log.push(`${actor.name} scores a critical hit on ${target.name}!`);
   run.log.push(
     `${actor.name} hits ${target.name}: ${dealt} damage (${power} attack power, ${armor} armor, ${blocked} Guard blocked, ${iceBlocked} Ice Ward blocked; ${target.hp}/${target.maxHp} HP).`,
   );
@@ -849,12 +939,23 @@ function resolveEnemies(run: Run) {
         const wounded = run.enemies.find((u) => u.id === plan.allyId)!;
         run.roomUses[actor.id + ":heal"] =
           (run.roomUses[actor.id + ":heal"] ?? 0) + 1;
+        const crit = rollCrit(run, actor);
+        const base = Math.max(0, 6 + actor.fury - actor.curse);
         const healed = Math.min(
           wounded.maxHp - wounded.hp,
-          Math.max(0, 6 + actor.fury - actor.curse),
+          crit ? Math.ceil(base * CRIT_MULTIPLIER) : base,
         );
         wounded.hp += healed;
-        run.events.push({ type: "heal", targetId: wounded.id, amount: healed });
+        run.events.push({
+          type: "heal",
+          targetId: wounded.id,
+          amount: healed,
+          ...(crit ? { crit } : {}),
+        });
+        if (crit)
+          run.log.push(
+            `${actor.name} lands a critical heal on ${wounded.name}!`,
+          );
         run.log.push(
           `${actor.name} heals ${wounded.name}: +${healed} HP (${wounded.hp}/${wounded.maxHp}).`,
         );
@@ -950,10 +1051,7 @@ export function abilityPower(run: Run, actor: Unit, ability: Ability): number {
     ability.effect === "revive"
   )
     return ability.power;
-  const damaging =
-    !ability.effect ||
-    ability.effect === "pierce" ||
-    ability.effect === "cleave";
+  const damaging = isDamaging(ability);
   // Inspiration does not amplify other blessings: avoid recursive power inflation.
   const inspired = ability.effect === "fury" ? 0 : actor.fury;
   const bonus =
@@ -1027,17 +1125,27 @@ function applyAbility(run: Run, actor: Unit, ability: Ability, target: Unit) {
         ? run.party.filter((u) => u.hp > 0)
         : [target];
     for (const t of targets) {
-      const healed = Math.min(t.maxHp - t.hp, power);
+      const crit = rollCrit(run, actor);
+      const amount = crit ? Math.ceil(power * CRIT_MULTIPLIER) : power;
+      const healed = Math.min(t.maxHp - t.hp, amount);
       t.hp += healed;
-      run.events.push({ type: "heal", targetId: t.id, amount: healed });
+      run.events.push({
+        type: "heal",
+        targetId: t.id,
+        amount: healed,
+        ...(crit ? { crit } : {}),
+      });
+      if (crit)
+        run.log.push(`${actor.name} lands a critical heal on ${t.name}!`);
       run.log.push(
-        `${actor.name} heals ${t.name}: +${healed} HP (${power} healing power; ${t.hp}/${t.maxHp} HP).`,
+        `${actor.name} heals ${t.name}: +${healed} HP (${amount} healing power; ${t.hp}/${t.maxHp} HP).`,
       );
     }
   } else if (ability.effect === "guard") guard(run, target, power, 2);
   else if (ability.effect === "fury") fury(run, target, power);
   else if (ability.effect === "taunt") {
     run.tauntId = actor.id;
+    for (const enemy of run.enemies) if (enemy.hp > 0) enemy.mark = actor.id;
     run.log.push(
       `${actor.name} taunts: enemies attack this cat until its next turn.`,
     );
@@ -1052,6 +1160,13 @@ function applyAbility(run: Run, actor: Unit, ability: Ability, target: Unit) {
       if (actor.hp <= 0) break;
       hurt(run, actor, t, ability);
     }
+  } else if (ability.effect === "line") {
+    // The target takes the full hit; the enemies behind it (to its right) take less.
+    const alive = run.enemies.filter((u) => u.hp > 0);
+    const start = alive.findIndex((u) => u.id === target.id);
+    alive.slice(start, start + LINE_FALLOFF.length).forEach((t, index) => {
+      if (actor.hp > 0) hurt(run, actor, t, ability, LINE_FALLOFF[index]);
+    });
   } else hurt(run, actor, target, ability);
 }
 export function act(state: Run, abilityId: string, targetId: string): Run {
@@ -1077,12 +1192,7 @@ export function act(state: Run, abilityId: string, targetId: string): Run {
     a.cooldowns[ability.cooldownGroup ?? ability.id] =
       ability.cooldownTurns + 1;
   applyAbility(run, a, ability, t);
-  if (
-    !ability.effect ||
-    ability.effect === "pierce" ||
-    ability.effect === "cleave"
-  )
-    a.openingAttack = 0;
+  if (isDamaging(ability)) a.openingAttack = 0;
   // The turn ends by itself when no AP remain or nothing usable is left.
   if (!check(run) && (run.ap === 0 || !canAct(run, currentUnit(run)!))) {
     if (run.ap > 0)

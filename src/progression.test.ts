@@ -172,6 +172,7 @@ describe("Hearth blessing", () => {
       support: 0,
       secondWind: 0,
       openingAp: 0,
+      crit: 0,
     });
     expect(hearthBonuses(1)).toMatchObject({ hp: 2, initiative: 1 });
     expect(hearthBonuses(2).attack).toBe(1);
@@ -185,12 +186,15 @@ describe("Hearth blessing", () => {
       support: 1,
       secondWind: 60,
       openingAp: 1,
+      crit: 10,
     });
+    expect(hearthBonuses(5).crit).toBe(0);
+    expect(hearthBonuses(6).crit).toBe(5);
     expect(hearthBonuses(99)).toEqual(hearthBonuses(8));
     expect(hearthBonuses(-3)).toEqual(hearthBonuses(0));
   });
   it("describes the next rank and the end of the track", () => {
-    expect(nextHearthDescription(2)).toContain("Rank 3 · Second Wind");
+    expect(nextHearthDescription(2)).toContain("Next rank 3 · Second Wind");
     expect(nextHearthDescription(8)).toBe("Maximum Hearth rank reached.");
   });
 });

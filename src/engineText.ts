@@ -119,6 +119,14 @@ export const RULES: [RegExp, string][] = [
     /^Second Wind! (.+) rises at (\d+)% HP \((\d+)\/(\d+)\)\. It works once per expedition\.$/,
     "Second Wind! {1} rises at {2}% HP ({3}/{4}). It works once per expedition.",
   ],
+  [
+    /^(.+) scores a critical hit on (.+)!$/,
+    "{1} scores a critical hit on {2}!",
+  ],
+  [
+    /^(.+) lands a critical heal on (.+)!$/,
+    "{1} lands a critical heal on {2}!",
+  ],
   [/^(.+) uses (.+)\.$/, "{1} uses {2}."],
   // Refusal reasons shown on skill buttons.
   [/^Not your turn$/, "Not your turn"],

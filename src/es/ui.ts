@@ -53,7 +53,7 @@ export const UI: Record<string, string> = {
   "{name} trained. {next} Ready for the next expedition.":
     "{name} entrenó. {next} Listo para la próxima expedición.",
   "Train {name} · {cost} gold": "Entrenar a {name} · {cost} de oro",
-  "Rank {n} · {title}: {desc}": "Rango {n} · {title}: {desc}",
+  "Next rank {n} · {title}: {desc}": "Siguiente rango {n} · {title}: {desc}",
   "Rank {n}, {title}: {desc}": "Rango {n}, {title}: {desc}",
   "Rank {n}": "Rango {n}",
   "Maximum training rank reached.": "Rango máximo de entrenamiento alcanzado.",
@@ -162,8 +162,12 @@ export const UI: Record<string, string> = {
   "1 ally": "1 aliado",
   "1 fallen ally": "1 aliado caído",
   Self: "Uno mismo",
-  "Deal {power} damage to 1 enemy. Ignores armor.":
-    "Inflige {power} de daño a 1 enemigo. Ignora la armadura.",
+  "Ignores armor, shields and Ice Ward.":
+    "Ignora la armadura, los escudos y la Barrera de hielo.",
+  "Line of enemies": "Fila de enemigos",
+  "Hit 1 enemy for {power}, the one behind it for {second} and the next for {third}.":
+    "Golpea a 1 enemigo con {power}, al de atrás con {second} y al siguiente con {third}.",
+  "CRITICAL!": "¡CRÍTICO!",
   "Deal {power} damage to all enemies.":
     "Inflige {power} de daño a todos los enemigos.",
   "Heal 1 ally for {power} HP.": "Cura a 1 aliado {power} PV.",
@@ -198,8 +202,8 @@ export const UI: Record<string, string> = {
   Taunt: "Provocación",
   active: "activo",
   "Active effects on {name}": "Efectos activos en {name}",
-  "Reduces each hit by {n}. Armor-piercing attacks ignore it.":
-    "Reduce cada golpe en {n}. Los ataques que perforan armadura la ignoran.",
+  "Reduces each hit by {n}. Piercing attacks ignore it.":
+    "Reduce cada golpe en {n}. Los ataques perforantes la ignoran.",
   "Absorbs {n} more damage. Lasts {turns}.":
     "Absorbe {n} de daño más. Dura {turns}.",
   "+{n} to damage, healing and shields. Lasts {turns}.":

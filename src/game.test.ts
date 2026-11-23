@@ -75,7 +75,7 @@ describe("basic expedition and lobby regression", () => {
     expect(act(r, "strike", "pip")).toBe(r);
     expect(act(r, "bad", "e0")).toBe(r);
     r.ap = 1;
-    expect(act(r, "pounce", "e0")).toBe(r);
+    expect(act(r, "line", "e0")).toBe(r);
   });
   it("1AP skills stop at three uses and new actors reset counts", () => {
     let r = start();
@@ -89,12 +89,14 @@ describe("basic expedition and lobby regression", () => {
     expect(act(next, "strike", "e0")).not.toBe(next);
   });
   it("2AP skills stop at two uses with AP remaining", () => {
-    let r = start();
-    r.enemies[0]!.hp = 500;
-    r = act(act(r, "pounce", "e0"), "pounce", "e0");
+    let r = turn(start(), "clover");
+    r.party.find((c) => c.id === "miso")!.hp = 1;
+    r = act(act(r, "heal", "miso"), "heal", "miso");
     expect(r.ap).toBe(2);
-    expect(abilityLimit(r.party[0]!.abilities[1]!)).toBe(2);
-    expect(act(r, "pounce", "e0")).toBe(r);
+    expect(
+      abilityLimit(r.party.find((c) => c.id === "clover")!.abilities[1]!),
+    ).toBe(2);
+    expect(act(r, "heal", "miso")).toBe(r);
   });
   it("AP resets each round and next turn allows same skill again", () => {
     let r = start();
@@ -1116,5 +1118,330 @@ describe("automatic pass when no skill is usable", () => {
     // 3 AP remain: Flame paw is usable, so Ember keeps acting.
     expect(currentUnit(r)!.id).toBe("ember");
     expect(r.ap).toBe(3);
+  });
+});
+
+describe("piercing attacks ignore every defense", () => {
+  const needleOf = (r: Run) =>
+    r.party[0]!.abilities.find((a) => a.id === "pierce")!;
+  it("deals its full power through armor, Guard and Ice Ward", () => {
+    let r = trained("pip");
+    const foe = r.enemies[0]!;
+    foe.hp = foe.maxHp = 100;
+    foe.armor = 2;
+    foe.guard = 6;
+    foe.guardTurns = 2;
+    foe.iceArmor = 2;
+    foe.iceCharges = 3;
+    const needle = needleOf(r);
+    const power = abilityPower(r, r.party[0]!, needle);
+    expect(damagePreview(r, r.party[0]!, needle, foe)).toMatchObject({
+      armor: 0,
+      blocked: 0,
+      iceBlocked: 0,
+      damage: power,
+    });
+    r = act(r, "pierce", "e0");
+    expect(r.enemies[0]!.hp).toBe(100 - power);
+    // Nothing was spent: the shield and the Ice Ward charges are untouched.
+    expect(r.enemies[0]!.guard).toBe(6);
+    expect(r.enemies[0]!.iceCharges).toBe(3);
+    expect(r.log.join(" ")).toContain(
+      `${power} damage (${power} attack power, 0 armor, 0 Guard blocked, 0 Ice Ward blocked`,
+    );
+  });
+  it("reported case: a 40 HP enemy with 2 armor takes the whole hit", () => {
+    let r = trained("pip");
+    const foe = r.enemies[0]!;
+    foe.hp = foe.maxHp = 40;
+    foe.armor = 2;
+    const power = abilityPower(r, r.party[0]!, needleOf(r));
+    r = act(r, "pierce", "e0");
+    expect(r.enemies[0]!.hp).toBe(40 - power);
+  });
+  it("a regular attack on the same defended target is still mitigated", () => {
+    const r = trained("pip");
+    const foe = r.enemies[0]!;
+    foe.hp = foe.maxHp = 100;
+    foe.armor = 2;
+    foe.guard = 6;
+    const strike = r.party[0]!.abilities[0]!;
+    const preview = damagePreview(r, r.party[0]!, strike, foe);
+    expect(preview.armor).toBe(2);
+    expect(preview.blocked).toBeGreaterThan(0);
+    expect(preview.damage).toBeLessThan(strike.power);
+  });
+  it("preview and resolution agree for every defense mix", () => {
+    for (const [armor, guard, charges] of [
+      [0, 0, 0],
+      [2, 0, 0],
+      [0, 6, 0],
+      [3, 4, 2],
+    ] as const) {
+      let r = trained("pip");
+      const foe = r.enemies[0]!;
+      foe.hp = foe.maxHp = 100;
+      foe.armor = armor;
+      foe.guard = guard;
+      foe.guardTurns = guard ? 2 : 0;
+      foe.iceArmor = 2;
+      foe.iceCharges = charges;
+      const needle = needleOf(r);
+      const expected = damagePreview(r, r.party[0]!, needle, foe).damage;
+      r = act(r, "pierce", "e0");
+      expect(100 - r.enemies[0]!.hp).toBe(expected);
+    }
+  });
+});
+
+describe("Dagger line", () => {
+  const withThreeFoes = () => {
+    const r = start();
+    const extra = structuredClone(r.enemies[0]!);
+    extra.id = "e2";
+    extra.name = "Cave bat";
+    r.enemies.push(extra);
+    r.enemies.forEach((e) => {
+      e.hp = e.maxHp = 500;
+      e.armor = 0;
+      e.guard = 0;
+    });
+    return r;
+  };
+  it("hits the target fully, the one behind it for half and the next for 35%", () => {
+    let r = withThreeFoes();
+    const line = r.party[0]!.abilities.find((a) => a.id === "line")!;
+    const power = abilityPower(r, r.party[0]!, line);
+    r = act(r, "line", "e0");
+    expect(500 - r.enemies[0]!.hp).toBe(power);
+    expect(500 - r.enemies[1]!.hp).toBe(Math.round(power * 0.5));
+    expect(500 - r.enemies[2]!.hp).toBe(Math.round(power * 0.35));
+  });
+  it("only reaches the enemies behind the target, never the ones in front", () => {
+    let r = withThreeFoes();
+    r = act(r, "line", "e1");
+    expect(r.enemies[0]!.hp).toBe(500);
+    expect(r.enemies[1]!.hp).toBeLessThan(500);
+    expect(r.enemies[2]!.hp).toBeLessThan(500);
+    const last = withThreeFoes();
+    const hit = act(last, "line", "e2");
+    expect(hit.enemies[0]!.hp).toBe(500);
+    expect(hit.enemies[1]!.hp).toBe(500);
+    expect(hit.enemies[2]!.hp).toBeLessThan(500);
+  });
+  it("skips fallen enemies when counting who is behind", () => {
+    let r = withThreeFoes();
+    r.enemies[1]!.hp = 0;
+    r = act(r, "line", "e0");
+    expect(r.enemies[1]!.hp).toBe(0);
+    expect(r.enemies[2]!.hp).toBeLessThan(500);
+  });
+  it("armor still reduces each hit of the line", () => {
+    let r = withThreeFoes();
+    r.enemies[1]!.armor = 2;
+    const power = abilityPower(
+      r,
+      r.party[0]!,
+      r.party[0]!.abilities.find((a) => a.id === "line")!,
+    );
+    r = act(r, "line", "e0");
+    expect(500 - r.enemies[1]!.hp).toBe(Math.round(power * 0.5) - 2);
+  });
+  it("is limited to one use per turn and then waits one own turn", () => {
+    let r = withThreeFoes();
+    const line = r.party[0]!.abilities.find((a) => a.id === "line")!;
+    r = act(r, "line", "e0");
+    expect(abilityUnavailableReason(r, line)).toBeDefined();
+    expect(cooldownRemaining(r.party[0]!, line)).toBe(2);
+    r = endTurn(r);
+    // Pip's next turn: still cooling down.
+    let guardTurns = 0;
+    while (currentUnit(r)!.id !== "pip" && guardTurns++ < 12) r = endTurn(r);
+    expect(abilityUnavailableReason(r, line)).toContain("Cooldown");
+    r = endTurn(r);
+    while (currentUnit(r)!.id !== "pip" && guardTurns++ < 24) r = endTurn(r);
+    expect(abilityUnavailableReason(r, line)).toBeUndefined();
+  });
+});
+
+describe("Taunt makes every enemy mark the taunting cat", () => {
+  const tauntRun = (seed = 1) => {
+    const p = { ...initialProgress(), catLevels: { miso: 3 } };
+    const r = createRun(p, ["miso", "pip", "clover"], seed);
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 500));
+    return turn(r, "miso");
+  };
+  it("marks Miso on every living enemy as soon as Taunt is cast", () => {
+    let r = tauntRun();
+    r = act(r, "taunt", "miso");
+    expect(r.tauntId).toBe("miso");
+    for (const enemy of r.enemies) expect(enemy.mark).toBe("miso");
+    const rat = r.enemies[0]!;
+    expect(enemyIntent(r, rat)).toMatchObject({
+      kind: "attack",
+      targetId: "miso",
+    });
+  });
+  it("keeps the mark on Miso after each enemy acts while Taunt lasts", () => {
+    let r = tauntRun();
+    r = act(r, "taunt", "miso");
+    r = endTurn(r);
+    let checked = 0;
+    for (let i = 0; i < 12 && r.status === "combat" && r.tauntId; i++) {
+      for (const enemy of r.enemies.filter((e) => e.hp > 0))
+        expect(enemy.mark).toBe("miso");
+      checked++;
+      r = endTurn(r);
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+  it("every enemy attack lands on Miso during Taunt", () => {
+    let r = tauntRun();
+    r = act(r, "taunt", "miso");
+    const hits: string[] = [];
+    for (let i = 0; i < 6 && r.tauntId; i++) {
+      const before = r.log.length;
+      r = endTurn(r);
+      hits.push(
+        ...r.log
+          .slice(before)
+          .filter((line) => /^(Crypt rat|Moss slime) hits /.test(line)),
+      );
+    }
+    expect(hits.length).toBeGreaterThan(0);
+    for (const line of hits) expect(line).toContain("hits Miso");
+  });
+  it("releases the marks when Taunt ends and rolls them again", () => {
+    let nonMiso = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      let r = tauntRun(seed);
+      r = act(r, "taunt", "miso");
+      for (let i = 0; i < 12 && r.tauntId; i++) r = endTurn(r);
+      expect(r.tauntId).toBeUndefined();
+      if (r.enemies.some((e) => e.hp > 0 && e.mark !== "miso")) nonMiso++;
+    }
+    expect(nonMiso).toBeGreaterThan(0);
+  });
+  it("curses and support actions do not follow Taunt", () => {
+    const r = tauntRun();
+    r.tauntId = "miso";
+    const imp = r.enemies[0]!;
+    imp.name = "Spore imp";
+    r.round = 1;
+    r.party.find((c) => c.id === "pip")!.hp = 1;
+    const intent = enemyIntent(r, imp)!;
+    expect(intent.kind).toBe("curse");
+    expect(intent.targetId).toBe("pip");
+    expect(intent.redirected).toBeUndefined();
+  });
+});
+
+describe("critical hits", () => {
+  const party = ["pip", "miso", "clover"];
+  it("are off in the engine unless requested", () => {
+    const r = createRun(initialProgress(), party);
+    expect(r.critChance).toBe(0);
+    expect(r.enemyCritChance).toBe(0);
+    const hit = act(r, "strike", "e0");
+    expect(hit.events.every((e) => !e.crit)).toBe(true);
+  });
+  it("use 10 percent for everyone and add Hearth bonuses only for cats", () => {
+    const base = createRun(initialProgress(), party, 1, { crit: "on" });
+    expect(base.critChance).toBe(10);
+    expect(base.enemyCritChance).toBe(10);
+    for (const [rank, chance] of [
+      [5, 10],
+      [6, 15],
+      [8, 20],
+    ] as const) {
+      const r = createRun(
+        { ...initialProgress(), generalLevel: rank },
+        party,
+        1,
+        {
+          crit: "on",
+        },
+      );
+      expect(r.critChance).toBe(chance);
+      expect(r.enemyCritChance).toBe(10);
+    }
+  });
+  it("only Hearth changes the chance, not mastery, training or equipment", () => {
+    const rich: Progress = {
+      ...initialProgress(),
+      xp: 1500,
+      catLevels: { pip: 8 },
+      equipment: { pip: "Iron bell" },
+    };
+    expect(createRun(rich, party, 1, { crit: "on" }).critChance).toBe(10);
+  });
+  it("a critical hit deals 50 percent more, rounded up, before armor", () => {
+    let r = createRun(initialProgress(), party, 1, { crit: 100 });
+    r = act(r, "strike", "e0");
+    expect(r.events[0]).toMatchObject({ type: "hit", crit: true, damage: 6 });
+    expect(r.enemies[0]!.hp).toBe(24 - 6);
+    expect(r.log.join(" ")).toContain(
+      "Pip scores a critical hit on Crypt rat!",
+    );
+    let armored = createRun(initialProgress(), party, 1, { crit: 100 });
+    armored.enemies[0]!.armor = 2;
+    armored = act(armored, "strike", "e0");
+    expect(armored.events[0]).toMatchObject({ crit: true, damage: 4 });
+  });
+  it("heals can be critical too", () => {
+    let r = turn(
+      createRun(initialProgress(), party, 1, { crit: 100 }),
+      "clover",
+    );
+    r.party.find((c) => c.id === "miso")!.hp = 1;
+    r = act(r, "heal", "miso");
+    expect(r.events[0]).toMatchObject({ type: "heal", crit: true, amount: 11 });
+    expect(r.party.find((c) => c.id === "miso")!.hp).toBe(12);
+    expect(r.log.join(" ")).toContain("Mei lands a critical heal on Miso!");
+  });
+  it("enemy attacks can be critical", () => {
+    let r = createRun(initialProgress(), party, 1, { crit: 100 });
+    r = endTurn(r);
+    const enemyHits = r.events.filter(
+      (e) => e.type === "hit" && e.targetId !== "e0" && e.targetId !== "e1",
+    );
+    expect(enemyHits.length).toBeGreaterThan(0);
+    expect(enemyHits.every((e) => e.crit)).toBe(true);
+  });
+  it("roll each target of an area attack separately", () => {
+    const rates = new Set<number>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const p = { ...initialProgress(), catLevels: { ember: 3 } };
+      let r = turn(
+        createRun(p, ["ember", "pip", "miso"], seed, { crit: 50 }),
+        "ember",
+      );
+      r.enemies.forEach((e) => (e.hp = e.maxHp = 500));
+      r = act(r, "cleave", "ember");
+      rates.add(r.events.filter((e) => e.crit).length);
+    }
+    // With 50 percent per target, sometimes none, one or both are critical.
+    expect(rates.size).toBeGreaterThan(1);
+  });
+  it("happen about one time in ten over many hits", () => {
+    let hits = 0;
+    let crits = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      let r = createRun(initialProgress(), party, seed, { crit: "on" });
+      r.enemies[0]!.hp = r.enemies[0]!.maxHp = 500;
+      r = act(r, "strike", "e0");
+      const own = r.events[0]!;
+      hits++;
+      if (own.crit) crits++;
+    }
+    expect(crits / hits).toBeGreaterThan(0.05);
+    expect(crits / hits).toBeLessThan(0.17);
+  });
+  it("never change who the enemies mark", () => {
+    const marks = (crit: "off" | "on") =>
+      createRun(initialProgress(), party, 7, { crit }).enemies.map(
+        (e) => e.mark,
+      );
+    expect(marks("on")).toEqual(marks("off"));
   });
 });

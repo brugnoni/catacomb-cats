@@ -14,7 +14,7 @@ export const GAME: Record<string, string> = {
   "Moon blessing": "Bendición lunar",
   Moonwell: "Pozo lunar",
   "Claw strike": "Zarpazo",
-  Pounce: "Abalanzada",
+  "Dagger line": "Línea de dagas",
   "Needle strike": "Estocada de aguja",
   "Thorn swipe": "Zarpazo de espina",
   "Healing purr": "Ronroneo sanador",
@@ -153,6 +153,8 @@ export const GAME: Record<string, string> = {
   "+2 max HP and +1 initiative for every cat.":
     "+2 PV máx. y +1 de iniciativa para cada gato.",
   "+1 attack power for every cat.": "+1 de poder de ataque para cada gato.",
+  "+1 attack power and +5% critical chance for every cat.":
+    "+1 de poder de ataque y +5% de probabilidad de crítico para cada gato.",
   "Once per expedition, the first cat to fall rises at once with 40% HP.":
     "Una vez por expedición, el primer gato que cae se levanta al instante con el 40% de PV.",
   "+3 max HP and +1 initiative for every cat.":
@@ -161,8 +163,8 @@ export const GAME: Record<string, string> = {
     "+1 de poder de curación, Guardia e Inspirado para cada gato.",
   "Second Wind restores 60% HP. +3 max HP for every cat.":
     "Segundo aliento restaura el 60% de PV. +3 PV máx. para cada gato.",
-  "+1 AP in the first round of every room.":
-    "+1 PA en la primera ronda de cada sala.",
+  "+1 AP in the first round of every room and +5% critical chance for every cat.":
+    "+1 PA en la primera ronda de cada sala y +5% de probabilidad de crítico para cada gato.",
   // Engine log lines
   "The descent begins. {1}.": "El descenso comienza. {1}.",
   "Room rewards: +{1} gold, +{2} XP and {3}. Spoils are banked only after defeating the boss and returning to the lobby.":
@@ -220,6 +222,9 @@ export const GAME: Record<string, string> = {
     "{1} no tiene habilidades utilizables y pasa.",
   "Second Wind! {1} rises at {2}% HP ({3}/{4}). It works once per expedition.":
     "¡Segundo aliento! {1} se levanta con el {2}% de PV ({3}/{4}). Funciona una vez por expedición.",
+  "{1} scores a critical hit on {2}!": "¡{1} asesta un golpe crítico a {2}!",
+  "{1} lands a critical heal on {2}!":
+    "¡{1} logra una curación crítica en {2}!",
   "{1} uses {2}.": "{1} usa {2}.",
   // Refusal reasons
   "Not your turn": "No es tu turno",

@@ -9,6 +9,14 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem("catacomb-cats.lang", "en");
   });
   await page.addInitScript(() => {
+    const w = window as unknown as {
+      __CATACOMB_SEED__: number;
+      __CATACOMB_CRIT__: "off";
+    };
+    // No random critical hits, so damage numbers stay exact.
+    w.__CATACOMB_CRIT__ = "off";
+  });
+  await page.addInitScript(() => {
     (window as unknown as { __CATACOMB_SEED__: number }).__CATACOMB_SEED__ = 1;
   });
 });
@@ -151,7 +159,7 @@ test("defeat resets the expedition while preserving permanent upgrades", async (
   await page.getByRole("button", { name: /Improve blessing/ }).click();
   await expect(page.getByText("Hearth blessing · Rank 1")).toBeVisible();
   await expect(page.locator(".hearth-next")).toContainText(
-    "Rank 2 · Sharpened claws",
+    "Next rank 2 · Sharpened claws",
   );
   await enterDungeon(page);
   for (let turn = 0; turn < 150; turn++) {
@@ -472,9 +480,7 @@ test("exhausting shared AP resolves enemy turns and skips cats until the next ro
   await page.goto("/");
   await enterDungeon(page);
   await pickTarget(page, "e1");
-  const pounce = page.getByRole("button", { name: /^Pounce/ });
-  await pounce.click();
-  await pounce.click();
+  await page.getByRole("button", { name: /^Dagger line/ }).click();
   const strike = page.getByRole("button", { name: /^Claw strike/ });
   await strike.click();
   await expect(page.locator('[data-unit="e1"] .unit-target')).toHaveAttribute(
@@ -482,6 +488,11 @@ test("exhausting shared AP resolves enemy turns and skips cats until the next ro
     "true",
   );
   await strike.click();
+  await strike.click();
+  // One AP remains but Pip has nothing usable left, so the turn passes by itself.
+  await expect(page.locator(".command-deck h2")).toHaveText("Luna");
+  await pickTarget(page, "e1");
+  await page.getByRole("button", { name: /^Moon bolt/ }).click();
   await expect(page.locator(".round-counter")).toContainText("ROUND 2");
   await expect(page.locator(".round-counter")).toContainText("6 / 6 AP");
   await expect(page.locator(".command-deck h2")).toHaveText("Pip");
@@ -532,7 +543,7 @@ test("an attack clears a defeated target even when the same cat still has AP", a
   await page.goto("/");
   await enterDungeon(page);
   await pickTarget(page, "e0");
-  await page.getByRole("button", { name: /^Pounce/ }).click();
+  await page.getByRole("button", { name: /^Dagger line/ }).click();
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await pickTarget(page, "e0");
   const bolt = page.getByRole("button", { name: /^Moon bolt/ });
@@ -1077,4 +1088,115 @@ test("the field guide is fully available in Spanish", async ({ page }) => {
       exact: true,
     }),
   ).toContainText("Patas robustas");
+});
+
+test("lobby says which rank is the next one", async ({ page }) => {
+  await page.goto("/");
+  const miso = page
+    .locator(".cat-card")
+    .filter({ has: page.getByRole("heading", { name: "Miso", exact: true }) });
+  await expect(miso.locator(".training-description")).toContainText(
+    "Next rank 1 · Sturdy paws",
+  );
+  await expect(page.locator(".hearth-next")).toContainText(
+    "Next rank 1 · Warm embers",
+  );
+});
+
+test("a curse is drawn as a violet thread", async ({ page }) => {
+  await seedLegacySave(page, { generalLevel: 8 });
+  await page.goto("/");
+  await enterDungeon(page);
+  for (let step = 0; step < 80; step++) {
+    const next = page.getByRole("button", { name: "Continue to next room" });
+    if (await next.isVisible()) {
+      await next.click();
+      break;
+    }
+    await page
+      .locator(".enemies .combatant:not(.dead) .unit-target")
+      .first()
+      .click();
+    const attack = page.getByRole("button", {
+      name: /^(Claw strike|Moon bolt|Valiant slash|Thorn swipe|Cinder jab)/,
+    });
+    if (await attack.isEnabled()) await attack.click();
+    else
+      await page.getByRole("button", { name: "End turn", exact: true }).click();
+  }
+  await expect(
+    page.getByRole("heading", { name: "The forgotten hall" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Target Spore imp" }).hover();
+  await expect(page.locator(".intent-line.curse")).toHaveCount(1);
+  await expect(page.getByTestId("intent-note")).toContainText("Curse");
+  const stroke = await page
+    .locator(".intent-line.curse")
+    .evaluate((el) => getComputedStyle(el).stroke);
+  expect(stroke).toBe("rgb(181, 124, 255)");
+});
+
+test("Taunt makes every enemy mark Miso", async ({ page }) => {
+  await seedLegacySave(page, { catLevels: { miso: 3 } });
+  await page.goto("/");
+  await enterDungeon(page);
+  await advanceToCat(page, "Miso");
+  await page.getByRole("button", { name: /^Stand behind me/ }).click();
+  await page.getByRole("button", { name: "Target Crypt rat" }).hover();
+  await expect(page.locator('[data-unit="miso"]')).toHaveClass(/marked/);
+  await expect(page.getByTestId("intent-note")).toContainText("Miso");
+});
+
+test("Dagger line hits the target and the enemy behind it", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  await pickTarget(page, "e0");
+  const line = page.getByRole("button", { name: /^Dagger line/ });
+  await expect(line).toContainText(
+    "Hit 1 enemy for 8, the one behind it for 4 and the next for 3.",
+  );
+  await line.click();
+  await expect(page.locator('[data-unit="e0"] .health-value')).toHaveText(
+    "16 / 24 HP",
+  );
+  await expect(page.locator('[data-unit="e1"] .health-value')).toHaveText(
+    "25 / 29 HP",
+  );
+  await expect(line).toBeDisabled();
+});
+
+test("a critical hit is announced over its target", async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as { __CATACOMB_CRIT__: number }).__CATACOMB_CRIT__ =
+      100;
+  });
+  await page.goto("/");
+  await enterDungeon(page);
+  await pickTarget(page, "e0");
+  await page.getByRole("button", { name: /^Claw strike/ }).click();
+  await expect(page.locator('[data-unit="e0"] .crit-pop')).toHaveText(
+    "CRITICAL!",
+  );
+  await expect(page.locator('[data-unit="e0"]')).toHaveClass(/crit/);
+  await expect(page.getByLabel("Combat log")).toContainText(
+    "Pip scores a critical hit on Crypt rat!",
+  );
+  await expect(page.locator('[data-unit="e0"] .health-value')).toHaveText(
+    "18 / 24 HP",
+  );
+});
+
+test("Needle strike ignores armor and shields in the preview and the result", async ({
+  page,
+}) => {
+  await seedLegacySave(page, { catLevels: { pip: 3 } });
+  await page.goto("/");
+  await enterDungeon(page);
+  await pickTarget(page, "e0");
+  const needle = page.getByRole("button", { name: /^Needle strike/ });
+  await expect(needle).toContainText("Ignores armor, shields and Ice Ward.");
+  await expect(needle).toContainText(/Deals \d+ · \d+ HP left/);
+  await expect(needle).not.toContainText("blocked");
 });

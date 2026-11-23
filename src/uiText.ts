@@ -42,7 +42,7 @@ export function nextTrainingText(
   if (rank >= MAX_TRAINING_RANK) return t("Maximum training rank reached.");
   const next = trainingTrack(catId)[rank];
   return next
-    ? t("Rank {n} · {title}: {desc}", {
+    ? t("Next rank {n} · {title}: {desc}", {
         n: next.rank,
         title: t(next.title),
         desc: t(next.description),
@@ -52,7 +52,7 @@ export function nextTrainingText(
 export function nextHearthText(rank: number, t: Translate): string {
   if (rank >= MAX_TRAINING_RANK) return t("Maximum Hearth rank reached.");
   const next = HEARTH_TRACK[rank]!;
-  return t("Rank {n} · {title}: {desc}", {
+  return t("Next rank {n} · {title}: {desc}", {
     n: next.rank,
     title: t(next.title),
     desc: t(next.description),

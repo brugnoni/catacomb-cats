@@ -100,10 +100,9 @@ export function UnitEffects({
       kind: "armor",
       label: t("Armor"),
       value: String(unit.armor),
-      description: t(
-        "Reduces each hit by {n}. Armor-piercing attacks ignore it.",
-        { n: unit.armor },
-      ),
+      description: t("Reduces each hit by {n}. Piercing attacks ignore it.", {
+        n: unit.armor,
+      }),
     });
   if (unit.guard > 0)
     effects.push({

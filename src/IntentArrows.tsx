@@ -7,7 +7,7 @@ export interface IntentEntry {
 }
 interface Line {
   key: string;
-  kind: "hostile" | "friendly";
+  kind: "hostile" | "friendly" | "curse";
   d: string;
 }
 /** Gap between the unit cards and the first thread, and between stacked threads. */
@@ -71,7 +71,7 @@ export function IntentArrows({
       for (const { enemyId, intent } of entries) {
         const from = card(enemyId);
         for (const [id, kind] of [
-          [intent.targetId, "hostile"],
+          [intent.targetId, intent.kind === "curse" ? "curse" : "hostile"],
           [intent.allyId, "friendly"],
         ] as const) {
           const to = id ? card(id) : undefined;
@@ -104,7 +104,7 @@ export function IntentArrows({
       data-testid="intent-arrows"
     >
       <defs>
-        {(["hostile", "friendly"] as const).map((kind) => (
+        {(["hostile", "friendly", "curse"] as const).map((kind) => (
           <marker
             key={kind}
             id={`intent-dot-${kind}`}
