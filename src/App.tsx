@@ -10,6 +10,7 @@ import { Faq } from "./Faq";
 import { UnitEffects } from "./UnitEffects";
 import { IntentArrows, type IntentEntry } from "./IntentArrows";
 import { cooldownText, describeAbility } from "./abilityText";
+import { AbilityHead } from "./AbilityCard";
 import {
   CATS,
   cooldownRemaining,
@@ -722,23 +723,7 @@ export default function App() {
                             )
                           }
                         >
-                          <span>
-                            {ability.name} · {ability.cost} AP
-                          </span>
-                          <span className="ability-tags">
-                            <span className={`ability-tag kind-${info.kind}`}>
-                              {info.kindLabel}
-                            </span>
-                            <span className="ability-tag">
-                              {info.targetLabel}
-                            </span>
-                          </span>
-                          <span className="ability-detail">{info.text}</span>
-                          {info.note && (
-                            <span className="ability-detail ability-note">
-                              {info.note}
-                            </span>
-                          )}
+                          <AbilityHead ability={ability} power={power} />
                           {preview && (
                             <span className="ability-detail damage-preview">
                               {preview.damage > 0

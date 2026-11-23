@@ -52,7 +52,19 @@ El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La
 
 La última aclaración expresa del usuario es que **solo Revive de Mei tiene cooldown de dos turnos**. No comparte cooldown con la cura de grupo ni con Healing purr. Usar Revive en el turno N lo bloquea en N+1 y N+2; vuelve en N+3. Se puede elegir un gato muerto desde su sprite o el selector. El revivido actúa desde la siguiente ronda, no gana un turno inmediato.
 
-**Ember:** Claw strike **no tiene cooldown**. Flame paw (potencia 20, 3 AP) tiene cooldown de 2 turnos: usado en N, bloqueado en N+1 y N+2, disponible en N+3. Sweeping embers conserva su cooldown de 1 turno. Cada ataque tiene su propio cooldown, y otro ataque listo sigue siendo utilizable. Flame paw debe rendir más daño por AP que repetir Claw strike (prueba en `game.test.ts`). Los cooldowns cuentan inicios de turno del propio gato y se reinician entre salas.
+**Ember:** Cinder jab **no tiene cooldown**. Flame paw (potencia 20, 3 AP) tiene cooldown de 2 turnos: usado en N, bloqueado en N+1 y N+2, disponible en N+3. Sweeping embers conserva su cooldown de 1 turno. Cada ataque tiene su propio cooldown, y otro ataque listo sigue siendo utilizable. Flame paw debe rendir más daño por AP que repetir Cinder jab (prueba en `game.test.ts`). Los cooldowns cuentan inicios de turno del propio gato y se reinician entre salas.
+
+## Nombres de habilidades (un tema por gato)
+
+| Gato  | Tema            | Habilidades                                                        |
+| ----- | --------------- | ------------------------------------------------------------------ |
+| Miso  | Caballero       | Valiant slash, Nine lives, Stand behind me                         |
+| Luna  | Luna            | Moon bolt, Moon blessing, Moonwell                                 |
+| Pip   | Pícaro          | Claw strike, Pounce, Needle strike                                 |
+| Mei   | Hierbas y hogar | Thorn swipe, Healing purr, Circle of renewal, Return to the hearth |
+| Ember | Fuego           | Cinder jab, Flame paw, Sweeping embers                             |
+
+Los ids internos (`strike`, `guard`, `slam`...) no cambian; solo los nombres visibles.
 
 ## Progresión y pasivas
 

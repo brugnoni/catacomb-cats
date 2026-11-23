@@ -108,7 +108,7 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
       .first()
       .click();
     const attack = page.getByRole("button", {
-      name: /^(Claw strike|Moon bolt)/,
+      name: /^(Claw strike|Moon bolt|Valiant slash|Thorn swipe|Cinder jab)/,
     });
     if (await attack.isEnabled()) await attack.click();
     else
@@ -289,7 +289,7 @@ test("training explains and applies its permanent health and power improvement",
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await pickTarget(page, "e0");
   await expect(
-    page.getByRole("button", { name: /^Claw strike/ }),
+    page.getByRole("button", { name: /^Valiant slash/ }),
   ).toContainText("4 damage");
 });
 
@@ -619,7 +619,7 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
   );
 });
 
-test("Ember Flame paw has a two-turn cooldown while Claw strike has none", async ({
+test("Ember Flame paw has a two-turn cooldown while Cinder jab has none", async ({
   page,
 }) => {
   await seedLegacySave(page, { catLevels: { ember: 3 } });
@@ -638,7 +638,7 @@ test("Ember Flame paw has a two-turn cooldown while Claw strike has none", async
   await expect(flame.locator(".ability-cooldown")).toContainText(
     "Ready in 3 turns",
   );
-  const claw = page.getByRole("button", { name: /^Claw strike/ });
+  const claw = page.getByRole("button", { name: /^Cinder jab/ });
   await expect(claw).toBeEnabled();
   await expect(claw.locator(".ability-cooldown")).toHaveCount(0);
   await page.getByRole("button", { name: "End turn", exact: true }).click();
@@ -694,6 +694,7 @@ test("the field guide exposes all eight training ranks for every companion", asy
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "FAQ", exact: true }).click();
+  await page.getByRole("tab", { name: /Companions/ }).click();
   for (const name of ["Miso", "Luna", "Mei", "Pip", "Ember"]) {
     const track = page.getByRole("list", {
       name: `${name} training ranks`,
@@ -938,4 +939,41 @@ test("Expedition Strength is shown in the header under the room name", async ({
     "Expedition Strength +0 (+0 damage to all cats)",
   );
   await expect(page.locator(".expedition-effects")).toHaveCount(0);
+});
+
+test("the field guide has two sections and shows skills as cards", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "FAQ", exact: true }).click();
+  const faqTab = page.getByRole("tab", { name: /Frequently Asked Questions/ });
+  const companionsTab = page.getByRole("tab", { name: /Companions/ });
+  await expect(faqTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".faq-entries details").first()).toBeVisible();
+  await expect(page.locator(".guide-companions")).toHaveCount(0);
+  await companionsTab.click();
+  await expect(companionsTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".faq-entries")).toHaveCount(0);
+  const skills = (cat: string) =>
+    page.getByRole("list", { name: `${cat} skills`, exact: true });
+  await expect(skills("Miso").getByRole("listitem")).toHaveCount(3);
+  await expect(skills("Mei").getByRole("listitem")).toHaveCount(4);
+  await expect(skills("Ember").getByRole("listitem")).toHaveCount(3);
+  await expect(skills("Miso")).toContainText("Valiant slash");
+  await expect(skills("Mei")).toContainText("Thorn swipe");
+  await expect(skills("Ember")).toContainText("Cinder jab");
+  await expect(skills("Ember")).toContainText("Cooldown: 2 turns");
+  await expect(skills("Pip")).toContainText("Claw strike");
+  await expect(skills("Mei").getByRole("listitem").nth(3)).toContainText(
+    "Revive a fallen ally",
+  );
+  const basics = await page
+    .locator(".skill-cards")
+    .evaluateAll((lists) =>
+      lists.map((list) => list.querySelector("li span")!.textContent),
+    );
+  // Every companion's basic attack has its own name.
+  expect(new Set(basics).size).toBe(5);
+  await faqTab.click();
+  await expect(page.locator(".faq-entries details").first()).toBeVisible();
 });

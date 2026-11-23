@@ -80,7 +80,9 @@ select {
   border-radius: 0;
 }
 .app {
-  max-width: 1560px;
+  /* A centered, slightly scaled-down page, like a 90% browser zoom. */
+  zoom: 0.9;
+  max-width: 1360px;
   margin: auto;
   padding: 0 36px 24px;
 }
@@ -1579,4 +1581,61 @@ hr {
 .expedition-strength {
   color: #f0d58a;
   font-weight: 400;
+}
+
+/* Field guide: two sections and skill cards */
+.guide-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 18px 0 16px;
+  flex-wrap: wrap;
+}
+.guide-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex: 1 1 260px;
+  font-size: 20px;
+  padding: 10px 16px;
+}
+.guide-tab.active {
+  color: #1b1405;
+  background: var(--gold);
+  border-color: #b98f3f;
+}
+.skills-heading {
+  margin: 16px 0 8px;
+  font: inherit;
+  font-size: 20px;
+  color: #d7d8c9;
+}
+.skill-cards {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 26px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+}
+.ability-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 12px;
+  color: #d9d1ba;
+  background: #293039;
+  border: 2px solid #69615b;
+  border-bottom: 4px solid #0b1018;
+  border-right: 4px solid #0b1018;
+  box-shadow: inset 2px 2px #ffffff12;
+}
+.ability-card .ability-detail {
+  max-width: none;
+}
+.ability-unlock {
+  margin-top: 4px;
+  font-size: 14px;
+  color: #cdb7ef;
 }

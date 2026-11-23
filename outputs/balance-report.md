@@ -18,7 +18,7 @@ Shared mastery grants one level per 150 banked XP: +2 HP per level and +1 native
 
 ## Active skills, cooldowns and shields
 
-Mei's rank-three special offers party healing or a 60%-HP single-target revival. Only revival has a cooldown: when used at turn T, revival is unavailable at T+1 and T+2 and returns at T+3. Party healing, her regular single-target heal and her basic attack are not placed on that cooldown; they remain limited by AP and per-turn uses. Every Ember attack, including Claw strike, has its own cooldown: it skips his following own turn and becomes available on the next. Rejected actions spend no AP, use counts or cooldowns. Cooldowns reset on room entry.
+Mei's rank-three special offers party healing or a 60%-HP single-target revival. Only revival has a cooldown: when used at turn T, revival is unavailable at T+1 and T+2 and returns at T+3. Party healing, her regular single-target heal and her basic attack are not placed on that cooldown; they remain limited by AP and per-turn uses. Ember's Cinder jab has no cooldown, Flame paw has a two-turn cooldown, and Sweeping embers a one-turn cooldown; each becomes available on the next. Rejected actions spend no AP, use counts or cooldowns. Cooldowns reset on room entry.
 
 Guard and Inspired cannot stack. A full-duration effect blocks a redundant player cast; once its affected unit's turn starts reduce its duration, it can be refreshed. Guard now restores full current shield power and duration. Inspired only restores duration, preserving current potency. Ice Ward and reactive recovery have finite charges per room and cannot be replenished by Guard refresh. Reactive recovery requires actual HP damage and does not trigger on lethal blows or reflected damage.
 

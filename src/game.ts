@@ -54,7 +54,7 @@ export const CATS: Cat[] = [
     hp: 35,
     initiative: 12,
     abilities: [
-      strike,
+      { ...strike, name: "Valiant slash" },
       {
         id: "guard",
         name: "Nine lives",
@@ -104,7 +104,7 @@ export const CATS: Cat[] = [
     hp: 29,
     initiative: 10,
     abilities: [
-      strike,
+      { ...strike, name: "Thorn swipe" },
       {
         id: "heal",
         name: "Healing purr",
@@ -123,7 +123,7 @@ export const CATS: Cat[] = [
     hp: 32,
     initiative: 8,
     abilities: [
-      { ...strike, power: 5 },
+      { ...strike, name: "Cinder jab", power: 5 },
       {
         id: "slam",
         name: "Flame paw",

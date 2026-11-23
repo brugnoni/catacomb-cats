@@ -773,7 +773,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r = nextRoom(clear(r));
     expect(r.party.find((c) => c.id === "clover")!.cooldowns).toEqual({});
   });
-  it("Ember Claw strike never has a cooldown and Flame paw waits two own turns", () => {
+  it("Ember Cinder jab never has a cooldown and Flame paw waits two own turns", () => {
     let r = trained("ember");
     r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
     const claw = r.party[0]!.abilities[0]!;
@@ -817,7 +817,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r = onlyOwnTurns(r, "ember");
     expect(abilityUnavailableReason(r, cleave)).toBeUndefined();
   });
-  it("Flame paw out-damages spamming Claw strike for the same AP", () => {
+  it("Flame paw out-damages spamming Cinder jab for the same AP", () => {
     const flame = CATS.find((c) => c.id === "ember")!.abilities;
     const claw = flame[0]!;
     const slam = flame[1]!;
@@ -1093,7 +1093,7 @@ describe("Hearth blessing in combat", () => {
 });
 
 describe("automatic pass when no skill is usable", () => {
-  it("passes Ember's turn after three Claw strikes leave 1 AP and nothing else fits", () => {
+  it("passes Ember's turn after three Cinder jabs leave 1 AP and nothing else fits", () => {
     let r = trained("ember");
     r.enemies.forEach((e) => (e.hp = e.maxHp = 200));
     r.ap = 4;

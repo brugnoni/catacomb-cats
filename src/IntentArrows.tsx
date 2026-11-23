@@ -44,24 +44,26 @@ export function IntentArrows({
     }
     const measure = () => {
       const box = container.getBoundingClientRect();
+      // CSS zoom on an ancestor scales rects but not the svg's own units.
+      const scale = box.width / container.offsetWidth || 1;
       // The absolutely positioned svg starts inside the container's border.
-      const originX = box.left + container.clientLeft;
-      const originY = box.top + container.clientTop;
+      const originX = box.left + container.clientLeft * scale;
+      const originY = box.top + container.clientTop * scale;
       const card = (id: string) => {
         const rect = container
           .querySelector(`[data-unit="${id}"]`)
           ?.getBoundingClientRect();
         return rect
           ? {
-              x: rect.left + rect.width / 2 - originX,
-              bottom: rect.bottom - originY,
+              x: (rect.left + rect.width / 2 - originX) / scale,
+              bottom: (rect.bottom - originY) / scale,
             }
           : undefined;
       };
       const floor = Math.max(
         0,
         ...[...container.querySelectorAll("[data-unit]")].map(
-          (el) => el.getBoundingClientRect().bottom - originY,
+          (el) => (el.getBoundingClientRect().bottom - originY) / scale,
         ),
       );
       const next: Line[] = [];
@@ -82,7 +84,7 @@ export function IntentArrows({
           });
         }
       }
-      setSize({ width: box.width, height: box.height });
+      setSize({ width: box.width / scale, height: box.height / scale });
       setLines(next);
     };
     measure();

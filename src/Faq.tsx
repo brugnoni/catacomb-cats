@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { AbilityHead } from "./AbilityCard";
+import { cooldownText, plural } from "./abilityText";
 import {
   CATS,
   SIGNATURE_ABILITIES,
@@ -12,30 +15,6 @@ import {
   trainingTrack,
   trainingCost,
 } from "./progression";
-function describeSkill(a: Ability): string {
-  switch (a.effect) {
-    case "heal":
-      return `Restore up to ${a.power} HP to a living ally.`;
-    case "heal-all":
-      return `Restore up to ${a.power} HP to every living ally. No multi-turn cooldown.`;
-    case "revive":
-      return "Revive one fallen ally at 60% maximum HP. Only revival has a two-turn cooldown.";
-    case "guard":
-      return `Apply a ${a.power}-point shield. Eligible refreshes restore its full strength and duration.`;
-    case "fury":
-      return `Grant Inspired +${a.power} power to damage, healing and shields for three target turn starts.`;
-    case "taunt":
-      return "Draw enemy attacks until Miso’s next turn begins.";
-    case "ap":
-      return "Add 2 current and maximum shared AP for this room. Costs 1 AP; once per room.";
-    case "pierce":
-      return `Deal ${a.power} power to one enemy, ignoring armor but not shields.`;
-    case "cleave":
-      return `Deal ${a.power} power to every living enemy.`;
-    default:
-      return `Deal ${a.power} power to one enemy.`;
-  }
-}
 const entries = [
   [
     "How do turns and AP work?",
@@ -79,7 +58,7 @@ const entries = [
   ],
   [
     "How do Mei and Ember cooldowns work?",
-    "Only Mei’s revival has a two-turn cooldown: revive on turn N, revival is unavailable on N+1 and N+2, and ready on N+3. Her rank-3 party heal and regular single-target heal have no multi-turn cooldown and remain available subject to AP and per-turn use limits. Using them does not change revival’s cooldown. Ember’s Claw strike has no cooldown. Flame paw has a two-turn cooldown: use it on turn N, it is unavailable on N+1 and N+2, and ready on N+3. Sweeping embers keeps a one-turn cooldown. Each attack has its own cooldown, so another ready attack can still be used. Cooldowns count only that cat’s turn starts, never other characters’ End turn clicks, and reset when entering a new room. Invalid casts do not start cooldowns or spend AP.",
+    "Only Mei’s revival has a two-turn cooldown: revive on turn N, revival is unavailable on N+1 and N+2, and ready on N+3. Her rank-3 party heal and regular single-target heal have no multi-turn cooldown and remain available subject to AP and per-turn use limits. Using them does not change revival’s cooldown. Ember’s Cinder jab has no cooldown. Flame paw has a two-turn cooldown: use it on turn N, it is unavailable on N+1 and N+2, and ready on N+3. Sweeping embers keeps a one-turn cooldown. Each attack has its own cooldown, so another ready attack can still be used. Cooldowns count only that cat’s turn starts, never other characters’ End turn clicks, and reset when entering a new room. Invalid casts do not start cooldowns or spend AP.",
   ],
   [
     "What do the new rank passives do?",
@@ -134,7 +113,30 @@ const entries = [
     "Existing gold, XP, training ranks, Hearth ranks and equipment are kept. Their effects follow the new class and balance rules. Old boss-clear history and upgrade spending are migrated where they can be inferred; older saves did not record every historical purchase exactly. Progress stays in this browser; active expeditions still are not saved.",
   ],
 ];
+type GuideTab = "faq" | "companions";
+function skillsOf(catId: string): { ability: Ability; unlock?: string }[] {
+  const cat = CATS.find((c) => c.id === catId)!;
+  return [
+    ...cat.abilities.map((ability) => ({ ability })),
+    { ability: SIGNATURE_ABILITIES[catId]!, unlock: "Unlocks at rank 3" },
+    ...(catId === "clover"
+      ? [{ ability: REVIVE_ABILITY, unlock: "Unlocks at rank 3" }]
+      : []),
+  ];
+}
+function usageText(ability: Ability): string {
+  if (ability.roomLimit) return `${plural(ability.roomLimit, "use")} per room`;
+  const limit = abilityLimit(ability);
+  return Number.isFinite(limit)
+    ? `Up to ${plural(limit, "use")} per turn`
+    : "Limited by shared AP";
+}
 export function Faq({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<GuideTab>("faq");
+  const tabs: { id: GuideTab; label: string }[] = [
+    { id: "faq", label: "Frequently Asked Questions" },
+    { id: "companions", label: "Companions" },
+  ];
   return (
     <main className="field-guide">
       <header className="guide-heading">
@@ -145,56 +147,89 @@ export function Faq({ onClose }: { onClose: () => void }) {
         </div>
         <button onClick={onClose}>Back to game</button>
       </header>
-      <section aria-label="Frequently asked questions" className="faq-entries">
-        {entries.map(([question, answer]) => (
-          <details key={question}>
-            <summary>{question}</summary>
-            <p>{answer}</p>
-          </details>
+      <div
+        className="guide-tabs"
+        role="tablist"
+        aria-label="Field guide sections"
+      >
+        {tabs.map(({ id, label }) => (
+          <button
+            key={id}
+            role="tab"
+            id={`guide-tab-${id}`}
+            aria-selected={tab === id}
+            aria-controls={`guide-panel-${id}`}
+            className={tab === id ? "guide-tab active" : "guide-tab"}
+            onClick={() => setTab(id)}
+          >
+            {label}
+            <span aria-hidden="true">{tab === id ? "▾" : "▸"}</span>
+          </button>
         ))}
-      </section>
-      <section className="guide-companions">
-        <h2>Companion training & skills</h2>
-        {CATS.map((cat) => (
-          <article key={cat.id}>
-            <h3>
-              {cat.name} · {cat.role}
-            </h3>
-            <ol
-              className="rank-track"
-              aria-label={`${cat.name} training ranks`}
-            >
-              {trainingTrack(cat.id).map((row) => (
-                <li key={row.rank}>
-                  <strong>Rank {row.rank}</strong>
-                  <h4>{row.title}</h4>
-                  <p>{row.description}</p>
-                  <span className="rank-cost">
-                    {trainingCost(row.rank - 1)} gold · permanent training
-                  </span>
-                </li>
-              ))}
-            </ol>
-            {[
-              ...cat.abilities,
-              SIGNATURE_ABILITIES[cat.id]!,
-              ...(cat.id === "clover" ? [REVIVE_ABILITY] : []),
-            ].map((a) => (
-              <p key={a.id}>
-                <strong>{a.name}</strong> · {a.cost} AP. {describeSkill(a)}{" "}
-                {a.cooldownTurns
-                  ? `After use, skip the next ${a.cooldownTurns} own turn${a.cooldownTurns === 1 ? "" : "s"} before reuse. `
-                  : ""}
-                {a.roomLimit
-                  ? `${a.roomLimit} use per room. `
-                  : Number.isFinite(abilityLimit(a))
-                    ? `Up to ${abilityLimit(a)} uses per turn when ready.`
-                    : "Limited by shared AP."}
-              </p>
-            ))}
-          </article>
-        ))}
-      </section>
+      </div>
+      {tab === "faq" && (
+        <section
+          role="tabpanel"
+          id="guide-panel-faq"
+          aria-labelledby="guide-tab-faq"
+          aria-label="Frequently asked questions"
+          className="faq-entries"
+        >
+          {entries.map(([question, answer]) => (
+            <details key={question}>
+              <summary>{question}</summary>
+              <p>{answer}</p>
+            </details>
+          ))}
+        </section>
+      )}
+      {tab === "companions" && (
+        <section
+          role="tabpanel"
+          id="guide-panel-companions"
+          aria-labelledby="guide-tab-companions"
+          className="guide-companions"
+        >
+          <h2>Companion training & skills</h2>
+          {CATS.map((cat) => (
+            <article key={cat.id}>
+              <h3>
+                {cat.name} · {cat.role}
+              </h3>
+              <ol
+                className="rank-track"
+                aria-label={`${cat.name} training ranks`}
+              >
+                {trainingTrack(cat.id).map((row) => (
+                  <li key={row.rank}>
+                    <strong>Rank {row.rank}</strong>
+                    <h4>{row.title}</h4>
+                    <p>{row.description}</p>
+                    <span className="rank-cost">
+                      {trainingCost(row.rank - 1)} gold · permanent training
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <h4 className="skills-heading">Skills</h4>
+              <ul className="skill-cards" aria-label={`${cat.name} skills`}>
+                {skillsOf(cat.id).map(({ ability, unlock }) => (
+                  <li className="ability-card" key={ability.id}>
+                    <AbilityHead ability={ability} power={ability.power} />
+                    {unlock && <span className="ability-unlock">{unlock}</span>}
+                    {ability.cooldownTurns ? (
+                      <span className="ability-cooldown">
+                        {cooldownText(ability.cooldownTurns, 0)}
+                      </span>
+                    ) : null}
+                    <span className="ability-usage">{usageText(ability)}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </section>
+      )}
     </main>
   );
 }
