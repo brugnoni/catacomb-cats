@@ -7,6 +7,8 @@ test.beforeEach(async ({ page }) => {
   // English by default so the game starts without the language screen.
   await page.addInitScript(() => {
     localStorage.setItem("catacomb-cats.lang", "en");
+    // The tutorial question has its own tests (tests/tutorial.spec.ts).
+    localStorage.setItem("catacomb-cats.tutorial", "skipped");
   });
   await page.addInitScript(() => {
     const w = window as unknown as {

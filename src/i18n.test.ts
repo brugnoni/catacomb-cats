@@ -28,6 +28,7 @@ import {
   nextHearthDescription,
   nextTrainingDescription,
 } from "./progression";
+import { TUTORIAL_STEPS } from "./tutorialSteps";
 import {
   ROOM_NAMES,
   ROOM_PATH,
@@ -86,6 +87,7 @@ const placeholders = (text: string) =>
 /** Terms that are the same in both languages. */
 const SAME = new Set([
   "FAQ",
+  "Tutorial",
   "XP",
   "Miso",
   "Luna",
@@ -127,6 +129,10 @@ describe("Spanish dictionary", () => {
       wanted.add(`{n} ${word}s`);
     }
     for (const [, template] of RULES) wanted.add(template);
+    for (const step of TUTORIAL_STEPS) {
+      wanted.add(step.title);
+      wanted.add(step.body);
+    }
     expect([...wanted].filter((key) => !(key in ES))).toEqual([]);
   });
   it("covers every enemy that can appear in an expedition", () => {
