@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import type { Unit } from "./game";
-import { plural } from "./abilityText";
+import { plural, useT } from "./i18n";
 type EffectKind =
   | "armor"
   | "guard"
@@ -87,6 +87,7 @@ export function UnitEffects({
   taunting?: boolean;
   units?: Unit[];
 }) {
+  const { t } = useT();
   const effects: {
     kind: EffectKind;
     label: string;
@@ -97,69 +98,101 @@ export function UnitEffects({
   if (unit.armor > 0)
     effects.push({
       kind: "armor",
-      label: "Armor",
+      label: t("Armor"),
       value: String(unit.armor),
-      description: `Reduces each hit by ${unit.armor}. Armor-piercing attacks ignore it.`,
+      description: t(
+        "Reduces each hit by {n}. Armor-piercing attacks ignore it.",
+        { n: unit.armor },
+      ),
     });
   if (unit.guard > 0)
     effects.push({
       kind: "guard",
-      label: "Guard",
+      label: t("Guard"),
       value: String(unit.guard),
-      description: `Absorbs ${unit.guard} more damage. Lasts ${plural(unit.guardTurns, "turn")}.`,
+      description: t("Absorbs {n} more damage. Lasts {turns}.", {
+        n: unit.guard,
+        turns: plural(t, unit.guardTurns, "turn"),
+      }),
     });
   if (unit.fury > 0)
     effects.push({
       kind: "inspired",
-      label: "Inspired",
+      label: t("Inspired"),
       value: `+${unit.fury}`,
-      description: `+${unit.fury} to damage, healing and shields. Lasts ${plural(unit.furyTurns, "turn")}.`,
+      description: t("+{n} to damage, healing and shields. Lasts {turns}.", {
+        n: unit.fury,
+        turns: plural(t, unit.furyTurns, "turn"),
+      }),
     });
   if (unit.curse > 0)
     effects.push({
       kind: "curse",
-      label: "Curse",
+      label: t("Curse"),
       value: `−${unit.curse}`,
-      description: `Damage, healing and shields are ${unit.curse} lower. Lasts ${plural(unit.curseTurns, "turn")}.`,
+      description: t(
+        "Damage, healing and shields are {n} lower. Lasts {turns}.",
+        { n: unit.curse, turns: plural(t, unit.curseTurns, "turn") },
+      ),
     });
   if (unit.reflect > 0)
     effects.push({
       kind: "reflect",
-      label: "Reflect",
+      label: t("Reflect"),
       value: String(unit.reflect),
-      description: `Sends ${unit.reflect} damage back to whoever hurts this unit. Lasts ${plural(unit.reflectTurns, "turn")}.`,
+      description: t(
+        "Sends {n} damage back to whoever hurts this unit. Lasts {turns}.",
+        { n: unit.reflect, turns: plural(t, unit.reflectTurns, "turn") },
+      ),
     });
   if (unit.iceCharges > 0)
     effects.push({
       kind: "ice",
-      label: "Ice Ward",
+      label: t("Ice Ward"),
       value: String(unit.iceCharges),
-      description: `Reduces the next ${plural(unit.iceCharges, "hit")} by ${unit.iceArmor}.`,
+      description: t("Reduces the next {hits} by {n}.", {
+        hits: plural(t, unit.iceCharges, "hit"),
+        n: unit.iceArmor,
+      }),
     });
   if (unit.reactiveHealCharges > 0)
     effects.push({
       kind: "recovery",
-      label: "Healing response",
+      label: t("Healing response"),
       value: String(unit.reactiveHealCharges),
-      description: `Recovers ${unit.reactiveHeal} HP when ${unit.name} is hurt and survives. ${plural(unit.reactiveHealCharges, "use")} left this room.`,
+      description: t(
+        "Recovers {n} HP when {name} is hurt and survives. {uses} left this room.",
+        {
+          n: unit.reactiveHeal,
+          name: unit.name,
+          uses: plural(t, unit.reactiveHealCharges, "use"),
+        },
+      ),
     });
   if (unit.openingAttack > 0)
     effects.push({
       kind: "ambush",
-      label: "Ambush",
+      label: t("Ambush"),
       value: `+${unit.openingAttack}`,
-      description: `The first damaging skill this room gets +${unit.openingAttack} damage.`,
+      description: t("The first damaging skill this room gets +{n} damage.", {
+        n: unit.openingAttack,
+      }),
     });
   if (taunting)
     effects.push({
       kind: "taunt",
-      label: "Taunt",
-      value: "active",
-      description: `Enemy attacks target ${unit.name} until ${unit.name}'s next turn.`,
+      label: t("Taunt"),
+      value: t("active"),
+      description: t("Enemy attacks target {name} until {name}'s next turn.", {
+        name: unit.name,
+      }),
     });
   if (!effects.length) return null;
   return (
-    <div className="unit-effects" aria-label={`Active effects on ${unit.name}`}>
+    <div
+      className="unit-effects"
+      aria-label={t("Active effects on {name}", { name: unit.name })}
+    >
       {effects.map((effect) => (
         <Badge key={effect.kind} {...effect} />
       ))}

@@ -54,6 +54,14 @@ La última aclaración expresa del usuario es que **solo Revive de Mei tiene coo
 
 **Ember:** Cinder jab **no tiene cooldown**. Flame paw (potencia 20, 3 AP) tiene cooldown de 2 turnos: usado en N, bloqueado en N+1 y N+2, disponible en N+3. Sweeping embers conserva su cooldown de 1 turno. Cada ataque tiene su propio cooldown, y otro ataque listo sigue siendo utilizable. Flame paw debe rendir más daño por AP que repetir Cinder jab (prueba en `game.test.ts`). Los cooldowns cuentan inicios de turno del propio gato y se reinician entre salas.
 
+## Idiomas (inglés y español)
+
+- Primera visita: pantalla "Select Your Language" con el fondo de The Burrow (`src/LanguageScreen.tsx`); la elección se guarda en `localStorage` (`catacomb-cats.lang`, separada del progreso) y se puede cambiar en cualquier momento con el menú **Language/Idioma** junto a FAQ, incluso a mitad de expedición.
+- El **texto en inglés es la clave**: `t("English text", { params })` de `src/i18n.ts`. El español vive en `src/es/` (`ui.ts` interfaz, `game.ts` nombres, entrenamiento, Hearth y mensajes del motor, `faq.ts` guía). Los nombres internos (ids, enemigos, habilidades) siguen en inglés en el motor; solo se traducen al mostrarlos.
+- Los mensajes del motor (registro de combate y motivos de rechazo) se traducen en la interfaz con las reglas de `src/engineText.ts`; el motor no cambia. Si añades o cambias un mensaje del motor, añade o ajusta su regla y su traducción.
+- `src/i18n.test.ts` falla si falta una traducción (claves `t("...")` del código, nombres, entrenamiento, Hearth, reglas del motor, enemigos), si cambian los marcadores `{x}`, o si un mensaje real de partidas simuladas no tiene regla. Los E2E fijan el inglés con `localStorage`.
+- Español: PV (HP), PA (AP), Guardia, Barrera de hielo, Hogar (Hearth), Madriguera (Burrow/lobby).
+
 ## Nombres de habilidades (un tema por gato)
 
 | Gato  | Tema            | Habilidades                                                        |

@@ -773,7 +773,7 @@ export interface EnemyIntent {
   /** True when Taunt will redirect the attack away from the mark. */
   redirected?: boolean;
 }
-const INTENT_LABELS: Record<EnemyPlanKind, string> = {
+export const INTENT_LABELS: Record<EnemyPlanKind, string> = {
   attack: "Attack",
   curse: "Curse",
   heal: "Heal an ally",

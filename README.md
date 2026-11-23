@@ -56,3 +56,7 @@ The project-owned skills, hidden workflow/hook configuration, final assets, init
 ## Play online
 
 The game is deployed to GitHub Pages on every push to `main`: https://brugnoni.github.io/catacomb-cats/. Progress is stored in each visitor's own browser (`localStorage`) and is not shared between devices.
+
+## Languages
+
+The game is available in English and Spanish. The first visit asks for a language; the Language menu in the top bar changes it at any time. See docs/HANDOFF.md for how translations are organized.

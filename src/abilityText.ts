@@ -1,4 +1,5 @@
 import type { Ability } from "./game";
+import { identityT, plural, type Translate } from "./i18n";
 
 export type AbilityKind = "damage" | "heal" | "shield" | "buff" | "utility";
 export interface AbilityDescription {
@@ -12,16 +13,8 @@ export interface AbilityDescription {
   /** Optional second sentence for the one rule players must know. */
   note?: string;
 }
-const KIND_LABELS: Record<AbilityKind, string> = {
-  damage: "Damage",
-  heal: "Heal",
-  shield: "Shield",
-  buff: "Buff",
-  utility: "Utility",
-};
 export const GUARD_TURNS = 2;
 export const INSPIRED_TURNS = 3;
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 function kindOf(ability: Ability): AbilityKind {
   switch (ability.effect) {
@@ -40,79 +33,112 @@ function kindOf(ability: Ability): AbilityKind {
       return "damage";
   }
 }
-function targetOf(ability: Ability): string {
-  if (ability.effect === "heal-all") return "All allies";
-  if (ability.effect === "cleave") return "All enemies";
+function kindLabel(kind: AbilityKind, t: Translate): string {
+  switch (kind) {
+    case "damage":
+      return t("Damage");
+    case "heal":
+      return t("Heal");
+    case "shield":
+      return t("Shield");
+    case "buff":
+      return t("Buff");
+    default:
+      return t("Utility");
+  }
+}
+function targetOf(ability: Ability, t: Translate): string {
+  if (ability.effect === "heal-all") return t("All allies");
+  if (ability.effect === "cleave") return t("All enemies");
   switch (ability.target) {
     case "enemy":
-      return "1 enemy";
+      return t("1 enemy");
     case "ally":
-      return "1 ally";
+      return t("1 ally");
     case "fallen-ally":
-      return "1 fallen ally";
+      return t("1 fallen ally");
     case "all-allies":
-      return "All allies";
+      return t("All allies");
     case "all-enemies":
-      return "All enemies";
+      return t("All enemies");
     default:
-      return "Self";
+      return t("Self");
   }
 }
 function textOf(
   ability: Ability,
   power: number,
+  t: Translate,
 ): Pick<AbilityDescription, "text" | "note"> {
   switch (ability.effect) {
     case "pierce":
-      return { text: `Deal ${power} damage to 1 enemy. Ignores armor.` };
+      return {
+        text: t("Deal {power} damage to 1 enemy. Ignores armor.", { power }),
+      };
     case "cleave":
-      return { text: `Deal ${power} damage to all enemies.` };
+      return { text: t("Deal {power} damage to all enemies.", { power }) };
     case "heal":
-      return { text: `Heal 1 ally for ${power} HP.` };
+      return { text: t("Heal 1 ally for {power} HP.", { power }) };
     case "heal-all":
-      return { text: `Heal all living allies for ${power} HP each.` };
+      return {
+        text: t("Heal all living allies for {power} HP each.", { power }),
+      };
     case "revive":
       return {
-        text: "Revive a fallen ally at 60% max HP.",
-        note: "They act next round.",
+        text: t("Revive a fallen ally at 60% max HP."),
+        note: t("They act next round."),
       };
     case "guard":
       return {
-        text: `Shield 1 ally for ${power}. Lasts ${plural(GUARD_TURNS, "turn")}.`,
-        note: "Refreshing this ability restores full shield and duration (does not stack).",
+        text: t("Shield 1 ally for {power}. Lasts {turns}.", {
+          power,
+          turns: plural(t, GUARD_TURNS, "turn"),
+        }),
+        note: t(
+          "Refreshing this ability restores full shield and duration (does not stack).",
+        ),
       };
     case "fury":
       return {
-        text: `Inspire 1 ally: +${power} to damage, healing and shields. Lasts ${plural(INSPIRED_TURNS, "turn")}.`,
-        note: "Refreshing this ability restores the duration (does not stack).",
+        text: t(
+          "Inspire 1 ally: +{power} to damage, healing and shields. Lasts {turns}.",
+          { power, turns: plural(t, INSPIRED_TURNS, "turn") },
+        ),
+        note: t(
+          "Refreshing this ability restores the duration (does not stack).",
+        ),
       };
     case "taunt":
-      return { text: "Enemies attack this cat until its next turn." };
+      return { text: t("Enemies attack this cat until its next turn.") };
     case "ap":
       return {
-        text: `Gain +${power} AP now and each round in this room.`,
-        note: "Once per room.",
+        text: t("Gain +{power} AP now and each round in this room.", { power }),
+        note: t("Once per room."),
       };
     default:
-      return { text: `Deal ${power} damage to 1 enemy.` };
+      return { text: t("Deal {power} damage to 1 enemy.", { power }) };
   }
 }
 export function describeAbility(
   ability: Ability,
   power: number,
+  t: Translate = identityT,
 ): AbilityDescription {
   const kind = kindOf(ability);
   return {
     kind,
-    kindLabel: KIND_LABELS[kind],
-    targetLabel: targetOf(ability),
-    ...textOf(ability, power),
+    kindLabel: kindLabel(kind, t),
+    targetLabel: targetOf(ability, t),
+    ...textOf(ability, power, t),
   };
 }
 /** "Ready in 3 turns" while cooling down, "Cooldown: 2 turns" when ready. */
-export function cooldownText(cooldownTurns: number, remaining: number) {
+export function cooldownText(
+  cooldownTurns: number,
+  remaining: number,
+  t: Translate = identityT,
+) {
   return remaining > 0
-    ? `Ready in ${plural(remaining, "turn")}`
-    : `Cooldown: ${plural(cooldownTurns, "turn")}`;
+    ? t("Ready in {turns}", { turns: plural(t, remaining, "turn") })
+    : t("Cooldown: {turns}", { turns: plural(t, cooldownTurns, "turn") });
 }
-export { plural };

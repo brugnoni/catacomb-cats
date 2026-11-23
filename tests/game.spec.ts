@@ -4,6 +4,10 @@ const saveKey = "catacomb-cats.progress.v1";
 
 // A fixed seed keeps the random enemy marks reproducible in every test.
 test.beforeEach(async ({ page }) => {
+  // English by default so the game starts without the language screen.
+  await page.addInitScript(() => {
+    localStorage.setItem("catacomb-cats.lang", "en");
+  });
   await page.addInitScript(() => {
     (window as unknown as { __CATACOMB_SEED__: number }).__CATACOMB_SEED__ = 1;
   });
@@ -976,4 +980,101 @@ test("the field guide has two sections and shows skills as cards", async ({
   expect(new Set(basics).size).toBe(5);
   await faqTab.click();
   await expect(page.locator(".faq-entries details").first()).toBeVisible();
+});
+
+test("the first visit shows only a language screen and remembers the choice", async ({
+  page,
+}) => {
+  await page.addInitScript(() => localStorage.removeItem("catacomb-cats.lang"));
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Select Your Language" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "English" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Español" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Enter the dungeon/ }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Español" }).click();
+  await expect(
+    page.getByRole("button", { name: /Entrar en la mazmorra/ }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => localStorage.getItem("catacomb-cats.lang")),
+  ).toBe("es");
+  expect(await page.evaluate(() => document.documentElement.lang)).toBe("es");
+});
+
+test("the Language menu switches between English and Spanish at any time", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const language = page.getByLabel("Language");
+  await expect(language).toHaveValue("en");
+  await language.selectOption("es");
+  await expect(
+    page.getByRole("heading", { name: "La Madriguera" }),
+  ).toBeVisible();
+  await expect(page.getByText("Maestría de la compañía")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Entrenar a Miso/ }),
+  ).toBeVisible();
+  // Enemies, skills and the log are translated in the middle of an expedition.
+  await page.getByRole("button", { name: /Entrar en la mazmorra/ }).click();
+  await expect(page.getByRole("button", { name: /^Zarpazo/ })).toBeVisible();
+  await expect(page.locator(".difficulty-banner")).toContainText(
+    "Fuerza de expedición +0 (+0 de daño a todos los gatos)",
+  );
+  await expect(page.getByLabel("Registro de combate")).toContainText(
+    "El descenso comienza",
+  );
+  await pickTarget(page, "e0");
+  await expect(page.locator(".command-heading")).toContainText(
+    "Objetivo: Rata de cripta",
+  );
+  await page.getByRole("button", { name: /^Zarpazo/ }).click();
+  await expect(page.getByLabel("Registro de combate")).toContainText(
+    "Pip usa Zarpazo.",
+  );
+  await expect(page.getByLabel("Registro de combate")).toContainText(
+    "golpea a Rata de cripta",
+  );
+  await page.getByLabel("Idioma").selectOption("en");
+  await expect(page.getByLabel("Combat log")).toContainText(
+    "Pip uses Claw strike.",
+  );
+  await expect(page.getByLabel("Combat log")).toContainText("hits Crypt rat");
+  await page.reload();
+  await expect(page.getByLabel("Language")).toHaveValue("en");
+});
+
+test("the field guide is fully available in Spanish", async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("catacomb-cats.lang", "es"),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "FAQ", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Guía de campo" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: /Preguntas frecuentes/ }),
+  ).toBeVisible();
+  await expect(page.locator(".faq-entries summary").first()).toHaveText(
+    "¿Cómo funcionan los turnos y los PA?",
+  );
+  await page.getByRole("tab", { name: /Compañeros/ }).click();
+  const skills = page.getByRole("list", {
+    name: "Habilidades de Ember",
+    exact: true,
+  });
+  await expect(skills).toContainText("Jab de brasa");
+  await expect(skills).toContainText("Garra de fuego");
+  await expect(skills).toContainText("Enfriamiento: 2 turnos");
+  await expect(
+    page.getByRole("list", {
+      name: "Rangos de entrenamiento de Miso",
+      exact: true,
+    }),
+  ).toContainText("Patas robustas");
 });

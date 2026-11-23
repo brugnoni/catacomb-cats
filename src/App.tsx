@@ -11,6 +11,24 @@ import { UnitEffects } from "./UnitEffects";
 import { IntentArrows, type IntentEntry } from "./IntentArrows";
 import { cooldownText, describeAbility } from "./abilityText";
 import { AbilityHead } from "./AbilityCard";
+import { LanguageScreen } from "./LanguageScreen";
+import { translateEngine } from "./engineText";
+import {
+  LangContext,
+  loadLang,
+  makeT,
+  saveLang,
+  useT,
+  type Lang,
+} from "./i18n";
+import {
+  ROOM_NAMES as roomNames,
+  ROOM_PATH,
+  difficultyDescription,
+  difficultyLabel,
+  nextHearthText,
+  nextTrainingText,
+} from "./uiText";
 import {
   CATS,
   cooldownRemaining,
@@ -40,8 +58,6 @@ import {
 import {
   getDifficulty,
   masteryLevel,
-  nextTrainingDescription,
-  nextHearthDescription,
   MAX_TRAINING_RANK,
   MAX_MASTERY_LEVEL,
   XP_PER_MASTERY,
@@ -63,12 +79,25 @@ function loadProgress(): Progress {
     return initialProgress();
   }
 }
-const roomNames = [
-  "Whispering entrance",
-  "The forgotten hall",
-  "The king beneath",
-];
+
 export default function App() {
+  const [lang, setLang] = useState<Lang | null>(loadLang);
+  const pick = (next: Lang) => {
+    saveLang(next);
+    setLang(next);
+  };
+  useEffect(() => {
+    document.documentElement.lang = lang ?? "en";
+  }, [lang]);
+  if (lang === null) return <LanguageScreen onPick={pick} />;
+  return (
+    <LangContext.Provider value={{ lang, t: makeT(lang) }}>
+      <Game onLanguage={pick} />
+    </LangContext.Provider>
+  );
+}
+function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
+  const { lang, t } = useT();
   const [progress, setProgress] = useState(loadProgress);
   const [party, setParty] = useState<string[]>(
     CATS.slice(0, 3).map((cat) => cat.id),
@@ -88,7 +117,9 @@ export default function App() {
       localStorage.setItem(SAVE_KEY, JSON.stringify(next));
     } catch {
       setNotice(
-        "Your browser could not save progress. Keep this tab open to continue.",
+        t(
+          "Your browser could not save progress. Keep this tab open to continue.",
+        ),
       );
     }
   };
@@ -103,11 +134,13 @@ export default function App() {
   const leave = () => {
     if (run?.status === "victory") {
       setNotice(
-        "Expedition complete. Your treasures and experience are safely home.",
+        t(
+          "Expedition complete. Your treasures and experience are safely home.",
+        ),
       );
       storeProgress(claimRewards(progress, run));
     } else
-      setNotice("The expedition is over. Your permanent upgrades are safe.");
+      setNotice(t("The expedition is over. Your permanent upgrades are safe."));
     setRun(null);
     setTarget("");
   };
@@ -235,14 +268,29 @@ export default function App() {
           <span className="brand-mark" aria-hidden="true">
             ✣
           </span>{" "}
-          CATACOMB CATS <small>THE HOLLOW BELOW</small>
+          CATACOMB CATS <small>{t("THE HOLLOW BELOW")}</small>
         </div>
         <div className="top-meta">
           <span className="location-tag">
-            {run ? `DEPTH 0${run.room + 1}` : "CAMP / THE BURROW"}
+            {run
+              ? t("DEPTH 0{n}", { n: run.room + 1 })
+              : t("CAMP / THE BURROW")}
           </span>
-          <span className="currency">{progress.gold} gold</span>
+          <span className="currency">
+            {progress.gold} {t("gold")}
+          </span>
           <span>{progress.xp} XP</span>
+          <label className="lang-switch">
+            <span>{t("Language")}</span>
+            <select
+              aria-label={t("Language")}
+              value={lang}
+              onChange={(event) => onLanguage(event.target.value as Lang)}
+            >
+              <option value="en">English</option>
+              <option value="es">Español</option>
+            </select>
+          </label>
           <button
             className="faq-nav quiet"
             aria-expanded={showFaq}
@@ -263,16 +311,18 @@ export default function App() {
         <>
           <section
             className="burrow-scene"
-            aria-label="The Burrow, your underground camp"
+            aria-label={t("The Burrow, your underground camp")}
           >
             <div className="scene-caption">
-              <span className="eyebrow">A fire worth coming home to</span>
-              <h1>The Burrow</h1>
-              <p>Pack light. Stay together.</p>
+              <span className="eyebrow">
+                {t("A fire worth coming home to")}
+              </span>
+              <h1>{t("The Burrow")}</h1>
+              <p>{t("Pack light. Stay together.")}</p>
             </div>
             <div
               className="scene-party"
-              aria-label="Selected expedition companions"
+              aria-label={t("Selected expedition companions")}
             >
               {party.map((id) => (
                 <div className="scene-companion" key={id}>
@@ -282,11 +332,12 @@ export default function App() {
               ))}
             </div>
             <div className="expedition-gate">
-              <span className="eyebrow">EXPEDITION 01</span>
-              <h2>The Hollow Below</h2>
-              <p>3 chambers · 1 crown</p>
+              <span className="eyebrow">{t("EXPEDITION 01")}</span>
+              <h2>{t("The Hollow Below")}</h2>
+              <p>{t("3 chambers · 1 crown")}</p>
               <p className="difficulty-preview">
-                {difficulty.label} · Threat {difficulty.tier}
+                {difficultyLabel(difficulty, t)} · {t("Threat")}{" "}
+                {difficulty.tier}
               </p>
               <button
                 className="primary"
@@ -296,16 +347,21 @@ export default function App() {
                   setNotice("");
                 }}
               >
-                Enter the dungeon →
+                {t("Enter the dungeon →")}
               </button>
               <span className="gate-note">
                 {party.length === 3
-                  ? "Your party is ready."
-                  : `Choose ${3 - party.length} more companion${party.length === 2 ? "" : "s"}.`}
+                  ? t("Your party is ready.")
+                  : t(
+                      party.length === 2
+                        ? "Choose 1 more companion."
+                        : "Choose {n} more companions.",
+                      { n: 3 - party.length },
+                    )}
               </span>
             </div>
             <div className="scene-coordinate" aria-hidden="true">
-              SAFE HAVEN · NO ENEMIES DETECTED
+              {t("SAFE HAVEN · NO ENEMIES DETECTED")}
             </div>
           </section>
           <div className="camp-desk">
@@ -315,26 +371,33 @@ export default function App() {
             >
               <div className="section-heading">
                 <div>
-                  <span className="eyebrow">Prepare your expedition</span>
-                  <h2 id="companions-heading">The company</h2>
+                  <span className="eyebrow">
+                    {t("Prepare your expedition")}
+                  </span>
+                  <h2 id="companions-heading">{t("The company")}</h2>
                 </div>
                 <span className="party-count">
                   {party.length}
-                  <span> / 3 READY</span>
+                  <span> {t("/ 3 READY")}</span>
                 </span>
               </div>
               <div className="xp-summary">
                 <strong>
-                  Company mastery · Rank {masteryLevel(progress.xp)}
+                  {t("Company mastery · Rank {n}", {
+                    n: masteryLevel(progress.xp),
+                  })}
                 </strong>
                 <span>
                   {masteryLevel(progress.xp) >= MAX_MASTERY_LEVEL
-                    ? "Mastery cap reached"
-                    : `${progress.xp % XP_PER_MASTERY} / ${XP_PER_MASTERY} XP to next level`}
+                    ? t("Mastery cap reached")
+                    : t("{xp} / {max} XP to next level", {
+                        xp: progress.xp % XP_PER_MASTERY,
+                        max: XP_PER_MASTERY,
+                      })}
                 </span>
                 <progress
                   className="xp-progress"
-                  aria-label="Experience toward next level"
+                  aria-label={t("Experience toward next level")}
                   max={150}
                   value={
                     masteryLevel(progress.xp) >= MAX_MASTERY_LEVEL
@@ -343,16 +406,16 @@ export default function App() {
                   }
                 />
                 <p>
-                  Every 150 banked XP grants +2 max HP to all cats. Every third
-                  mastery level adds +1 power to attacks, healing, Guard and
-                  blessings. Mastery bonuses stop at level 10.
+                  {t(
+                    "Every 150 banked XP grants +2 max HP to all cats. Every third mastery level adds +1 power to attacks, healing, Guard and blessings. Mastery bonuses stop at level 10.",
+                  )}
                 </p>
               </div>
               <div className="roster">
                 {CATS.map((cat) => {
                   const rank = progress.catLevels[cat.id] ?? 0;
                   const unit = buildCat(progress, cat.id);
-                  const nextTraining = nextTrainingDescription(cat.id, rank);
+                  const nextTraining = nextTrainingText(cat.id, rank, t);
                   return (
                     <article
                       className={`cat-card ${party.includes(cat.id) ? "selected" : "reserve"}`}
@@ -369,24 +432,33 @@ export default function App() {
                       <div className="cat-info">
                         <div className="cat-name-line">
                           <h3>{cat.name}</h3>
-                          <span className="cat-level">RANK {rank}</span>
+                          <span className="cat-level">
+                            {t("RANK")} {rank}
+                          </span>
                         </div>
-                        <div className="role">{cat.role}</div>
+                        <div className="role">{t(cat.role)}</div>
                         <div className="stats">
                           <span>
-                            {unit.maxHp} <small>HP</small>
+                            {unit.maxHp} <small>{t("HP")}</small>
                           </span>
                           <span>
-                            {unit.initiative} <small>INIT</small>
+                            {unit.initiative} <small>{t("INIT")}</small>
                           </span>
                         </div>
                         <div
                           className="milestone-progress"
-                          aria-label={`${cat.name} skill unlock`}
+                          aria-label={t("{name} skill unlock", {
+                            name: cat.name,
+                          })}
                         >
                           {rank >= 3
-                            ? `Third skill unlocked: ${unit.abilities[2]?.name}`
-                            : `Third skill: ${rank}/3 training ranks · first 3 cost 100 gold total`}
+                            ? t("Third skill unlocked: {name}", {
+                                name: t(unit.abilities[2]?.name ?? ""),
+                              })
+                            : t(
+                                "Third skill: {rank}/3 training ranks · first 3 cost 100 gold total",
+                                { rank },
+                              )}
                         </div>
                         <div className="card-actions">
                           <button
@@ -402,13 +474,15 @@ export default function App() {
                             }
                           >
                             {party.includes(cat.id)
-                              ? "Remove from party"
-                              : "Add to party"}
+                              ? t("Remove from party")
+                              : t("Add to party")}
                           </button>
                           <label className="equipment-label">
-                            <span>TRINKET</span>
+                            <span>{t("TRINKET")}</span>
                             <select
-                              aria-label={`Equipment for ${cat.name}`}
+                              aria-label={t("Equipment for {name}", {
+                                name: cat.name,
+                              })}
                               value={progress.equipment[cat.id] ?? ""}
                               onChange={(event) =>
                                 storeProgress(
@@ -416,15 +490,15 @@ export default function App() {
                                 )
                               }
                             >
-                              <option value="">Empty slot</option>
+                              <option value="">{t("Empty slot")}</option>
                               {progress.inventory.map((item) => (
                                 <option value={item} key={item}>
-                                  {item}{" "}
+                                  {t(item)}{" "}
                                   {item === "Iron bell"
-                                    ? "(+6 HP)"
+                                    ? t("(+6 HP)")
                                     : item === "Silk ribbon"
-                                      ? "(+3 INIT)"
-                                      : "(+1 ATK)"}
+                                      ? t("(+3 INIT)")
+                                      : t("(+1 ATK)")}
                                 </option>
                               ))}
                             </select>
@@ -440,7 +514,10 @@ export default function App() {
                             className="train-button quiet"
                             onClick={() => {
                               setNotice(
-                                `${cat.name} trained. ${nextTraining} Ready for the next expedition.`,
+                                t(
+                                  "{name} trained. {next} Ready for the next expedition.",
+                                  { name: cat.name, next: nextTraining },
+                                ),
                               );
                               storeProgress(buyUpgrade(progress, cat.id));
                             }}
@@ -449,8 +526,10 @@ export default function App() {
                               progress.gold < upgradeCost(progress, cat.id)
                             }
                           >
-                            Train {cat.name} · {upgradeCost(progress, cat.id)}{" "}
-                            gold
+                            {t("Train {name} · {cost} gold", {
+                              name: cat.name,
+                              cost: upgradeCost(progress, cat.id),
+                            })}
                           </button>
                         </div>
                       </div>
@@ -460,32 +539,40 @@ export default function App() {
               </div>
             </section>
             <aside className="camp-upgrades">
-              <span className="eyebrow">At the hearth</span>
-              <h2>Leave a light on.</h2>
+              <span className="eyebrow">{t("At the hearth")}</span>
+              <h2>{t("Leave a light on.")}</h2>
               <div className="hearth-symbol" aria-hidden="true">
                 ♜
               </div>
               <p className="blessing-rank">
-                Hearth blessing · Rank {progress.generalLevel}
+                {t("Hearth blessing · Rank {n}", { n: progress.generalLevel })}
               </p>
               <p className="hearth-next">
-                {nextHearthDescription(progress.generalLevel)}
+                {nextHearthText(progress.generalLevel, t)}
               </p>
               <div
                 className="difficulty-details"
-                aria-label="Expedition difficulty"
+                aria-label={t("Expedition difficulty")}
               >
                 <h3>
-                  {difficulty.label} · Threat {difficulty.tier}
+                  {difficultyLabel(difficulty, t)} · {t("Threat")}{" "}
+                  {difficulty.tier}
                 </h3>
-                <p>{difficulty.description}</p>
+                <p>{difficultyDescription(difficulty, t)}</p>
                 <p>
-                  {progress.wins} victories · {progress.spentGold} gold invested
-                  · Mastery {masteryLevel(progress.xp)}
+                  {t(
+                    "{wins} victories · {gold} gold invested · Mastery {level}",
+                    {
+                      wins: progress.wins,
+                      gold: progress.spentGold,
+                      level: masteryLevel(progress.xp),
+                    },
+                  )}
                 </p>
                 <p>
-                  Difficulty is fixed when you enter. Future victories and
-                  permanent investment strengthen the next expedition.
+                  {t(
+                    "Difficulty is fixed when you enter. Future victories and permanent investment strengthen the next expedition.",
+                  )}
                 </p>
               </div>
               <button
@@ -495,12 +582,14 @@ export default function App() {
                   progress.gold < upgradeCost(progress)
                 }
               >
-                Improve blessing · {upgradeCost(progress)} gold
+                {t("Improve blessing · {cost} gold", {
+                  cost: upgradeCost(progress),
+                })}
               </button>
               <div className="camp-rule">
-                Upgrades stay.
+                {t("Upgrades stay.")}
                 <br />
-                Dungeon spoils must make it home.
+                {t("Dungeon spoils must make it home.")}
               </div>
             </aside>
           </div>
@@ -510,38 +599,38 @@ export default function App() {
           <header className="battle-header">
             <div>
               <span className="eyebrow">
-                THE HOLLOW BELOW / CHAMBER 0{run.room + 1}
+                {t("THE HOLLOW BELOW / CHAMBER 0{n}", { n: run.room + 1 })}
               </span>
-              <h1>{roomNames[run.room]}</h1>
+              <h1>{t(roomNames[run.room]!)}</h1>
             </div>
           </header>
           <div
             className="difficulty-banner"
-            aria-label="Active expedition difficulty"
+            aria-label={t("Active expedition difficulty")}
           >
-            {run.difficulty.label} · Threat {run.difficulty.tier} · Fixed for
-            this expedition ·{" "}
+            {difficultyLabel(run.difficulty, t)} · {t("Threat")}{" "}
+            {run.difficulty.tier} · {t("Fixed for this expedition")} ·{" "}
             <strong className="expedition-strength">
-              Expedition Strength +{run.bonus} (+{run.bonus} damage to all cats)
+              {t("Expedition Strength +{n} (+{n} damage to all cats)", {
+                n: run.bonus,
+              })}
             </strong>
           </div>
-          <nav className="room-path" aria-label="Expedition progress">
-            {["Entrance", "Forgotten hall", "Boss chamber"].map(
-              (room, index) => (
-                <span
-                  key={room}
-                  className={
-                    index === run.room
-                      ? "current"
-                      : index < run.room
-                        ? "cleared"
-                        : ""
-                  }
-                >
-                  {index < run.room ? "×" : `0${index + 1}`} {room}
-                </span>
-              ),
-            )}
+          <nav className="room-path" aria-label={t("Expedition progress")}>
+            {ROOM_PATH.map((room, index) => (
+              <span
+                key={room}
+                className={
+                  index === run.room
+                    ? "current"
+                    : index < run.room
+                      ? "cleared"
+                      : ""
+                }
+              >
+                {index < run.room ? "×" : `0${index + 1}`} {t(room)}
+              </span>
+            ))}
           </nav>
           <div className="battle-layout">
             <main>
@@ -562,21 +651,21 @@ export default function App() {
                       />
                       <button
                         className="unit-target"
-                        aria-label={`Target ${unit.name}`}
+                        aria-label={t("Target {name}", { name: t(unit.name) })}
                         aria-pressed={target === unit.id}
                         onClick={() => setTarget(unit.id)}
                         disabled={unit.hp <= 0 && !canSelectFallen}
                       >
                         <Sprite id={unit.id} />
                       </button>
-                      <h3>{unit.name}</h3>
+                      <h3>{t(unit.name)}</h3>
                       <div className="health">
                         <span
                           style={{ width: `${(unit.hp / unit.maxHp) * 100}%` }}
                         />
                       </div>
                       <span className="health-value">
-                        {unit.hp} / {unit.maxHp} HP
+                        {unit.hp} / {unit.maxHp} {t("HP")}
                       </span>
                     </article>
                   ))}
@@ -597,21 +686,21 @@ export default function App() {
                       />
                       <button
                         className="unit-target"
-                        aria-label={`Target ${unit.name}`}
+                        aria-label={t("Target {name}", { name: t(unit.name) })}
                         aria-pressed={target === unit.id}
                         onClick={() => setTarget(unit.id)}
                         disabled={unit.hp <= 0}
                       >
                         <Sprite id={unit.name} />
                       </button>
-                      <h3>{unit.name}</h3>
+                      <h3>{t(unit.name)}</h3>
                       <div className="health">
                         <span
                           style={{ width: `${(unit.hp / unit.maxHp) * 100}%` }}
                         />
                       </div>
                       <span className="health-value">
-                        {unit.hp} / {unit.maxHp} HP
+                        {unit.hp} / {unit.maxHp} {t("HP")}
                       </span>
                     </article>
                   ))}
@@ -622,50 +711,55 @@ export default function App() {
                   version={run.eventId}
                 />
               </div>
-              <div className="initiative" aria-label="Initiative order">
-                <span className="queue-label">TURN ORDER</span>
+              <div className="initiative" aria-label={t("Initiative order")}>
+                <span className="queue-label">{t("TURN ORDER")}</span>
                 {run.order.map((id) => (
                   <span
                     className={`${id === currentId ? "current" : ""} ${units.find((unit) => unit.id === id)?.hp === 0 ? "fallen" : ""}`}
                     key={id}
                   >
-                    {units.find((unit) => unit.id === id)?.name ?? id}
+                    {t(units.find((unit) => unit.id === id)?.name ?? id)}
                   </span>
                 ))}
               </div>
               {run.status === "combat" && (
                 <section className="command-deck">
                   <div className="command-heading">
-                    <span className="eyebrow">YOUR MOVE</span>
-                    <h2>{current?.name ?? "Enemy"}</h2>
+                    <span className="eyebrow">{t("YOUR MOVE")}</span>
+                    <h2>{current?.name ?? t("Enemy")}</h2>
                     <p>
                       {canSelectFallen
-                        ? "Heal your team or select a fallen ally to revive."
+                        ? t("Heal your team or select a fallen ally to revive.")
                         : targetUnit
-                          ? `Target: ${targetUnit.name}`
-                          : "Click a character to target, then pick an action."}
+                          ? t("Target: {name}", { name: t(targetUnit.name) })
+                          : t(
+                              "Click a character to target, then pick an action.",
+                            )}
                     </p>
                     {noteEnemy && noteIntent && (
                       <p className="intent-note" data-testid="intent-note">
-                        {noteEnemy.name} next turn:{" "}
-                        <strong>{noteIntent.label}</strong>
+                        {t("{name} next turn:", { name: t(noteEnemy.name) })}{" "}
+                        <strong>{t(noteIntent.label)}</strong>
                         {noteIntent.targetId &&
-                          ` → ${run.party.find((u) => u.id === noteIntent.targetId)?.name}${noteIntent.redirected ? " (Taunt)" : ""}`}
+                          ` → ${run.party.find((u) => u.id === noteIntent.targetId)?.name}${noteIntent.redirected ? ` (${t("Taunt")})` : ""}`}
                         {noteIntent.allyId &&
-                          ` → ${run.enemies.find((u) => u.id === noteIntent.allyId)?.name}`}
+                          ` → ${t(run.enemies.find((u) => u.id === noteIntent.allyId)?.name ?? "")}`}
                         {!noteIntent.targetId &&
                           !noteIntent.allyId &&
                           noteIntent.kind === "attack" &&
-                          " → a new random cat"}
+                          ` → ${t("a new random cat")}`}
                       </p>
                     )}
                   </div>
                   <div className="actions">
-                    <div className="round-counter" aria-label="Shared AP">
-                      <span>ROUND {run.round}</span>
+                    <div className="round-counter" aria-label={t("Shared AP")}>
+                      <span>{t("ROUND {n}", { n: run.round })}</span>
                       <strong>
                         {run.ap}
-                        <small> / {run.maxAp} AP</small>
+                        <small>
+                          {" "}
+                          / {run.maxAp} {t("AP")}
+                        </small>
                       </strong>
                       <span className="ap-pips" aria-hidden="true">
                         {Array.from(
@@ -706,14 +800,16 @@ export default function App() {
                         previewEnemy && ability.target === "enemy"
                           ? damagePreview(run, current, ability, previewEnemy)
                           : undefined;
-                      const info = describeAbility(ability, power);
+                      const info = describeAbility(ability, power, t);
                       const usageLabel = ability.roomLimit
-                        ? "this room"
-                        : "this turn";
+                        ? t("this room")
+                        : t("this turn");
                       return (
                         <button
                           data-testid="ability"
-                          title={reason ?? info.text}
+                          title={
+                            reason ? translateEngine(t, reason) : info.text
+                          }
                           key={ability.id}
                           disabled={Boolean(reason)}
                           onClick={() =>
@@ -727,29 +823,36 @@ export default function App() {
                           {preview && (
                             <span className="ability-detail damage-preview">
                               {preview.damage > 0
-                                ? `Deals ${preview.damage} · ${preview.remainingHp} HP left`
-                                : "Deals 0 damage"}
+                                ? t("Deals {n} · {left} HP left", {
+                                    n: preview.damage,
+                                    left: preview.remainingHp,
+                                  })
+                                : t("Deals 0 damage")}
                               {preview.armor +
                                 preview.blocked +
                                 preview.iceBlocked >
                                 0 &&
-                                ` (${preview.armor + preview.blocked + preview.iceBlocked} blocked)`}
+                                ` (${t("{n} blocked", { n: preview.armor + preview.blocked + preview.iceBlocked })})`}
                             </span>
                           )}
                           {reason && (target || cooldown > 0) && (
                             <span className="ability-detail ability-blocked">
-                              {reason}
+                              {translateEngine(t, reason)}
                             </span>
                           )}
                           {ability.cooldownTurns ? (
                             <span className="ability-cooldown">
-                              {cooldownText(ability.cooldownTurns, cooldown)}
+                              {cooldownText(ability.cooldownTurns, cooldown, t)}
                             </span>
                           ) : null}
                           <span className="ability-usage">
                             {Number.isFinite(limit)
-                              ? `${Math.max(0, limit - uses)}/${limit} uses left ${usageLabel}`
-                              : "AP limited"}
+                              ? t("{left}/{limit} uses left {when}", {
+                                  left: Math.max(0, limit - uses),
+                                  limit,
+                                  when: usageLabel,
+                                })
+                              : t("AP limited")}
                           </span>
                         </button>
                       );
@@ -758,34 +861,40 @@ export default function App() {
                       className="quiet end-turn"
                       onClick={() => applyCombatAction(endTurn(run))}
                     >
-                      End turn
+                      {t("End turn")}
                     </button>
                   </div>
                 </section>
               )}
               {run.status === "reward" && (
                 <section className="result">
-                  <span className="eyebrow">CHAMBER CLEARED</span>
-                  <h2>The way opens.</h2>
+                  <span className="eyebrow">{t("CHAMBER CLEARED")}</span>
+                  <h2>{t("The way opens.")}</h2>
                   <div className="reward-details">
                     <p>
-                      Room reward: +{20 + run.room * 10} gold, +
-                      {30 + run.room * 15} XP and{" "}
-                      {run.items[run.items.length - 1]}.
+                      {t("Room reward: +{gold} gold, +{xp} XP and {item}.", {
+                        gold: 20 + run.room * 10,
+                        xp: 30 + run.room * 15,
+                        item: t(run.items[run.items.length - 1] ?? ""),
+                      })}
                     </p>
                     <p>
-                      Added to expedition loot. Gold, XP and items are banked
-                      after defeating the boss and returning to the lobby.
+                      {t(
+                        "Added to expedition loot. Gold, XP and items are banked after defeating the boss and returning to the lobby.",
+                      )}
                     </p>
                     <p>
-                      Applied now: surviving cats recovered up to 8 HP (capped
-                      at max HP). Fallen cats returned at 25% max HP, rounded
-                      up, without extra recovery. Expedition Strength increased
-                      by +1 to +{run.bonus} damage.
+                      {t(
+                        "Applied now: surviving cats recovered up to 8 HP (capped at max HP). Fallen cats returned at 25% max HP, rounded up, without extra recovery. Expedition Strength increased by +1 to +{n} damage.",
+                        { n: run.bonus },
+                      )}
                     </p>
                     <p>
                       {run.party
-                        .map((cat) => `${cat.name}: ${cat.hp}/${cat.maxHp} HP`)
+                        .map(
+                          (cat) =>
+                            `${cat.name}: ${cat.hp}/${cat.maxHp} ${t("HP")}`,
+                        )
                         .join(" · ")}
                     </p>
                   </div>
@@ -796,7 +905,7 @@ export default function App() {
                       setTarget("");
                     }}
                   >
-                    Continue to next room →
+                    {t("Continue to next room →")}
                   </button>
                 </section>
               )}
@@ -804,60 +913,79 @@ export default function App() {
                 <section className="result">
                   <span className="eyebrow">
                     {run.status === "victory"
-                      ? "THE CROWN HAS FALLEN"
-                      : "THE DARK TAKES ITS DUE"}
+                      ? t("THE CROWN HAS FALLEN")
+                      : t("THE DARK TAKES ITS DUE")}
                   </span>
                   <h2>
                     {run.status === "victory"
-                      ? "The burrow has its heroes."
-                      : "Even brave cats need another try."}
+                      ? t("The burrow has its heroes.")
+                      : t("Even brave cats need another try.")}
                   </h2>
                   <p>
                     {run.status === "victory"
-                      ? `Bring home ${run.gold} gold, ${run.xp} XP and your discoveries.`
-                      : "Your permanent upgrades remain. Return home and choose a new team."}
+                      ? t(
+                          "Bring home {gold} gold, {xp} XP and your discoveries.",
+                          {
+                            gold: run.gold,
+                            xp: run.xp,
+                          },
+                        )
+                      : t(
+                          "Your permanent upgrades remain. Return home and choose a new team.",
+                        )}
                   </p>
                   {run.status === "victory" && (
                     <p>
-                      All companions are fully healed and combat effects are
-                      cleared. Your next expedition starts at full HP.
+                      {t(
+                        "All companions are fully healed and combat effects are cleared. Your next expedition starts at full HP.",
+                      )}
                     </p>
                   )}
                   <button className="primary" onClick={leave}>
-                    Return to lobby
+                    {t("Return to lobby")}
                   </button>
                 </section>
               )}
             </main>
             <aside className="journal">
-              <span className="eyebrow">FIELD NOTES</span>
-              <h2>The descent</h2>
+              <span className="eyebrow">{t("FIELD NOTES")}</span>
+              <h2>{t("The descent")}</h2>
               <div className="run-loot">
-                {run.gold} gold <span>/</span> {run.xp} XP
-                <p>Unbanked expedition loot · secured after boss victory.</p>
-                <p>Items: {run.items.join(", ") || "None yet"}</p>
+                {run.gold} {t("gold")} <span>/</span> {run.xp} XP
+                <p>
+                  {t("Unbanked expedition loot · secured after boss victory.")}
+                </p>
+                <p>
+                  {t("Items: {list}", {
+                    list:
+                      run.items.map((item) => t(item)).join(", ") ||
+                      t("None yet"),
+                  })}
+                </p>
               </div>
-              <ol className="log" aria-label="Combat log">
+              <ol className="log" aria-label={t("Combat log")}>
                 {run.log.slice(-12).map((line, index) => (
-                  <li key={`${index}-${line}`}>{line}</li>
+                  <li key={`${index}-${line}`}>{translateEngine(t, line)}</li>
                 ))}
               </ol>
               <button className="quiet" onClick={leave}>
-                Retreat to lobby
+                {t("Retreat to lobby")}
               </button>
-              <p className="muted">Leave the expedition's spoils behind.</p>
+              <p className="muted">
+                {t("Leave the expedition's spoils behind.")}
+              </p>
             </aside>
           </div>
         </>
       )}
       <footer className="footer">
         <span>
-          CATACOMB CATS <span className="footer-dot">·</span> CHAPTER I
+          CATACOMB CATS <span className="footer-dot">·</span> {t("CHAPTER I")}
         </span>
         <span>
-          {run ? "NO WAY OUT BUT THROUGH" : "THE FIRE IS STILL BURNING"}
+          {run ? t("NO WAY OUT BUT THROUGH") : t("THE FIRE IS STILL BURNING")}
         </span>
-        <span>LOCAL SAVE</span>
+        <span>{t("LOCAL SAVE")}</span>
       </footer>
     </div>
   );
