@@ -1649,3 +1649,34 @@ describe("cooldown ready events", () => {
     ).toBe(0);
   });
 });
+
+describe("curse lowers received healing too", () => {
+  it("a cursed ally is healed for less, and never below zero", () => {
+    const heal = (curse: number) => {
+      let r = turn(start(), "clover");
+      const miso = r.party.find((c) => c.id === "miso")!;
+      miso.hp = 1;
+      miso.curse = curse;
+      miso.curseTurns = 2;
+      r = act(r, "heal", "miso");
+      return r.party.find((c) => c.id === "miso")!.hp - 1;
+    };
+    const full = heal(0);
+    expect(heal(2)).toBe(full - 2);
+    expect(heal(99)).toBe(0);
+  });
+  it("applies to every target of a group heal", () => {
+    let r = turn(start(), "clover");
+    r = trained("clover");
+    r.party.forEach((c) => (c.hp = 1));
+    r.party.find((c) => c.id === "pip")!.curse = 3;
+    r.party.find((c) => c.id === "pip")!.curseTurns = 2;
+    const power = abilityPower(r, r.party[0]!, SIGNATURE_ABILITIES.clover!);
+    r = act(r, "renewal", "clover");
+    const gained = (id: string) => r.party.find((c) => c.id === id)!.hp - 1;
+    const others = r.party.filter((c) => c.id !== "pip");
+    expect(others.every((c) => gained(c.id) > 0)).toBe(true);
+    expect(gained("pip")).toBe(Math.max(0, gained(others[0]!.id) - 3));
+    expect(power).toBeGreaterThan(0);
+  });
+});

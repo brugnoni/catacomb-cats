@@ -134,7 +134,7 @@ export function UnitEffects({
       label: t("Curse"),
       value: `−${unit.curse}`,
       description: t(
-        "Its damage, healing and shields, and the shields it receives, are {n} lower. Lasts {turns}.",
+        "Its damage, healing and shields, and the healing and shields it receives, are {n} lower. Lasts {turns}.",
         { n: unit.curse, turns: plural(t, unit.curseTurns, "turn") },
       ),
     });

@@ -19,6 +19,7 @@ export const UI: Record<string, string> = {
   Threat: "Amenaza",
   "First descent": "Primer descenso",
   "Ascension {n}": "Ascensión {n}",
+  "Entering the dungeon…": "Entrando en la mazmorra…",
   "Enter the dungeon →": "Entrar en la mazmorra →",
   "Your party is ready.": "Tu equipo está listo.",
   "Choose 1 more companion.": "Elige 1 compañero más.",
@@ -222,8 +223,8 @@ export const UI: Record<string, string> = {
     "Absorbe {n} de daño más. Dura {turns}.",
   "+{n} to damage, healing and shields. Lasts {turns}.":
     "+{n} al daño, la curación y los escudos. Dura {turns}.",
-  "Its damage, healing and shields, and the shields it receives, are {n} lower. Lasts {turns}.":
-    "Su daño, curación y escudos, y los escudos que recibe, son {n} menores. Dura {turns}.",
+  "Its damage, healing and shields, and the healing and shields it receives, are {n} lower. Lasts {turns}.":
+    "Su daño, curación y escudos, y la curación y los escudos que recibe, son {n} menores. Dura {turns}.",
   "Sends {n} damage back to whoever hurts this unit. Lasts {turns}.":
     "Devuelve {n} de daño a quien hiera a esta unidad. Dura {turns}.",
   "Reduces the next {hits} by {n}.": "Reduce en {n} los próximos {hits}.",

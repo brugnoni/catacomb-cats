@@ -1382,3 +1382,27 @@ test("a skill on cooldown shows a badge above its owner with the turns left", as
   await badge.hover();
   await expect(page.getByRole("tooltip")).toContainText("Ready in 2 turns");
 });
+
+test("a short loading screen shows before the battle starts", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Enter the dungeon" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Entering the dungeon…" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Enter the dungeon" }),
+  ).toBeDisabled();
+  await expect(page.locator(".command-deck")).toBeVisible();
+  await expect(page.locator(".entering-overlay")).toHaveCount(0);
+  // The scenery is already loaded when the battle appears.
+  const loaded = await page.evaluate(() =>
+    ["art/crypt.png", "art/characters.png"].every((src) =>
+      performance
+        .getEntriesByType("resource")
+        .some((e) => e.name.endsWith(src)),
+    ),
+  );
+  expect(loaded).toBe(true);
+});

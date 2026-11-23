@@ -13,6 +13,7 @@ import { cooldownText, describeAbility } from "./abilityText";
 import { AbilityHead } from "./AbilityCard";
 import { LanguageScreen } from "./LanguageScreen";
 import { TutorialCoach, TutorialOffer } from "./Tutorial";
+import { preloadArt } from "./preload";
 import {
   TUTORIAL_STEPS,
   loadTutorialFlag,
@@ -161,6 +162,15 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
     mark: string;
   } | null>(null);
   const [practice, setPractice] = useState(false);
+  // True while the battle art loads before a run begins.
+  const [entering, setEntering] = useState(false);
+  const startRun = async (make: () => Run, after?: () => void) => {
+    setEntering(true);
+    await preloadArt();
+    setEntering(false);
+    beginRun(make());
+    after?.();
+  };
   // Skill under the mouse or keyboard focus: its possible targets are outlined in yellow.
   const [aim, setAim] = useState("");
   const beginRun = (next: Run) => {
@@ -465,8 +475,11 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
       return;
     }
     if (tutorialStep.next === "practice") {
-      beginRun(practiceRun());
-      setPractice(true);
+      void startRun(practiceRun, () => {
+        setPractice(true);
+        setTutorial({ step: stepIndex + 1, mark: "" });
+      });
+      return;
     }
     setTutorial({ step: stepIndex + 1, mark: turnMark });
   };
@@ -572,14 +585,14 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                 </p>
                 <button
                   className="primary"
-                  disabled={party.length !== 3}
+                  disabled={party.length !== 3 || entering}
                   onClick={() => {
-                    beginRun(
+                    setNotice("");
+                    void startRun(() =>
                       createRun(progress, party, runSeed(), {
                         crit: runCrit(),
                       }),
                     );
-                    setNotice("");
                   }}
                 >
                   {t("Enter the dungeon →")}
@@ -1284,6 +1297,11 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
           <span>{t("LOCAL SAVE")}</span>
         </footer>
       </div>
+      {entering && (
+        <div className="entering-overlay" role="status">
+          {t("Entering the dungeon…")}
+        </div>
+      )}
       {offer && !run && !showFaq && !tutorial && (
         <TutorialOffer
           onStart={startTutorial}

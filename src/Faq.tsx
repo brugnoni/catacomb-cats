@@ -130,7 +130,7 @@ function buildEntries(t: Translate): [string, string][] {
     [
       t("How do curses work?"),
       t(
-        "Some enemies reduce a cat's damage, healing or protection output by 1 or 2 for two turns of that cat. Output cannot go below zero. Reapplying a curse refreshes its duration without adding together penalties. Unit labels and Field Notes report the amount and duration.",
+        "Some enemies reduce a cat's damage, healing or protection output by 1 or 2 for two turns of that cat. Output cannot go below zero. A cursed cat also receives that much less healing and shielding. Reapplying a curse refreshes its duration without adding together penalties. Unit labels and Field Notes report the amount and duration.",
       ),
     ],
     [

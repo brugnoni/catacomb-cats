@@ -1911,3 +1911,30 @@ hr {
   font-size: 20px;
   padding: 8px 14px;
 }
+
+/* Short loading screen before a battle so the art is ready */
+.entering-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  letter-spacing: 2px;
+  color: var(--gold);
+  background: #060a12f2;
+  animation: entering-fade 0.9s ease-in-out infinite alternate;
+}
+@keyframes entering-fade {
+  from {
+    color: #b98f3f;
+  }
+  to {
+    color: #ffe3a1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entering-overlay {
+    animation: none;
+  }
+}

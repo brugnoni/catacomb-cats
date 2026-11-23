@@ -125,7 +125,11 @@ export function applyAbility(
         : [target];
     for (const t of targets) {
       const crit = rollCrit(run, actor);
-      const amount = crit ? Math.ceil(power * CRIT_MULTIPLIER) : power;
+      // A curse lowers what a cat receives: healing as well as shields.
+      const amount = Math.max(
+        0,
+        (crit ? Math.ceil(power * CRIT_MULTIPLIER) : power) - t.curse,
+      );
       const healed = Math.min(t.maxHp - t.hp, amount);
       t.hp += healed;
       run.events.push({
