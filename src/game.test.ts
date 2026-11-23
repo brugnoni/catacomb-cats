@@ -1014,3 +1014,80 @@ describe("enemy marks and combat events", () => {
     expect(r.events.length).toBeGreaterThan(0);
   });
 });
+
+describe("Hearth blessing in combat", () => {
+  const catIds = ["pip", "miso", "clover"];
+  const withHearth = (generalLevel: number) => ({
+    ...initialProgress(),
+    generalLevel,
+  });
+  it("adds its stats to every cat and to damaging skills", () => {
+    const base = createRun(withHearth(0), catIds);
+    const rank2 = createRun(withHearth(2), catIds);
+    base.party.forEach((cat, i) => {
+      expect(rank2.party[i]!.maxHp).toBe(cat.maxHp + 2);
+      expect(rank2.party[i]!.initiative).toBe(cat.initiative + 1);
+      expect(rank2.party[i]!.abilities[0]!.power).toBe(
+        cat.abilities[0]!.power + 1,
+      );
+    });
+  });
+  it("rank 5 also raises healing, Guard and Inspired power", () => {
+    const base = createRun(withHearth(0), catIds);
+    const r5 = createRun(withHearth(5), catIds);
+    const power = (run: Run, catId: string, effect: string) =>
+      run.party
+        .find((c) => c.id === catId)!
+        .abilities.find((a) => a.effect === effect)!.power;
+    expect(power(r5, "clover", "heal")).toBe(power(base, "clover", "heal") + 1);
+    expect(power(r5, "miso", "guard")).toBe(power(base, "miso", "guard") + 1);
+  });
+  it("rank 8 gives +1 AP only in the first round of each room", () => {
+    let r = createRun(withHearth(8), catIds);
+    expect(r.ap).toBe(7);
+    expect(r.maxAp).toBe(6);
+    r = clear(r);
+    r = nextRoom(r);
+    expect(r.ap).toBe(7);
+    expect(createRun(withHearth(7), catIds).ap).toBe(6);
+  });
+  it("Second Wind raises the first fallen cat once per expedition", () => {
+    let r = createRun(withHearth(3), catIds);
+    const mei = r.party.find((c) => c.id === "clover")!;
+    mei.hp = 1;
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    const risen = r.party.find((c) => c.id === "clover")!;
+    expect(risen.hp).toBe(Math.ceil(risen.maxHp * 0.4));
+    expect(r.secondWind).toBe(0);
+    expect(r.log.join(" ")).toContain("Second Wind!");
+    risen.hp = 1;
+    r.enemies.forEach((e) => (e.mark = "clover"));
+    for (let i = 0; i < 6 && risen.hp > 0; i++) r = endTurn(r);
+    expect(r.party.find((c) => c.id === "clover")!.hp).toBe(0);
+  });
+  it("Second Wind restores 60 percent from rank 7", () => {
+    let r = createRun(withHearth(7), catIds);
+    r.party.find((c) => c.id === "clover")!.hp = 1;
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    const risen = r.party.find((c) => c.id === "clover")!;
+    expect(risen.hp).toBe(Math.ceil(risen.maxHp * 0.6));
+  });
+  it("Second Wind prevents defeat when the last cat falls", () => {
+    let r = createRun(withHearth(3), catIds);
+    for (const cat of r.party) if (cat.id !== "clover") cat.hp = 0;
+    r.party.find((c) => c.id === "clover")!.hp = 1;
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    expect(r.status).toBe("combat");
+    expect(r.party.find((c) => c.id === "clover")!.hp).toBeGreaterThan(0);
+  });
+  it("without Hearth rank 3 a fallen cat stays down", () => {
+    let r = createRun(withHearth(2), catIds);
+    r.party.find((c) => c.id === "clover")!.hp = 1;
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    expect(r.party.find((c) => c.id === "clover")!.hp).toBe(0);
+  });
+});

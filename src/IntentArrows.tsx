@@ -1,81 +1,87 @@
-import { useLayoutEffect, useState, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import type { EnemyIntent } from "./game";
 
+export interface IntentEntry {
+  enemyId: string;
+  intent: EnemyIntent;
+}
 interface Line {
   key: string;
   kind: "hostile" | "friendly";
   d: string;
 }
-/** Shorten a segment at both ends so arrows start and stop at the sprites' edges. */
-function trim(x1: number, y1: number, x2: number, y2: number, by: number) {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const length = Math.hypot(dx, dy) || 1;
-  const k = Math.min(by, length / 3) / length;
-  return [x1 + dx * k, y1 + dy * k, x2 - dx * k, y2 - dy * k] as const;
-}
+/** How far above a unit card the arrows start and end, clearing its status icons. */
+const CLEARANCE = 38;
 /**
- * Draws the selected enemy's next action over the battlefield: a red arrow to
- * the cat it has marked, or a green arrow to the enemy it will help.
+ * Draws enemy intents over the battlefield as high arcs above the characters:
+ * a red arrow to the cat an enemy has marked, a green one to the enemy it will help.
  */
 export function IntentArrows({
   containerRef,
-  enemyId,
-  intent,
+  entries,
   version,
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
-  enemyId?: string;
-  intent?: EnemyIntent;
+  entries: IntentEntry[];
   /** Changes whenever the battle state changes so arrows are measured again. */
   version: number;
 }) {
   const [lines, setLines] = useState<Line[]>([]);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const targetId = intent?.targetId;
-  const allyId = intent?.allyId;
-  useLayoutEffect(() => {
+  const signature = entries
+    .map(
+      (e) => `${e.enemyId}>${e.intent.targetId ?? ""}|${e.intent.allyId ?? ""}`,
+    )
+    .join(",");
+  // A passive effect runs after the parent's ref is attached, even on first mount.
+  useEffect(() => {
     const container = containerRef.current;
-    if (!container || !enemyId || (!targetId && !allyId)) {
+    if (!container || !signature) {
       setLines([]);
       return;
     }
     const measure = () => {
       const box = container.getBoundingClientRect();
-      const center = (id: string) => {
-        const el = container
-          .querySelector(`[data-unit="${id}"] .unit-target`)
+      const anchor = (id: string) => {
+        const card = container
+          .querySelector(`[data-unit="${id}"]`)
           ?.getBoundingClientRect();
-        return el
+        return card
           ? ([
-              el.left + el.width / 2 - box.left,
-              el.top + el.height / 2 - box.top,
+              card.left + card.width / 2 - box.left,
+              card.top - box.top - CLEARANCE,
             ] as const)
           : undefined;
       };
-      const from = center(enemyId);
       const next: Line[] = [];
-      for (const [id, kind] of [
-        [targetId, "hostile"],
-        [allyId, "friendly"],
-      ] as const) {
-        const to = id ? center(id) : undefined;
-        if (!from || !to) continue;
-        const [x1, y1, x2, y2] = trim(from[0], from[1], to[0], to[1], 52);
-        const lift = Math.min(70, Math.hypot(x2 - x1, y2 - y1) / 3);
-        next.push({
-          key: `${kind}-${id}`,
-          kind,
-          d: `M${x1} ${y1} Q${(x1 + x2) / 2} ${(y1 + y2) / 2 - lift} ${x2} ${y2}`,
-        });
-      }
+      entries.forEach(({ enemyId, intent }, index) => {
+        const from = anchor(enemyId);
+        for (const [id, kind] of [
+          [intent.targetId, "hostile"],
+          [intent.allyId, "friendly"],
+        ] as const) {
+          const to = id ? anchor(id) : undefined;
+          if (!from || !to) continue;
+          // Higher arcs for farther targets; each enemy gets its own height.
+          const top = Math.min(from[1], to[1]);
+          const rise = 26 + Math.min(40, Math.abs(to[0] - from[0]) / 6);
+          const arc = Math.max(6, top - rise - index * 10);
+          next.push({
+            key: `${enemyId}-${kind}-${id}`,
+            kind,
+            d: `M${from[0]} ${from[1]} C${from[0]} ${arc} ${to[0]} ${arc} ${to[0]} ${to[1]}`,
+          });
+        }
+      });
       setSize({ width: box.width, height: box.height });
       setLines(next);
     };
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
-  }, [containerRef, enemyId, targetId, allyId, version]);
+    // `entries` is summarised by `signature`; `version` re-measures after each action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerRef, signature, version]);
   if (!lines.length) return null;
   return (
     <svg
@@ -96,7 +102,7 @@ export function IntentArrows({
             refY="5"
             markerWidth="5"
             markerHeight="5"
-            orient="auto-start-reverse"
+            orient="auto"
           >
             <path d="M0 0L10 5L0 10Z" className={`intent-head ${kind}`} />
           </marker>

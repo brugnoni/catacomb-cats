@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   getDifficulty,
+  HEARTH_TRACK,
+  hearthBonuses,
+  nextHearthDescription,
   masteryBonuses,
   masteryLevel,
   nextTrainingDescription,
@@ -150,5 +153,44 @@ describe("ascension snapshot calculation", () => {
       extraEnemies: 2,
       armorBonus: 2,
     });
+  });
+});
+
+describe("Hearth blessing", () => {
+  it("has eight ranks, each with its own described benefit", () => {
+    expect(HEARTH_TRACK).toHaveLength(MAX_TRAINING_RANK);
+    HEARTH_TRACK.forEach((row, index) => {
+      expect(row.rank).toBe(index + 1);
+      expect(row.description.length).toBeGreaterThan(10);
+    });
+  });
+  it("accumulates stats, replaces Second Wind and caps at rank 8", () => {
+    expect(hearthBonuses(0)).toEqual({
+      hp: 0,
+      initiative: 0,
+      attack: 0,
+      support: 0,
+      secondWind: 0,
+      openingAp: 0,
+    });
+    expect(hearthBonuses(1)).toMatchObject({ hp: 2, initiative: 1 });
+    expect(hearthBonuses(2).attack).toBe(1);
+    expect(hearthBonuses(3).secondWind).toBe(40);
+    expect(hearthBonuses(6).secondWind).toBe(40);
+    expect(hearthBonuses(7).secondWind).toBe(60);
+    expect(hearthBonuses(8)).toEqual({
+      hp: 8,
+      initiative: 2,
+      attack: 2,
+      support: 1,
+      secondWind: 60,
+      openingAp: 1,
+    });
+    expect(hearthBonuses(99)).toEqual(hearthBonuses(8));
+    expect(hearthBonuses(-3)).toEqual(hearthBonuses(0));
+  });
+  it("describes the next rank and the end of the track", () => {
+    expect(nextHearthDescription(2)).toContain("Rank 3 · Second Wind");
+    expect(nextHearthDescription(8)).toBe("Maximum Hearth rank reached.");
   });
 });

@@ -66,7 +66,7 @@ La última aclaración expresa del usuario es que **solo Revive de Mei tiene coo
 - La FAQ muestra los ocho rangos completos y su coste. El lobby muestra solo la próxima mejora, con texto breve y legible.
 - Cada 150 XP bancados da un nivel de maestría compartida: +2 HP para todos. Cada tres niveles añade +1 a potencia numérica de ataques, curación, Guard y bendiciones. Maestría máxima 10.
 - Maestría no modifica AP, taunt, el 60% fijo de Revive ni los valores fijos de pasivas. `masteryBonuses().attack` es un alias de `power`; no sumar ambos.
-- Hearth añade +2 HP a todos por rango, máximo ocho rangos.
+- **Hearth (bendición global)**, `HEARTH_TRACK` en `src/progression.ts`; ocho rangos, coste 20 + 20 × rango. R1 +2 HP y +1 iniciativa; R2 +1 ataque; R3 **Second Wind** (una vez por expedición el primer gato caído se levanta al 40% HP, `Run.secondWind`); R4 +3 HP y +1 iniciativa; R5 +1 curación/Guard/Inspired; R6 +1 ataque; R7 Second Wind al 60% y +3 HP; R8 +1 AP en la primera ronda de cada sala (`Run.hearthAp`). Los guardados antiguos conservan el rango pero siguen estas reglas nuevas (ya no es +2 HP por rango).
 - Equipo único: Iron bell +6 HP; Silk ribbon +3 iniciativa; Lucky fang +1 ataque. Empty slot desequipa sin perder el objeto.
 
 ## Daño, enemigos y dificultad

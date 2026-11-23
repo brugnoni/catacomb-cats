@@ -1,8 +1,8 @@
-import { useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Sprite } from "./Sprite";
 import { Faq } from "./Faq";
 import { UnitEffects } from "./UnitEffects";
-import { IntentArrows } from "./IntentArrows";
+import { IntentArrows, type IntentEntry } from "./IntentArrows";
 import { cooldownText, describeAbility } from "./abilityText";
 import {
   CATS,
@@ -34,6 +34,7 @@ import {
   getDifficulty,
   masteryLevel,
   nextTrainingDescription,
+  nextHearthDescription,
   MAX_TRAINING_RANK,
   MAX_MASTERY_LEVEL,
   XP_PER_MASTERY,
@@ -70,6 +71,8 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [showFaq, setShowFaq] = useState(false);
   const battlefieldRef = useRef<HTMLDivElement>(null);
+  // At the start of every turn all enemy intents show for one second.
+  const [previewedTurn, setPreviewedTurn] = useState("");
   const storeProgress = (next: Progress) => {
     setProgress(next);
     try {
@@ -129,6 +132,29 @@ export default function App() {
   );
   const selectedIntent =
     run && selectedEnemy ? enemyIntent(run, selectedEnemy) : undefined;
+  const turnKey =
+    run?.status === "combat"
+      ? `${run.id}:${run.room}:${run.round}:${currentId}`
+      : "";
+  const previewAll = turnKey !== "" && previewedTurn !== turnKey;
+  useEffect(() => {
+    if (!turnKey) return;
+    const timer = setTimeout(() => setPreviewedTurn(turnKey), 1000);
+    return () => clearTimeout(timer);
+  }, [turnKey]);
+  const arrowEntries: IntentEntry[] = [];
+  if (run?.status === "combat")
+    for (const enemy of run.enemies) {
+      if (enemy.hp <= 0 || !(previewAll || enemy.id === selectedEnemy?.id))
+        continue;
+      const intent = enemyIntent(run, enemy);
+      if (intent) arrowEntries.push({ enemyId: enemy.id, intent });
+    }
+  const markedIds = new Set(
+    arrowEntries.flatMap(({ intent }) =>
+      intent.targetId ? [intent.targetId] : [],
+    ),
+  );
   // Units hit by the last action, in order, so each flash can start in turn.
   const hits = new Map<string, number>();
   run?.events.forEach((event, index) => {
@@ -148,6 +174,9 @@ export default function App() {
   const canSelectFallen =
     current?.abilities.some((ability) => ability.target === "fallen-ally") ??
     false;
+  const targetUnit = units.find(
+    (unit) => unit.id === target && (unit.hp > 0 || canSelectFallen),
+  );
   return (
     <div className={`app ${run ? "battle-mode" : "lobby-mode"}`}>
       <header className="topbar">
@@ -388,7 +417,9 @@ export default function App() {
               <p className="blessing-rank">
                 Hearth blessing · Rank {progress.generalLevel}
               </p>
-              <p>+2 max HP to every companion per rank (maximum 8 ranks).</p>
+              <p className="hearth-next">
+                {nextHearthDescription(progress.generalLevel)}
+              </p>
               <div
                 className="difficulty-details"
                 aria-label="Expedition difficulty"
@@ -432,13 +463,6 @@ export default function App() {
               </span>
               <h1>{roomNames[run.room]}</h1>
             </div>
-            <div className="round-counter">
-              <span>ROUND {run.round}</span>
-              <strong>
-                {run.ap}
-                <small> / {run.maxAp} AP</small>
-              </strong>
-            </div>
           </header>
           <div
             className="difficulty-banner"
@@ -473,7 +497,7 @@ export default function App() {
                     <article
                       key={unit.id}
                       data-unit={unit.id}
-                      className={`combatant ${unit.id === currentId ? "active" : ""} ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${selectedIntent?.targetId === unit.id ? "marked" : ""} ${hitClass(unit.id)}`}
+                      className={`combatant ${unit.id === currentId ? "active" : ""} ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${hitClass(unit.id)}`}
                       {...hitProps(unit.id)}
                     >
                       <UnitEffects
@@ -538,8 +562,7 @@ export default function App() {
                 </div>
                 <IntentArrows
                   containerRef={battlefieldRef}
-                  enemyId={selectedEnemy?.id}
-                  intent={selectedIntent}
+                  entries={arrowEntries}
                   version={run.eventId}
                 />
               </div>
@@ -571,7 +594,9 @@ export default function App() {
                     <p>
                       {canSelectFallen
                         ? "Heal your team or select a fallen ally to revive."
-                        : "Choose a target, then an action."}
+                        : targetUnit
+                          ? `Target: ${targetUnit.name}`
+                          : "Click a character to target, then pick an action."}
                     </p>
                     {selectedEnemy && selectedIntent && (
                       <p className="intent-note" data-testid="intent-note">
@@ -589,29 +614,24 @@ export default function App() {
                     )}
                   </div>
                   <div className="actions">
-                    <select
-                      aria-label="Ability target"
-                      value={target}
-                      onChange={(event) => setTarget(event.target.value)}
-                    >
-                      <option value="">Choose target</option>
-                      {units
-                        .filter(
-                          (unit) =>
-                            unit.hp > 0 ||
-                            (canSelectFallen &&
-                              run.party.some((cat) => cat.id === unit.id)),
-                        )
-                        .map((unit) => (
-                          <option key={unit.id} value={unit.id}>
-                            {unit.name} (
-                            {unit.hp > 0
-                              ? `${unit.hp} HP`
-                              : "Fallen · revive target"}
-                            )
-                          </option>
-                        ))}
-                    </select>
+                    <div className="round-counter" aria-label="Shared AP">
+                      <span>ROUND {run.round}</span>
+                      <strong>
+                        {run.ap}
+                        <small> / {run.maxAp} AP</small>
+                      </strong>
+                      <span className="ap-pips" aria-hidden="true">
+                        {Array.from(
+                          { length: Math.max(run.ap, run.maxAp) },
+                          (_, index) => (
+                            <i
+                              key={index}
+                              className={index < run.ap ? "on" : ""}
+                            />
+                          ),
+                        )}
+                      </span>
+                    </div>
                     {current?.abilities.map((ability) => {
                       const limit = ability.roomLimit ?? abilityLimit(ability);
                       const uses = ability.roomLimit

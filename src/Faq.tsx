@@ -6,6 +6,7 @@ import {
   type Ability,
 } from "./game";
 import {
+  HEARTH_TRACK,
   MAX_TRAINING_RANK,
   masteryLevel,
   trainingTrack,
@@ -62,7 +63,7 @@ const entries = [
   ],
   [
     "What does the Hearth blessing buy?",
-    "Each Hearth rank adds 2 maximum HP to all cats in future expeditions, capped at rank 8. The lobby states the current gain and price. They do not unlock signature skills or boost attack damage. Hearth investment also counts toward future difficulty after a boss victory.",
+    `The Hearth is a global blessing: each rank helps every cat in future expeditions, up to rank ${MAX_TRAINING_RANK}. ${HEARTH_TRACK.map((row) => `Rank ${row.rank}, ${row.title}: ${row.description}`).join(" ")} Second Wind works once per expedition and raises the first cat to fall. Hearth does not unlock signature skills. Its investment also counts toward future difficulty after a boss victory.`,
   ],
   [
     "What is XP for?",

@@ -1438,3 +1438,32 @@ hr {
     background: #ff4a3d;
   }
 }
+
+/* Command deck: centered tags and the AP counter beside the abilities */
+.ability-tags {
+  justify-content: center;
+}
+.actions .round-counter {
+  align-self: center;
+  align-items: center;
+  min-width: 104px;
+  padding: 8px 12px;
+  background: #151c27;
+  border: 1px solid #5b6672;
+}
+.ap-pips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  max-width: 120px;
+}
+.ap-pips i {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #7c6a3c;
+  background: transparent;
+}
+.ap-pips i.on {
+  background: var(--gold);
+}

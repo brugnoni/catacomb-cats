@@ -42,9 +42,13 @@ async function advanceToCat(page: Page, name: string) {
   throw new Error(`Could not reach ${name}'s turn`);
 }
 
+async function pickTarget(page: Page, id: string) {
+  await page.locator(`[data-unit="${id}"] .unit-target`).click();
+}
+
 async function enterDungeon(page: Page) {
   await page.getByRole("button", { name: "Enter the dungeon" }).click();
-  await expect(page.getByLabel("Ability target")).toBeVisible();
+  await expect(page.locator(".command-deck")).toBeVisible();
 }
 
 test("an upgraded party completes all three rooms and persists earned rewards", async ({
@@ -67,7 +71,10 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
   });
   await ratTarget.click();
   await expect(ratTarget).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByLabel("Ability target")).toHaveValue("e0");
+  await expect(page.locator('[data-unit="e0"] .unit-target')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   let roomsCleared = 0;
   for (let action = 0; action < 120; action++) {
     if (
@@ -96,16 +103,10 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
     await expect(
       page.getByRole("button", { name: "End turn", exact: true }),
     ).toBeVisible();
-    const target = page.getByLabel("Ability target");
-    const firstEnemy = await target
-      .locator("option")
-      .evaluateAll((options) =>
-        options
-          .map((option) => (option as HTMLOptionElement).value)
-          .find((value) => value.startsWith("e")),
-      );
-    expect(firstEnemy).toBeTruthy();
-    await target.selectOption(firstEnemy!);
+    await page
+      .locator(".enemies .combatant:not(.dead) .unit-target")
+      .first()
+      .click();
     const attack = page.getByRole("button", {
       name: /^(Claw strike|Moon bolt)/,
     });
@@ -145,6 +146,9 @@ test("defeat resets the expedition while preserving permanent upgrades", async (
   await page.goto("/");
   await page.getByRole("button", { name: /Improve blessing/ }).click();
   await expect(page.getByText("Hearth blessing · Rank 1")).toBeVisible();
+  await expect(page.locator(".hearth-next")).toContainText(
+    "Rank 2 · Sharpened claws",
+  );
   await enterDungeon(page);
   for (let turn = 0; turn < 150; turn++) {
     const end = page.getByRole("button", { name: "End turn", exact: true });
@@ -208,19 +212,22 @@ test("one AP skills stop after three uses and reset on the next actor turn", asy
 }) => {
   await page.goto("/");
   await enterDungeon(page);
-  await page.getByLabel("Ability target").selectOption("e1");
+  await pickTarget(page, "e1");
   const strike = page.getByRole("button", { name: /^Claw strike/ });
   for (let use = 0; use < 3; use++) {
-    await page.getByLabel("Ability target").selectOption("e1");
+    await pickTarget(page, "e1");
     await strike.click();
-    await expect(page.getByLabel("Ability target")).toHaveValue("e1");
+    await expect(page.locator('[data-unit="e1"] .unit-target')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   }
-  await page.getByLabel("Ability target").selectOption("e1");
+  await pickTarget(page, "e1");
   await expect(strike).toBeDisabled();
   await expect(strike).toHaveAttribute("title", "Turn limit reached");
   await expect(page.locator(".round-counter")).toContainText("3 / 6 AP");
   await page.getByRole("button", { name: "End turn", exact: true }).click();
-  await page.getByLabel("Ability target").selectOption("e0");
+  await pickTarget(page, "e0");
   await expect(page.getByRole("button", { name: /^Moon bolt/ })).toBeEnabled();
 });
 
@@ -229,7 +236,7 @@ test("the field guide can be opened during combat without losing the turn", asyn
 }) => {
   await page.goto("/");
   await enterDungeon(page);
-  await page.getByLabel("Ability target").selectOption("e0");
+  await pickTarget(page, "e0");
   await page.getByRole("button", { name: /^Claw strike/ }).click();
   const counter = (await page.locator(".round-counter").textContent()) ?? "";
   await page.getByRole("button", { name: /FAQ/ }).click();
@@ -238,7 +245,10 @@ test("the field guide can be opened during combat without losing the turn", asyn
   ).toBeVisible();
   await page.getByRole("button", { name: "Back to game" }).click();
   await expect(page.locator(".round-counter")).toHaveText(counter);
-  await expect(page.getByLabel("Ability target")).toHaveValue("e0");
+  await expect(page.locator('[data-unit="e0"] .unit-target')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 });
 
 test("two AP support skills stop after two uses with AP still available", async ({
@@ -248,12 +258,12 @@ test("two AP support skills stop after two uses with AP still available", async 
   await enterDungeon(page);
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await page.getByRole("button", { name: "End turn", exact: true }).click();
-  await page.getByLabel("Ability target").selectOption("miso");
+  await pickTarget(page, "miso");
   const guard = page.getByRole("button", { name: /^Nine lives/ });
   await guard.click();
-  await page.getByLabel("Ability target").selectOption("luna");
+  await pickTarget(page, "luna");
   await guard.click();
-  await page.getByLabel("Ability target").selectOption("pip");
+  await pickTarget(page, "pip");
   await expect(guard).toBeDisabled();
   await expect(page.locator(".round-counter")).toContainText("2 / 6 AP");
 });
@@ -277,7 +287,7 @@ test("training explains and applies its permanent health and power improvement",
   await enterDungeon(page);
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await page.getByRole("button", { name: "End turn", exact: true }).click();
-  await page.getByLabel("Ability target").selectOption("e0");
+  await pickTarget(page, "e0");
   await expect(
     page.getByRole("button", { name: /^Claw strike/ }),
   ).toContainText("4 damage");
@@ -302,7 +312,9 @@ test("three trainings cost 100 gold, unlock Moonwell, and its room limit preserv
   await enterDungeon(page);
   await advanceToCat(page, "Luna");
   const moonwell = page.getByRole("button", { name: /^Moonwell/ });
-  await expect(page.getByLabel("Ability target")).toHaveValue("");
+  await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
+    0,
+  );
   await expect(moonwell).toBeEnabled();
   await moonwell.click();
   await expect(page.locator(".round-counter")).toContainText("7 / 8 AP");
@@ -337,15 +349,17 @@ test("trained tank taunts without choosing a target and fully applied Guard reje
     .click();
   await enterDungeon(page);
   await advanceToCat(page, "Miso");
-  await page.getByLabel("Ability target").selectOption("miso");
+  await pickTarget(page, "miso");
   const guard = page.getByRole("button", { name: /^Nine lives/ });
   await guard.click();
   const before = await page
     .locator(".allies .combatant")
     .filter({ has: page.getByRole("heading", { name: "Miso", exact: true }) })
     .textContent();
-  await expect(page.getByLabel("Ability target")).toHaveValue("");
-  await page.getByLabel("Ability target").selectOption("miso");
+  await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
+    0,
+  );
+  await pickTarget(page, "miso");
   await expect(guard).toBeDisabled();
   await expect(guard).toHaveAttribute(
     "title",
@@ -399,12 +413,17 @@ test("attacks retain a living enemy target while ending a turn clears it", async
     "Deals 4 · 20 HP left",
   );
   await strike.click();
-  await expect(page.getByLabel("Ability target")).toHaveValue("e0");
+  await expect(page.locator('[data-unit="e0"] .unit-target')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(rat).toHaveAttribute("aria-pressed", "true");
   await expect(strike).toBeEnabled();
   await expect(page.locator(".round-counter")).toContainText("5 / 6 AP");
   await page.getByRole("button", { name: "End turn", exact: true }).click();
-  await expect(page.getByLabel("Ability target")).toHaveValue("");
+  await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
+    0,
+  );
   await expect(page.getByRole("button", { name: /^Moon bolt/ })).toBeDisabled();
 });
 
@@ -422,20 +441,24 @@ test("Inspired improves healing and cannot be applied twice at full duration", a
   await clover.getByRole("button", { name: "Add to party" }).click();
   await enterDungeon(page);
   await advanceToCat(page, "Luna");
-  await page.getByLabel("Ability target").selectOption("clover");
+  await pickTarget(page, "clover");
   const blessing = page.getByRole("button", { name: /^Moon blessing/i });
   await blessing.click();
-  await expect(page.getByLabel("Ability target")).toHaveValue("");
-  await page.getByLabel("Ability target").selectOption("clover");
+  await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
+    0,
+  );
+  await pickTarget(page, "clover");
   await expect(blessing).toBeDisabled();
   await expect(page.locator(".round-counter")).toContainText("4 / 6 AP");
   await advanceToCat(page, "Mei");
-  await page.getByLabel("Ability target").selectOption("luna");
+  await pickTarget(page, "luna");
   const heal = page.getByRole("button", { name: /^Healing purr/ });
   await expect(heal).toContainText("Heal 1 ally for 9 HP");
   await heal.click();
-  await expect(page.getByLabel("Ability target")).toHaveValue("");
-  await page.getByLabel("Ability target").selectOption("luna");
+  await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
+    0,
+  );
+  await pickTarget(page, "luna");
   await expect(heal).toBeDisabled();
 });
 
@@ -444,18 +467,23 @@ test("exhausting shared AP resolves enemy turns and skips cats until the next ro
 }) => {
   await page.goto("/");
   await enterDungeon(page);
-  await page.getByLabel("Ability target").selectOption("e1");
+  await pickTarget(page, "e1");
   const pounce = page.getByRole("button", { name: /^Pounce/ });
   await pounce.click();
   await pounce.click();
   const strike = page.getByRole("button", { name: /^Claw strike/ });
   await strike.click();
-  await expect(page.getByLabel("Ability target")).toHaveValue("e1");
+  await expect(page.locator('[data-unit="e1"] .unit-target')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await strike.click();
   await expect(page.locator(".round-counter")).toContainText("ROUND 2");
   await expect(page.locator(".round-counter")).toContainText("6 / 6 AP");
   await expect(page.locator(".command-deck h2")).toHaveText("Pip");
-  await expect(page.getByLabel("Ability target")).toHaveValue("");
+  await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
+    0,
+  );
   await expect(
     page.getByRole("button", { name: "Target Moss slime" }),
   ).toHaveAttribute("aria-pressed", "false");
@@ -468,7 +496,7 @@ test("effect icons expose themed descriptions on hover and keyboard focus and Gu
   await page.goto("/");
   await enterDungeon(page);
   await advanceToCat(page, "Miso");
-  await page.getByLabel("Ability target").selectOption("miso");
+  await pickTarget(page, "miso");
   await page.getByRole("button", { name: /^Nine lives/ }).click();
   const guard = page
     .locator(".allies")
@@ -499,18 +527,23 @@ test("an attack clears a defeated target even when the same cat still has AP", a
   await seedLegacySave(page, { catLevels: { luna: 3 } });
   await page.goto("/");
   await enterDungeon(page);
-  await page.getByLabel("Ability target").selectOption("e0");
+  await pickTarget(page, "e0");
   await page.getByRole("button", { name: /^Pounce/ }).click();
   await page.getByRole("button", { name: "End turn", exact: true }).click();
-  await page.getByLabel("Ability target").selectOption("e0");
+  await pickTarget(page, "e0");
   const bolt = page.getByRole("button", { name: /^Moon bolt/ });
   await bolt.click();
   await bolt.click();
-  await expect(page.getByLabel("Ability target")).toHaveValue("e0");
+  await expect(page.locator('[data-unit="e0"] .unit-target')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await bolt.click();
   await expect(page.locator(".command-deck h2")).toHaveText("Luna");
   await expect(page.locator(".round-counter")).toContainText("1 / 6 AP");
-  await expect(page.getByLabel("Ability target")).toHaveValue("");
+  await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
+    0,
+  );
   await expect(
     page.getByRole("button", { name: "Target Crypt rat" }),
   ).toBeDisabled();
@@ -542,13 +575,18 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
     page.getByRole("button", { name: "Target Luna", exact: true }),
   ).toBeEnabled();
   await page.getByRole("button", { name: "Target Luna", exact: true }).click();
-  await expect(page.getByLabel("Ability target")).toHaveValue("luna");
+  await expect(page.locator('[data-unit="luna"] .unit-target')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   const revive = page.getByRole("button", { name: /^Return to the hearth/ });
   const renewal = page.getByRole("button", { name: /^Circle of renewal/ });
   await expect(revive).toContainText("60% max HP");
   await revive.click();
   await expect(luna.locator(".health-value")).toHaveText("15 / 25 HP");
-  await expect(page.getByLabel("Ability target")).toHaveValue("");
+  await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
+    0,
+  );
   await expect(renewal).toBeEnabled();
   await expect(renewal.locator(".ability-cooldown")).toHaveCount(0);
   await expect(revive.locator(".ability-cooldown")).toContainText(
@@ -593,7 +631,7 @@ test("Ember Flame paw has a two-turn cooldown while Claw strike has none", async
   await card("Ember").getByRole("button", { name: "Add to party" }).click();
   await enterDungeon(page);
   await advanceToCat(page, "Ember");
-  await page.getByLabel("Ability target").selectOption("e1");
+  await pickTarget(page, "e1");
   const flame = page.getByRole("button", { name: /^Flame paw/ });
   await flame.click();
   await expect(flame.locator(".ability-cooldown")).toContainText(
@@ -604,7 +642,7 @@ test("Ember Flame paw has a two-turn cooldown while Claw strike has none", async
   await expect(claw.locator(".ability-cooldown")).toHaveCount(0);
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await advanceToCat(page, "Ember");
-  await page.getByLabel("Ability target").selectOption("e1");
+  await pickTarget(page, "e1");
   await expect(flame).toBeDisabled();
   await expect(flame.locator(".ability-cooldown")).toContainText(
     "Ready in 2 turns",
@@ -615,7 +653,7 @@ test("Ember Flame paw has a two-turn cooldown while Claw strike has none", async
   await expect(claw.locator(".ability-cooldown")).toHaveCount(0);
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await advanceToCat(page, "Ember");
-  await page.getByLabel("Ability target").selectOption("e1");
+  await pickTarget(page, "e1");
   await expect(flame).toBeDisabled();
   await expect(flame.locator(".ability-cooldown")).toContainText(
     "Ready in 1 turn",
@@ -629,7 +667,7 @@ test("an eligible shield refresh restores consumed absorption as well as duratio
   await page.goto("/");
   await enterDungeon(page);
   await advanceToCat(page, "Miso");
-  await page.getByLabel("Ability target").selectOption("luna");
+  await pickTarget(page, "luna");
   const guard = page.getByRole("button", { name: /^Nine lives/ });
   await expect(guard).toContainText("Shield 1 ally for 8");
   await guard.click();
@@ -641,7 +679,7 @@ test("an eligible shield refresh restores consumed absorption as well as duratio
   await expect(
     luna.getByRole("button", { name: "Guard: 1", exact: true }),
   ).toBeVisible();
-  await page.getByLabel("Ability target").selectOption("luna");
+  await pickTarget(page, "luna");
   await expect(guard).toBeEnabled();
   await guard.click();
   const shield = luna.getByRole("button", { name: "Guard: 8", exact: true });
@@ -733,4 +771,79 @@ test("a hit flashes the target's border, name, HP bar and HP numbers red", async
     .locator(".allies .combatant")
     .filter({ has: page.getByRole("heading", { name: "Miso" }) });
   await expect(miso).not.toHaveClass(/hit-/);
+});
+
+test("every turn starts with a one-second preview of all enemy arrows", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  await expect(page.locator(".intent-line")).not.toHaveCount(0);
+  await expect(page.locator(".intent-line")).toHaveCount(0, { timeout: 3000 });
+  await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
+  await page.getByRole("button", { name: "End turn", exact: true }).click();
+  await expect(page.locator(".command-deck h2")).toHaveText("Luna");
+  await expect(page.locator(".intent-line")).not.toHaveCount(0);
+  await expect(page.locator(".intent-line")).toHaveCount(0, { timeout: 3000 });
+});
+
+test("arrows are drawn above the characters, not across them", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  await expect(page.locator(".intent-line").first()).toBeVisible();
+  const box = await page.locator(".battlefield").boundingBox();
+  const cards = await page
+    .locator(".combatant")
+    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().top));
+  const arrows = await page
+    .locator(".intent-line")
+    .evaluateAll((els) =>
+      els.map(
+        (el) => (el as SVGGraphicsElement).getBoundingClientRect().bottom,
+      ),
+    );
+  expect(box).not.toBeNull();
+  // Every arrow ends above the top edge of the highest unit card.
+  for (const bottom of arrows) expect(bottom).toBeLessThan(Math.min(...cards));
+});
+
+test("targets are picked by clicking characters; there is no target dropdown", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  await expect(page.getByLabel("Ability target")).toHaveCount(0);
+  await expect(page.locator(".command-deck select")).toHaveCount(0);
+  await page.getByRole("button", { name: "Target Crypt rat" }).click();
+  await expect(page.locator(".command-heading")).toContainText(
+    "Target: Crypt rat",
+  );
+});
+
+test("the AP counter sits beside the abilities", async ({ page }) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  const counter = page.locator(".actions .round-counter");
+  await expect(counter).toContainText("6 / 6 AP");
+  await expect(page.locator(".battle-header .round-counter")).toHaveCount(0);
+  const counterBox = await counter.boundingBox();
+  const abilityBox = await page
+    .getByRole("button", { name: /^Claw strike/ })
+    .boundingBox();
+  expect(counterBox!.y).toBeLessThan(abilityBox!.y + abilityBox!.height);
+  expect(
+    Math.abs(counterBox!.x + counterBox!.width - abilityBox!.x),
+  ).toBeLessThan(40);
+});
+
+test("ability tags are centered in their button", async ({ page }) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  const centered = await page
+    .getByRole("button", { name: /^Claw strike/ })
+    .locator(".ability-tags")
+    .evaluate((el) => getComputedStyle(el).justifyContent);
+  expect(centered).toBe("center");
 });

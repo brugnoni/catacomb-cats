@@ -359,6 +359,102 @@ export function trainingPassives(
   }
   return passive;
 }
+/** Global Hearth blessing: shared by every cat, one distinct benefit per rank. */
+export interface HearthBonuses {
+  hp: number;
+  initiative: number;
+  /** Extra power for damaging skills (attacks, Needle strike, Sweeping embers). */
+  attack: number;
+  /** Extra power for healing, Guard and Inspired blessings. */
+  support: number;
+  /** Percent of max HP restored by Second Wind; 0 = not unlocked. */
+  secondWind: number;
+  /** Extra shared AP in the first round of every room. */
+  openingAp: number;
+}
+export interface HearthRank {
+  rank: number;
+  title: string;
+  description: string;
+  bonuses: Partial<HearthBonuses>;
+}
+export const HEARTH_TRACK: HearthRank[] = [
+  {
+    rank: 1,
+    title: "Warm embers",
+    description: "+2 max HP and +1 initiative for every cat.",
+    bonuses: { hp: 2, initiative: 1 },
+  },
+  {
+    rank: 2,
+    title: "Sharpened claws",
+    description: "+1 attack power for every cat.",
+    bonuses: { attack: 1 },
+  },
+  {
+    rank: 3,
+    title: "Second Wind",
+    description:
+      "Once per expedition, the first cat to fall rises at once with 40% HP.",
+    bonuses: { secondWind: 40 },
+  },
+  {
+    rank: 4,
+    title: "Thick fur",
+    description: "+3 max HP and +1 initiative for every cat.",
+    bonuses: { hp: 3, initiative: 1 },
+  },
+  {
+    rank: 5,
+    title: "Soothing light",
+    description: "+1 healing, Guard and Inspired power for every cat.",
+    bonuses: { support: 1 },
+  },
+  {
+    rank: 6,
+    title: "Hunter's focus",
+    description: "+1 attack power for every cat.",
+    bonuses: { attack: 1 },
+  },
+  {
+    rank: 7,
+    title: "Stronger flame",
+    description: "Second Wind restores 60% HP. +3 max HP for every cat.",
+    bonuses: { hp: 3, secondWind: 60 },
+  },
+  {
+    rank: 8,
+    title: "Hearthlight",
+    description: "+1 AP in the first round of every room.",
+    bonuses: { openingAp: 1 },
+  },
+];
+export function hearthBonuses(rank: number): HearthBonuses {
+  const total: HearthBonuses = {
+    hp: 0,
+    initiative: 0,
+    attack: 0,
+    support: 0,
+    secondWind: 0,
+    openingAp: 0,
+  };
+  const capped = Math.min(MAX_TRAINING_RANK, whole(rank));
+  for (const row of HEARTH_TRACK) {
+    if (row.rank > capped) break;
+    for (const key of Object.keys(row.bonuses) as (keyof HearthBonuses)[]) {
+      // Second Wind is an absolute percentage that later ranks replace.
+      if (key === "secondWind") total[key] = row.bonuses[key] ?? total[key];
+      else total[key] += row.bonuses[key] ?? 0;
+    }
+  }
+  return total;
+}
+export function nextHearthDescription(rank: number): string {
+  const r = whole(rank);
+  if (r >= MAX_TRAINING_RANK) return "Maximum Hearth rank reached.";
+  const next = HEARTH_TRACK[r]!;
+  return `Rank ${next.rank} · ${next.title}: ${next.description}`;
+}
 export function masteryLevel(xp: number): number {
   return Math.min(MAX_MASTERY_LEVEL, Math.floor(whole(xp) / XP_PER_MASTERY));
 }

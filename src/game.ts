@@ -2,6 +2,7 @@ import {
   trainingCost,
   trainingBonuses,
   masteryBonuses,
+  hearthBonuses,
   getDifficulty,
   MAX_TRAINING_RANK,
   trainingPassives,
@@ -279,6 +280,10 @@ export interface Run {
   roomUses: Record<string, number>;
   tauntId?: string;
   difficulty: ReturnType<typeof getDifficulty>;
+  /** Hearth Second Wind: percent of max HP restored to the first cat to fall; 0 = unused or locked. */
+  secondWind: number;
+  /** Hearth: extra shared AP in the first round of every room. */
+  hearthAp: number;
 }
 const clone = <T>(value: T): T => structuredClone(value);
 function statusFields() {
@@ -314,13 +319,10 @@ export function buildCat(progress: Progress, id: string): Unit {
   const rank = progress.catLevels[id] ?? 0;
   const growth = trainingBonuses(id, rank);
   const mastery = masteryBonuses(progress.xp);
+  const hearth = hearthBonuses(progress.generalLevel);
   const gear = progress.equipment[id];
   const hp =
-    c.hp +
-    growth.hp +
-    mastery.hp +
-    Math.min(MAX_TRAINING_RANK, progress.generalLevel) * 2 +
-    (gear === "Iron bell" ? 6 : 0);
+    c.hp + growth.hp + mastery.hp + hearth.hp + (gear === "Iron bell" ? 6 : 0);
   const abilities = [
     ...c.abilities,
     ...(rank >= 3
@@ -329,11 +331,17 @@ export function buildCat(progress: Progress, id: string): Unit {
   ].map((a) => {
     let bonus = 0;
     if (a.effect === "heal" || a.effect === "heal-all")
-      bonus = growth.healing + mastery.power;
-    else if (a.effect === "guard") bonus = growth.guard + mastery.power;
-    else if (a.effect === "fury") bonus = growth.fury + mastery.power;
+      bonus = growth.healing + mastery.power + hearth.support;
+    else if (a.effect === "guard")
+      bonus = growth.guard + mastery.power + hearth.support;
+    else if (a.effect === "fury")
+      bonus = growth.fury + mastery.power + hearth.support;
     else if (!a.effect || a.effect === "pierce" || a.effect === "cleave")
-      bonus = growth.attack + mastery.power + (gear === "Lucky fang" ? 1 : 0);
+      bonus =
+        growth.attack +
+        mastery.power +
+        hearth.attack +
+        (gear === "Lucky fang" ? 1 : 0);
     return { ...a, power: a.power + bonus };
   });
   return {
@@ -342,7 +350,10 @@ export function buildCat(progress: Progress, id: string): Unit {
     hp,
     maxHp: hp,
     initiative:
-      c.initiative + growth.initiative + (gear === "Silk ribbon" ? 3 : 0),
+      c.initiative +
+      growth.initiative +
+      hearth.initiative +
+      (gear === "Silk ribbon" ? 3 : 0),
     abilities,
     ...statusFields(),
     passives: trainingPassives(id, rank),
@@ -496,6 +507,7 @@ export function createRun(progress: Progress, party: string[], seed = 1): Run {
   )
     throw new Error("Choose three different cats.");
   const difficulty = getDifficulty(progress);
+  const hearth = hearthBonuses(progress.generalLevel);
   const run: Run = {
     id: crypto.randomUUID(),
     rng: seed >>> 0,
@@ -506,7 +518,7 @@ export function createRun(progress: Progress, party: string[], seed = 1): Run {
     order: [],
     turn: 0,
     round: 1,
-    ap: 6,
+    ap: 6 + hearth.openingAp,
     maxAp: 6,
     room: 0,
     status: "combat",
@@ -518,6 +530,8 @@ export function createRun(progress: Progress, party: string[], seed = 1): Run {
     uses: {},
     roomUses: {},
     difficulty,
+    secondWind: hearth.secondWind,
+    hearthAp: hearth.openingAp,
   };
   for (const cat of run.party) prepareRoom(cat);
   setOrder(run);
@@ -642,6 +656,21 @@ export function damagePreview(
     remainingHp: healthAfterDamage + reactiveHealing,
   };
 }
+/** Hearth Second Wind: the first cat to fall in an expedition rises at once. */
+function rescue(run: Run, unit: Unit) {
+  if (unit.hp > 0 || run.secondWind <= 0) return;
+  if (!run.party.some((u) => u.id === unit.id)) return;
+  unit.hp = Math.min(
+    unit.maxHp,
+    Math.max(1, Math.ceil((unit.maxHp * run.secondWind) / 100)),
+  );
+  clearEffects(unit);
+  if (run.tauntId === unit.id) delete run.tauntId;
+  run.log.push(
+    `Second Wind! ${unit.name} rises at ${run.secondWind}% HP (${unit.hp}/${unit.maxHp}). It works once per expedition.`,
+  );
+  run.secondWind = 0;
+}
 function hurt(run: Run, actor: Unit, target: Unit, ability: Ability) {
   const {
     power,
@@ -673,6 +702,7 @@ function hurt(run: Run, actor: Unit, target: Unit, ability: Ability) {
       `${target.name} triggers Soothing Spirit: +${reactiveHealing} HP (${target.reactiveHealCharges} charges left; ${target.hp}/${target.maxHp} HP).`,
     );
   }
+  rescue(run, target);
   if (
     dealt > 0 &&
     target.reflect > 0 &&
@@ -690,6 +720,7 @@ function hurt(run: Run, actor: Unit, target: Unit, ability: Ability) {
     run.log.push(
       `${target.name} reflects ${reflected} damage to ${actor.name} (${actor.hp}/${actor.maxHp} HP).`,
     );
+    rescue(run, actor);
   }
 }
 type EnemyPlanKind =
@@ -1064,7 +1095,8 @@ export function nextRoom(state: Run): Run {
   run.room++;
   run.enemies = roomEnemies(run.room, run.difficulty);
   run.round = 1;
-  run.ap = run.maxAp = 6;
+  run.maxAp = 6;
+  run.ap = 6 + run.hearthAp;
   run.status = "combat";
   run.uses = {};
   run.roomUses = {};
