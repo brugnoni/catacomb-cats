@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getDifficulty,
+  powerPoints,
   HEARTH_TRACK,
   hearthBonuses,
   nextHearthDescription,
@@ -133,25 +134,50 @@ describe("explicit training tracks", () => {
 });
 describe("ascension snapshot calculation", () => {
   it("does not punish spending before a first victory and excludes unspent gold", () => {
-    expect(getDifficulty({ wins: 0, spentGold: 1000, xp: 1000 }).tier).toBe(0);
-    expect(getDifficulty({ wins: 1, spentGold: 0, xp: 135 }).tier).toBe(1);
+    const bought = { xp: 1000, generalLevel: 8, catLevels: { miso: 8 } };
+    expect(getDifficulty({ wins: 0, ...bought }).tier).toBe(0);
+    expect(getDifficulty({ wins: 1, xp: 0 }).tier).toBe(0);
   });
-  it("scales independently with wins, spent gold and mastery and bounds escalation", () => {
-    const baseline = getDifficulty({ wins: 1, spentGold: 0, xp: 135 });
+  it("follows the permanent power bought: top three cats, Hearth and mastery", () => {
+    expect(powerPoints({ wins: 1, xp: 0 })).toBe(0);
     expect(
-      getDifficulty({ wins: 2, spentGold: 0, xp: 135 }).hpMultiplier,
-    ).toBeGreaterThan(baseline.hpMultiplier);
-    expect(getDifficulty({ wins: 1, spentGold: 200, xp: 135 }).tier).toBe(2);
-    expect(getDifficulty({ wins: 1, spentGold: 0, xp: 300 }).tier).toBe(2);
+      powerPoints({
+        wins: 1,
+        xp: 300,
+        generalLevel: 2,
+        catLevels: { a: 5, b: 4, c: 3, d: 2, e: 1 },
+      }),
+    ).toBe(5 + 4 + 3 + 2 + 2);
+    const at = (points: number) =>
+      getDifficulty({ wins: 1, xp: 0, catLevels: { a: points } }).tier;
+    expect(at(2)).toBe(0);
+    expect(at(3)).toBe(1);
+    expect(at(6)).toBe(2);
+    // Gold spent or victories alone never raise the tier.
+    expect(getDifficulty({ wins: 500, xp: 0 }).tier).toBe(0);
+  });
+  it("bounds escalation at the maximum tier", () => {
     expect(
-      getDifficulty({ wins: 10000, spentGold: 100000, xp: 100000 }),
+      getDifficulty({
+        wins: 1,
+        xp: 99999,
+        generalLevel: 8,
+        catLevels: { a: 8, b: 8, c: 8 },
+      }).hpMultiplier,
+    ).toBeCloseTo(2.68, 5);
+    expect(
+      getDifficulty({
+        wins: 10000,
+        xp: 100000,
+        generalLevel: 99,
+        catLevels: { a: 99, b: 99, c: 99 },
+      }),
     ).toMatchObject({
-      tier: 12,
-      hpMultiplier: 1.96,
-      damageBonus: 3,
+      tier: 14,
+      damageBonus: 7,
       initiativeBonus: 3,
-      extraEnemies: 2,
-      armorBonus: 2,
+      extraEnemies: 1,
+      armorBonus: 1,
     });
   });
 });

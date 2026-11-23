@@ -1,5 +1,10 @@
-import { HEARTH_TRACK, MAX_TRAINING_RANK, trainingTrack } from "./progression";
-import type { Difficulty } from "./progression";
+import {
+  HEARTH_TRACK,
+  MAX_TRAINING_RANK,
+  tierFacts,
+  trainingTrack,
+  type Difficulty,
+} from "./progression";
 import type { Translate } from "./i18n";
 
 export function difficultyLabel(difficulty: Difficulty, t: Translate): string {
@@ -16,20 +21,23 @@ export function difficultyDescription(
     return t(
       "Base encounters. Ascension begins after your first boss victory.",
     );
-  const armor = Math.min(2, Math.floor(tier / 6));
+  const facts = tierFacts(tier);
   return t(
     "Enemies have +{hp}% HP, +{power} power and +{init} initiative. {extra}{armor}Based on victories, gold spent and mastery; fixed for this expedition.",
     {
-      hp: tier * 8,
-      power: Math.ceil(tier / 4),
-      init: Math.floor(tier / 4),
+      hp: facts.hpPercent,
+      power: facts.power,
+      init: facts.initiative,
       extra:
-        tier >= 10
+        facts.reinforcements > 1
           ? t("2 extra reinforcements per room; ")
-          : tier >= 5
+          : facts.reinforcements === 1
             ? t("1 extra reinforcement per room; ")
             : "",
-      armor: armor > 0 ? t("armored foes gain +{n} armor. ", { n: armor }) : "",
+      armor:
+        facts.armor > 0
+          ? t("armored foes gain +{n} armor. ", { n: facts.armor })
+          : "",
     },
   );
 }

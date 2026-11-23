@@ -485,8 +485,25 @@ export function nextTrainingDescription(catId: string, rank: number): string {
 }
 export interface DifficultyProgress {
   wins: number;
-  spentGold: number;
   xp: number;
+  generalLevel?: number;
+  catLevels?: Record<string, number>;
+}
+/**
+ * How much permanent power a player has bought: the ranks of their three best
+ * cats, the Hearth and the mastery level. Difficulty follows this, not gold.
+ */
+export function powerPoints(progress: DifficultyProgress): number {
+  const top3 = Object.values(progress.catLevels ?? {})
+    .map(whole)
+    .sort((a, b) => b - a)
+    .slice(0, 3)
+    .reduce((a, b) => a + Math.min(b, MAX_TRAINING_RANK), 0);
+  return (
+    top3 +
+    Math.min(MAX_TRAINING_RANK, whole(progress.generalLevel ?? 0)) +
+    masteryLevel(progress.xp)
+  );
 }
 export interface Difficulty {
   tier: number;
@@ -498,6 +515,42 @@ export interface Difficulty {
   label: string;
   description: string;
 }
+/** Difficulty tuning: one place to rebalance how fast Ascension grows. */
+export const DIFFICULTY_TUNING = {
+  maxTier: 14,
+  /** Power points (see powerPoints) for one tier. */
+  pointsPerTier: 3,
+  hpPerTier: 0.12,
+  powerEveryTiers: 2,
+  initiativeEveryTiers: 4,
+  /** Tiers that add a reinforcement to every room (first and second). */
+  reinforcementTiers: [10] as const,
+  armorEveryTiers: 8,
+};
+/** Loot for clearing a room (0-2). Banked only after the boss falls and the player returns to the lobby. */
+export const ROOM_REWARD = { gold: [40, 60, 80], xp: [30, 45, 60] } as const;
+export const roomReward = (room: number) => ({
+  gold: ROOM_REWARD.gold[room] ?? 0,
+  xp: ROOM_REWARD.xp[room] ?? 0,
+});
+export const EXPEDITION_REWARD = {
+  gold: ROOM_REWARD.gold.reduce((a, b) => a + b, 0),
+  xp: ROOM_REWARD.xp.reduce((a, b) => a + b, 0),
+};
+/** Healing a surviving cat gets when a room is cleared: the larger of a flat amount and a share of max HP. */
+export const ROOM_HEAL = { flat: 8, percent: 33 };
+/** The numbers a tier adds to every enemy; shared by the engine, lobby text and FAQ. */
+export function tierFacts(tier: number) {
+  return {
+    hpPercent: Math.round(tier * DIFFICULTY_TUNING.hpPerTier * 100),
+    power: Math.ceil(tier / DIFFICULTY_TUNING.powerEveryTiers),
+    initiative: Math.floor(tier / DIFFICULTY_TUNING.initiativeEveryTiers),
+    reinforcements: DIFFICULTY_TUNING.reinforcementTiers.filter(
+      (t) => tier >= t,
+    ).length,
+    armor: Math.min(2, Math.floor(tier / DIFFICULTY_TUNING.armorEveryTiers)),
+  };
+}
 /** No hidden scaling from unspent gold. Snapshot this once when a run begins. */
 export function getDifficulty(progress: DifficultyProgress): Difficulty {
   const wins = whole(progress.wins);
@@ -505,22 +558,23 @@ export function getDifficulty(progress: DifficultyProgress): Difficulty {
     wins === 0
       ? 0
       : Math.min(
-          12,
-          wins +
-            Math.floor(whole(progress.spentGold) / 200) +
-            Math.floor(masteryLevel(progress.xp) / 2),
+          DIFFICULTY_TUNING.maxTier,
+          Math.floor(powerPoints(progress) / DIFFICULTY_TUNING.pointsPerTier),
         );
   return {
     tier,
-    hpMultiplier: 1 + tier * 0.08,
-    damageBonus: Math.ceil(tier / 4),
-    initiativeBonus: Math.floor(tier / 4),
-    extraEnemies: tier >= 10 ? 2 : tier >= 5 ? 1 : 0,
-    armorBonus: Math.min(2, Math.floor(tier / 6)),
+    hpMultiplier: 1 + tier * DIFFICULTY_TUNING.hpPerTier,
+    damageBonus: tierFacts(tier).power,
+    initiativeBonus: tierFacts(tier).initiative,
+    extraEnemies: tierFacts(tier).reinforcements,
+    armorBonus: tierFacts(tier).armor,
     label: tier === 0 ? "First descent" : `Ascension ${tier}`,
     description:
       tier === 0
         ? "Base encounters. Ascension begins after your first boss victory."
-        : `Enemies have +${tier * 8}% HP, +${Math.ceil(tier / 4)} power and +${Math.floor(tier / 4)} initiative. ${tier >= 5 ? `${tier >= 10 ? 2 : 1} extra reinforcement${tier >= 10 ? "s" : ""} per room; ` : ""}${Math.floor(tier / 6) > 0 ? `armored foes gain +${Math.min(2, Math.floor(tier / 6))} armor. ` : ""}Based on victories, gold spent and mastery; fixed for this expedition.`,
+        : (({ hpPercent, power, initiative, reinforcements, armor }) =>
+            `Enemies have +${hpPercent}% HP, +${power} power and +${initiative} initiative. ${reinforcements > 0 ? `${reinforcements} extra reinforcement${reinforcements > 1 ? "s" : ""} per room; ` : ""}${armor > 0 ? `armored foes gain +${armor} armor. ` : ""}Based on victories, gold spent and mastery; fixed for this expedition.`)(
+            tierFacts(tier),
+          ),
   };
 }

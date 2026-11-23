@@ -1,52 +1,62 @@
-# Progression and encounter balance
+# Balance report
 
-The current rules use explicit class ranks, shared mastery, cooldowns and limited-use room passives. These deterministic scenarios are examples, not general win rates or a substitute for human playtesting.
+Measured with `src/sim.ts` (two bots, all ten teams, seeded) and checked by `src/balance.test.ts`.
+Reproduce a sweep (results go to a file; vitest hides console output):
 
-## Growth budget
+```
+BALANCE_REPORT=1 SIM_OUT=report.txt SIM_SEEDS=16 SIM_STAGES=0,2,4,6,9,12 SIM_BOTS=medium \
+  pnpm exec vitest run src/sim.test.ts -t medium
+```
 
-Each cat has eight explicit ranks in `src/progression.ts`; `trainingTrack()` supplies the same descriptions to the FAQ and `nextTrainingDescription()` supplies the next lobby benefit. Rank 3 remains the signature unlock. Prices are 20, 30, 50, 70, 90, 110, 130 and 150 gold: 100 total to unlock a signature, with training capped at rank 8.
+## Bots
 
-| Cat   | Stats from all eight ranks                   | Rank 5 passive                                                            | Rank 8 passive improvement            |
-| ----- | -------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------- |
-| Miso  | +16 HP, +1 attack, +3 Guard, +1 initiative   | Starts each room with 4 Guard                                             | Opening Guard becomes 6               |
-| Luna  | +7 HP, +2 attack, +2 Inspired, +2 initiative | Ice Ward reduces damage by 2 for 3 incoming attacks per room              | Ice Ward gains a fourth charge        |
-| Mei   | +10 HP, +4 healing, +2 initiative            | After a nonlethal attack damages HP, recover 2 HP, up to 3 times per room | Reactive recovery can trigger 5 times |
-| Pip   | +10 HP, +3 attack, +3 initiative             | First damaging skill in each room gains +2 power                          | Opening bonus becomes +3              |
-| Ember | +14 HP, +3 attack, +2 initiative             | Starts each room with 3 Guard                                             | Opening Guard becomes 5               |
+- **Medium**: attentive casual player. Revives, heals below 60% HP, shields the cat the strongest enemy has marked, blesses, then spends AP on the best damage per AP. Target: **75-85%** wins.
+- **Optimal**: beam search over the rest of each round using the deterministic engine (crits off). Target: **92-97%**.
+- `playerAfter(wins, team)` builds a typical save: 180 gold and 135 XP per victory, spent round-robin on the team's training, then the Hearth up to half the training rank.
 
-Shared mastery grants one level per 150 banked XP: +2 HP per level and +1 native numerical skill power every third level, capped at mastery 10. This improves damage, healing, Guard and Inspired potency. It does not increase AP generation, taunt, revival percentage or the numerical values of passive charges. Inspired during combat improves damage/healing/Guard but does not amplify another Inspired blessing; this prevents recursive blessing inflation.
+## Before (initial balance)
 
-## Active skills, cooldowns and shields
+| Stage (wins) | Tier | Medium win rate | Notes                                                   |
+| ------------ | ---- | --------------- | ------------------------------------------------------- |
+| 0            | 0    | 100%            | trivial, 14 rounds, almost no deaths                    |
+| 1-3          | 1-3  | 99-100%         | trivial                                                 |
+| 3            | 5    | 55%             | cliff: tier 5 added a reinforcement to every room       |
+| 6            | 10   | 26%             | second reinforcement; difficulty grew faster than power |
+| 12           | 12   | 72%             | teams without a healer 0-15%                            |
 
-Mei's rank-three special offers party healing or a 60%-HP single-target revival. Only revival has a cooldown: when used at turn T, revival is unavailable at T+1 and T+2 and returns at T+3. Party healing, her regular single-target heal and her basic attack are not placed on that cooldown; they remain limited by AP and per-turn uses. Ember's Cinder jab has no cooldown, Flame paw has a two-turn cooldown, and Sweeping embers a one-turn cooldown; each becomes available on the next. Rejected actions spend no AP, use counts or cooldowns. Cooldowns reset on room entry.
+Optimal bot: 100% everywhere with about 96% HP left, so the game had no pressure at all. All losses happened in the boss room.
 
-Guard and Inspired cannot stack. A full-duration effect blocks a redundant player cast; once its affected unit's turn starts reduce its duration, it can be refreshed. Guard now restores full current shield power and duration. Inspired only restores duration, preserving current potency. Ice Ward and reactive recovery have finite charges per room and cannot be replenished by Guard refresh. Reactive recovery requires actual HP damage and does not trigger on lethal blows or reflected damage.
+## Findings
 
-After ordinary room victories, dead cats revive at 25% maximum HP and surviving cats recover up to 8 HP. Boss victory fully restores the entire party. A combat revival returns an ally at 60% HP and they act beginning with the next round. Full-party defeat still ends the run.
+1. Difficulty counted wins, gold spent and mastery: it double-counted power and rose about 2-3 tiers per victory while the player grew slower, producing the cliff and hard-stuck runs.
+2. Tier 0-4 enemies were too weak, tier 5+ reinforcements were a discrete +33% enemy count.
+3. The boss room was the only real check (every loss), while rooms 1-2 cost under 10% HP.
+4. Team strength varied from 0% to 100%: the healer and Luna's AP skill carried; Miso was the weakest cat.
+5. Room recovery (flat 8 HP) was the single biggest lever for teams without sustain.
 
-## Ascension snapshot
+## Changes
 
-Before the first recorded boss victory, tier is zero. Afterwards:
+- **Difficulty follows Power**, the permanent power bought: ranks of the three best cats + Hearth + mastery level. One tier per 3 Power, up to tier 14 (full power). Wins, gold and losing never change it. Constants in `DIFFICULTY_TUNING`.
+- Per tier: +12% HP (was 8%), +1 power every 2 tiers (was 4), +1 initiative every 4. One reinforcement per room from tier 10 (was two, from 5 and 10), +1 armor from tier 8 (was 6 and 12).
+- Enemy base stats raised, rooms 1-2 more than the boss (Crypt rat 31/8, Moss slime 38/8, Bone sentry 43/9, Cave bat 31/8, Spore imp 36/8, Hollow King 80/10, Royal wisp 32/8, Bone squire 40/9; HP/power).
+- Room recovery: 33% of max HP (at least 8), was a flat 8.
+- Rewards 40/60/80 gold (180 per win, was 90); XP unchanged. Training pays back about twice as fast, matching the faster tier curve.
+- Cats: Miso HP 40 (35), Valiant slash 5 (4), Nine lives 8 (6); Pip HP 30 (27); Ember HP 35 (32).
 
-`tier = min(12, victories + floor(goldSpent / 200) + floor(masteryLevel / 2))`
+## After
 
-Enemy HP scales by `1 + 0.08 * tier`; power adds `ceil(tier / 4)` and initiative adds `floor(tier / 4)`. Tier 5 adds one reinforcement per room, and tier 10 adds a second (two total). Armored enemies gain `min(2, floor(tier / 6))` extra armor. Unspent gold does not affect difficulty. The snapshot is frozen on entry.
+| Stage (wins) | Tier  | Medium win rate      |
+| ------------ | ----- | -------------------- |
+| 0            | 0     | ~80% (teams 25-100%) |
+| 1-5          | 2-7   | 80-95%               |
+| 6-8          | 8-9   | 83-98%               |
+| 10-12        | 11-12 | 86-91%               |
 
-## Measured scenarios
+Average about 88%; optimal bot 100% at stages 0-12 (measured before the final cat and recovery adjustments, so it is a lower bound).
 
-The policy selects legal actions and targets using the engine's cooldown and target validators. It prioritizes a legal combat revival when a companion is fallen, uses Moonwell, heals wounded allies, applies Inspired to unblessed allies, then chooses damage per AP with a kill preference. It does not reserve AP, plan future rounds, or intentionally use Taunt/Guard. Measured HP is captured before the decision that finishes the boss, distinct from automatic victory healing.
+## Known gaps (not tuned further)
 
-| Scenario                                           | Party              | Result                | Room rounds | HP before finishing decision | Combat revivals | Final HP |
-| -------------------------------------------------- | ------------------ | --------------------- | ----------- | ---------------------------- | --------------- | -------- |
-| Fresh save, offensive actions only                 | Miso / Luna / Mei  | Victory, Ascension 0  | 3 / 4 / 5   | 35/35, 0/25, 1/29            | 0               | All full |
-| Fresh save, support policy                         | Miso / Luna / Mei  | Victory, Ascension 0  | 3 / 6 / 8   | 35/35, 0/25, 13/29           | 0               | All full |
-| One victory, 135 XP, Mei rank 3, Iron bell on Miso | Miso / Luna / Mei  | Victory, Ascension 1  | 3 / 6 / 9   | 41/41, 6/25, 24/32           | 4               | All full |
-| All training and mastery capped, Hearth rank 8     | Luna / Ember / Mei | Victory, Ascension 12 | 4 / 5 / 8   | 38/68, 82/82, 75/75          | 1               | All full |
-
-The fresh support policy finishes with 48 combat HP before the last decision versus 36 for attacks only, but takes more rounds. Both lose a companion temporarily and can still win with room resurrection. At higher ranks, combat revival provides a new recovery option while its two-turn revival-only cooldown prevents reviving on every Mei turn without blocking party healing. The maximum-tier example remains attainable under this policy, but it is substantially healthier than earlier builds because mastery now improves healing, new passives reduce attrition, and combat revival restores allies above room-clear revival HP. No enemy stats were adjusted to hide that increased player strength.
-
-These samples cannot establish fairness for every class combination, equipment choice or spending history. Broad balance remains a playtesting task. The tests enforce legal actions, finite execution, meaningful multi-round encounters, scaled non-one-shot opening enemies and full victory restoration.
-
-Three reproducible policy scenarios live in `src/balance.test.ts`. Print current metrics with:
-
-`BALANCE_REPORT=1 pnpm exec vitest run src/balance.test.ts --reporter verbose --disableConsoleIntercept`
+- Teams without a healer and without Luna (for example Miso + Pip + Ember) still win only about 25-70% of first descents.
+- The optimal bot is above its 92-97% target (100%): the game is fully winnable with perfect play, but there is little margin at the top. Raising enemy HP and power by about 10% at high tiers is the first lever if the endgame feels easy.
+- The Hearth is capped by `playerAfter` at half the training rank, so endgame stages are modelled with Hearth 4.
+- Critical hits were off in every measurement (10% base in the real game adds variance but no average change).

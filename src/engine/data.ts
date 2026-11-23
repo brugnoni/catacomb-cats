@@ -14,15 +14,15 @@ export const CATS: Cat[] = [
     name: "Miso",
     role: "Vanguard",
     color: "#f4ae68",
-    hp: 35,
+    hp: 40,
     initiative: 12,
     abilities: [
-      { ...strike, name: "Valiant slash" },
+      { ...strike, name: "Valiant slash", power: 5 },
       {
         id: "guard",
         name: "Nine lives",
         cost: 2,
-        power: 6,
+        power: 8,
         target: "ally",
         effect: "guard",
       },
@@ -52,7 +52,7 @@ export const CATS: Cat[] = [
     name: "Pip",
     role: "Scout",
     color: "#88ceb3",
-    hp: 27,
+    hp: 30,
     initiative: 20,
     abilities: [
       strike,
@@ -92,7 +92,7 @@ export const CATS: Cat[] = [
     name: "Ember",
     role: "Brawler",
     color: "#e98e91",
-    hp: 32,
+    hp: 35,
     initiative: 8,
     abilities: [
       { ...strike, name: "Cinder jab", power: 5 },

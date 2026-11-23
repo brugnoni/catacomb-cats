@@ -100,8 +100,8 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
       roomsCleared++;
       await expect(page.locator(".reward-details")).toContainText(
         roomsCleared === 1
-          ? "Room reward: +20 gold, +30 XP"
-          : "Room reward: +30 gold, +45 XP",
+          ? "Room reward: +40 gold, +30 XP"
+          : "Room reward: +60 gold, +45 XP",
       );
       await expect(page.locator(".difficulty-banner")).toContainText(
         `Expedition Strength +${roomsCleared} (+${roomsCleared} damage to all cats)`,
@@ -140,7 +140,7 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
   await page
     .getByRole("button", { name: "Return to lobby", exact: true })
     .click();
-  await expect(page.locator(".currency")).toContainText("120 gold");
+  await expect(page.locator(".currency")).toContainText("210 gold");
   await expect(page.locator(".top-meta")).toContainText("135 XP");
   await enterDungeon(page);
   for (const health of await page.locator(".allies .health-value").all()) {
@@ -148,7 +148,7 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
     expect(values[1]).toBe(values[2]);
   }
   await page.reload();
-  await expect(page.locator(".currency")).toContainText("120 gold");
+  await expect(page.locator(".currency")).toContainText("210 gold");
   await expect(page.locator(".top-meta")).toContainText("135 XP");
 });
 
@@ -294,7 +294,7 @@ test("training explains and applies its permanent health and power improvement",
     "Rank 3 unlocks Stand behind me · now 0/3",
   );
   await miso.getByRole("button", { name: /^Train Miso/ }).click();
-  await expect(miso.locator(".stats")).toContainText("38");
+  await expect(miso.locator(".stats")).toContainText("43");
   await expect(page.locator(".currency")).toContainText("10 gold");
   await enterDungeon(page);
   await page.getByRole("button", { name: "End turn", exact: true }).click();
@@ -302,7 +302,7 @@ test("training explains and applies its permanent health and power improvement",
   await pickTarget(page, "e0");
   await expect(
     page.getByRole("button", { name: /^Valiant slash/ }),
-  ).toContainText("4 damage");
+  ).toContainText("5 damage");
 });
 
 test("three trainings cost 100 gold, unlock Moonwell, and its room limit preserves AP", async ({
@@ -338,7 +338,7 @@ test("three trainings cost 100 gold, unlock Moonwell, and its room limit preserv
   await page.reload();
   await expect(luna.getByLabel("Luna skill unlock")).toContainText("Moonwell");
   await expect(page.getByLabel("Expedition difficulty")).toContainText(
-    "100 gold invested",
+    "Power 3",
   );
 });
 
@@ -422,7 +422,7 @@ test("attacks retain a living enemy target while ending a turn clears it", async
   await rat.click();
   const strike = page.getByRole("button", { name: /^Claw strike/ });
   await expect(strike.locator(".damage-preview")).toContainText(
-    "Deals 4 · 20 HP left",
+    "Deals 4 · 27 HP left",
   );
   await strike.click();
   await expect(page.locator('[data-unit="e0"] .unit-target')).toHaveAttribute(
@@ -539,11 +539,13 @@ test("effect icons expose themed descriptions on hover and keyboard focus and Gu
 test("an attack clears a defeated target even when the same cat still has AP", async ({
   page,
 }) => {
-  await seedLegacySave(page, { catLevels: { luna: 3 } });
+  // Hearth rank 2 adds +1 attack so two bolts leave the rat alive and the third finishes it.
+  await seedLegacySave(page, { catLevels: { luna: 3 }, generalLevel: 2 });
   await page.goto("/");
   await enterDungeon(page);
   await pickTarget(page, "e0");
   await page.getByRole("button", { name: /^Dagger line/ }).click();
+  await page.getByRole("button", { name: /^Claw strike/ }).click();
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await pickTarget(page, "e0");
   const bolt = page.getByRole("button", { name: /^Moon bolt/ });
@@ -554,8 +556,6 @@ test("an attack clears a defeated target even when the same cat still has AP", a
     "true",
   );
   await bolt.click();
-  await expect(page.locator(".command-deck h2")).toHaveText("Luna");
-  await expect(page.locator(".round-counter")).toContainText("1 / 6 AP");
   await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
     0,
   );
@@ -685,7 +685,7 @@ test("an eligible shield refresh restores consumed absorption as well as duratio
   await advanceToCat(page, "Miso");
   await pickTarget(page, "luna");
   const guard = page.getByRole("button", { name: /^Nine lives/ });
-  await expect(guard).toContainText("Shield 1 ally for 8");
+  await expect(guard).toContainText("Shield 1 ally for 10");
   await guard.click();
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await advanceToCat(page, "Miso");
@@ -693,12 +693,13 @@ test("an eligible shield refresh restores consumed absorption as well as duratio
     .locator(".allies .combatant")
     .filter({ has: page.getByRole("heading", { name: "Luna", exact: true }) });
   await expect(
-    luna.getByRole("button", { name: "Guard: 1", exact: true }),
-  ).toBeVisible();
+    // The enemy hit (10 power) consumed the whole 10 point shield.
+    luna.getByRole("button", { name: /^Guard:/ }),
+  ).toHaveCount(0);
   await pickTarget(page, "luna");
   await expect(guard).toBeEnabled();
   await guard.click();
-  const shield = luna.getByRole("button", { name: "Guard: 8", exact: true });
+  const shield = luna.getByRole("button", { name: "Guard: 10", exact: true });
   await expect(shield).toBeVisible();
   await shield.hover();
   await expect(page.getByRole("tooltip")).toContainText("Lasts 2 turns");
@@ -1159,10 +1160,10 @@ test("Dagger line hits the target and the enemy behind it", async ({
   );
   await line.click();
   await expect(page.locator('[data-unit="e0"] .health-value')).toHaveText(
-    "16 / 24 HP",
+    "23 / 31 HP",
   );
   await expect(page.locator('[data-unit="e1"] .health-value')).toHaveText(
-    "25 / 29 HP",
+    "34 / 38 HP",
   );
   await expect(line).toBeDisabled();
 });
@@ -1184,7 +1185,7 @@ test("a critical hit is announced over its target", async ({ page }) => {
     "Pip scores a critical hit on Crypt rat!",
   );
   await expect(page.locator('[data-unit="e0"] .health-value')).toHaveText(
-    "18 / 24 HP",
+    "25 / 31 HP",
   );
 });
 

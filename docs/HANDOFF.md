@@ -104,17 +104,17 @@ El caso reportado de 1/37 HP, armadura 2 y ataque de potencia 6 está cubierto: 
 
 Los enemigos tienen roles: tanques con armadura/Guard, ágiles con iniciativa alta, mejoras de ataque, maldiciones, protección, reflexión y curación limitada de aliados. Reflejar causa daño de retorno fijo y no vuelve a reflejarse.
 
-Tras la primera victoria, se fija al entrar una dificultad de Ascension según victorias, oro gastado y maestría; el oro sin gastar no cuenta. El nivel no cambia durante la run. Fórmula actual:
+Tras la primera victoria, se fija al entrar una dificultad de Ascension según el **Poder** comprado (`powerPoints()` en `src/progression.ts`: rangos de los tres mejores gatos + rango del Hogar + nivel de maestría); ganar, gastar oro o perder no la cambian por sí solos. El nivel no cambia durante la run. Todos los números están en `DIFFICULTY_TUNING` y `tierFacts()` (las comparten motor, lobby y FAQ). Fórmula actual:
 
-`tier = min(12, wins + floor(spentGold / 200) + floor(masteryLevel / 2))`
+`tier = min(14, floor(Poder / 3))` (0 antes de la primera victoria)
 
-HP enemigo × `(1 + 0.08 × tier)`; potencia +`ceil(tier / 4)`; iniciativa +`floor(tier / 4)`. En tier 5 aparece un refuerzo por sala, en tier 10 un segundo. Enemigos ya acorazados ganan hasta dos de armadura adicional, en tiers 6 y 12. Antes de la primera victoria el tier es 0.
+HP enemigo × `(1 + 0.12 × tier)`; potencia +`ceil(tier / 2)`; iniciativa +`floor(tier / 4)`. Desde el tier 10 aparece un refuerzo por sala. Los enemigos ya acorazados ganan +1 de armadura desde el tier 8. Objetivo de balance: ver `outputs/balance-report.md` (bot medio 75-85%, bot óptimo 92-97%; el simulador está en `src/sim.ts`).
 
 ## Recompensas, recuperación y guardado
 
-- Sala 1: 20 oro/30 XP; sala 2: 30 oro/45 XP; jefe: 40 oro/60 XP. Total completo: 90 oro y 135 XP, más objetos descubiertos.
+- Sala 1: 40 oro/30 XP; sala 2: 60 oro/45 XP; jefe: 80 oro/60 XP (`ROOM_REWARD`). Total completo: 180 oro y 135 XP, más objetos descubiertos.
 - Oro, XP y objetos de salas son **Expedition Loot provisional**. Solo se bancan tras vencer al jefe **y pulsar Return to lobby**. No se equipan objetos encontrados a mitad de run.
-- Tras las primeras dos salas, los supervivientes recuperan hasta 8 HP y todos ganan +1 de daño para el resto de la run. Los caídos reviven al 25% de HP máximo, redondeado arriba, sin recibir además los +8.
+- Tras las primeras dos salas, los supervivientes recuperan el 33% de su HP máximo (mínimo 8, `ROOM_HEAL`) y todos ganan +1 de daño para el resto de la run. Los caídos reviven al 25% de HP máximo, redondeado arriba, sin recibir además la curación de sala.
 - Vencer al jefe cura y revive a todo el grupo al máximo y limpia efectos temporales. La siguiente expedición comienza sana.
 - Derrota total, retirada o recarga pierden loot provisional. Una derrota total no activa resurrección.
 - El progreso permanente está en `localStorage`, clave **`catacomb-cats.progress.v1`**. La run activa no se guarda.

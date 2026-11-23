@@ -72,8 +72,8 @@ export const UI: Record<string, string> = {
   "2 extra reinforcements per room; ": "2 refuerzos extra por sala; ",
   "armored foes gain +{n} armor. ":
     "los enemigos acorazados ganan +{n} de armadura. ",
-  "{wins} victories · {gold} gold invested · Mastery {level}":
-    "{wins} victorias · {gold} de oro invertido · Maestría {level}",
+  "{wins} victories · Power {points} · Mastery {level}":
+    "{wins} victorias · Poder {points} · Maestría {level}",
   "Difficulty is fixed when you enter. Future victories and permanent investment strengthen the next expedition.":
     "La dificultad queda fija al entrar. Las futuras victorias y la inversión permanente refuerzan la próxima expedición.",
   "Upgrades stay.": "Las mejoras se quedan.",
@@ -121,8 +121,8 @@ export const UI: Record<string, string> = {
     "Recompensa de sala: +{gold} de oro, +{xp} XP y {item}.",
   "Added to expedition loot. Gold, XP and items are banked after defeating the boss and returning to the lobby.":
     "Añadido al botín de la expedición. El oro, el XP y los objetos se guardan tras derrotar al jefe y volver a la Madriguera.",
-  "Applied now: surviving cats recovered up to 8 HP (capped at max HP). Fallen cats returned at 25% max HP, rounded up, without extra recovery. Expedition Strength increased by +1 to +{n} damage.":
-    "Aplicado ahora: los gatos supervivientes recuperaron hasta 8 PV (sin pasar del máximo). Los gatos caídos volvieron con el 25% de PV máx., redondeado hacia arriba, sin recuperación extra. La Fuerza de expedición subió +1, hasta +{n} de daño.",
+  "Applied now: surviving cats recovered {pct}% of their max HP (at least {flat}). Fallen cats returned at 25% max HP, rounded up, without extra recovery. Expedition Strength increased by +1 to +{n} damage.":
+    '"Aplicado ahora: los gatos supervivientes recuperaron el {pct}% de sus PV máx. (al menos {flat}). Los gatos caídos volvieron con el 25% de PV máx., redondeado hacia arriba, sin recuperación extra. La Fuerza de expedición subió +1, hasta +{n} de daño.',
   "Continue to next room →": "Continuar a la siguiente sala →",
   "THE CROWN HAS FALLEN": "LA CORONA HA CAÍDO",
   "THE DARK TAKES ITS DUE": "LA OSCURIDAD COBRA SU PRECIO",

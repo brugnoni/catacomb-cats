@@ -26,6 +26,10 @@ import {
   type Progress,
   type Run,
 } from "./game";
+import { EXPEDITION_REWARD, ROOM_HEAL } from "./progression";
+/** Healing a surviving cat gets when a room is cleared. */
+const roomHeal = (maxHp: number) =>
+  Math.max(ROOM_HEAL.flat, Math.ceil((maxHp * ROOM_HEAL.percent) / 100));
 const start = () => createRun(initialProgress(), ["pip", "miso", "clover"]);
 function turn(run: Run, id: string) {
   run.order = [
@@ -66,8 +70,8 @@ describe("basic expedition and lobby regression", () => {
     expect(currentUnit(r)?.id).toBe("pip");
     const next = act(r, "strike", "e0");
     expect(next.ap).toBe(5);
-    expect(next.enemies[0]!.hp).toBe(20);
-    expect(r.enemies[0]!.hp).toBe(24);
+    expect(next.enemies[0]!.hp).toBe(27);
+    expect(r.enemies[0]!.hp).toBe(31);
     expect(currentUnit(endTurn(next))?.id).toBe("miso");
   });
   it("invalid actions never mutate or spend AP", () => {
@@ -118,10 +122,12 @@ describe("basic expedition and lobby regression", () => {
     r.party[0]!.hp -= 12;
     r = clear(r);
     expect(r.status).toBe("reward");
-    expect(r.gold).toBe(20);
+    expect(r.gold).toBe(40);
     expect(r.xp).toBe(30);
     expect(r.bonus).toBe(1);
-    expect(r.party[0]!.hp).toBe(r.party[0]!.maxHp - 4);
+    expect(r.party[0]!.hp).toBe(
+      r.party[0]!.maxHp - 12 + roomHeal(r.party[0]!.maxHp),
+    );
     expect(act(r, "strike", "e0")).toBe(r);
     r = nextRoom(r);
     expect(r.bonus).toBe(1);
@@ -131,7 +137,7 @@ describe("basic expedition and lobby regression", () => {
     expect(r.status).toBe("victory");
     expect(r.items).toEqual(["Iron bell", "Silk ribbon", "Lucky fang"]);
     const p = claimRewards(initialProgress(), r);
-    expect(p.gold).toBe(120);
+    expect(p.gold).toBe(30 + EXPEDITION_REWARD.gold);
     expect(p.xp).toBe(135);
     expect(p.wins).toBe(1);
     expect(claimRewards(p, r)).toBe(p);
@@ -148,7 +154,7 @@ describe("basic expedition and lobby regression", () => {
     let p = equip(initialProgress(), "pip", "Iron bell");
     p = equip(p, "miso", "Iron bell");
     expect(p.equipment.pip).toBeUndefined();
-    expect(buildCat(p, "miso").maxHp).toBe(41);
+    expect(buildCat(p, "miso").maxHp).toBe(46);
   });
 });
 describe("training, migration and increasing challenge", () => {
@@ -171,7 +177,7 @@ describe("training, migration and increasing challenge", () => {
       catLevels: { miso: 8, pip: 1, clover: 2 },
     };
     expect(buyUpgrade(p, "miso")).toBe(p);
-    expect(buildCat(p, "miso").maxHp).toBe(51);
+    expect(buildCat(p, "miso").maxHp).toBe(56);
     expect(buildCat(p, "pip").initiative).toBe(21);
     expect(buildCat(p, "clover").abilities[1]!.power).toBe(8);
   });
@@ -187,21 +193,20 @@ describe("training, migration and increasing challenge", () => {
     const p = initialProgress();
     const first = createRun({ ...p, gold: 9999 }, ["pip", "miso", "clover"]);
     expect(first.difficulty.tier).toBe(0);
-    const harder = createRun({ ...p, wins: 2, spentGold: 400, xp: 600 }, [
-      "pip",
-      "miso",
-      "clover",
-    ]);
+    const trained = {
+      wins: 2,
+      xp: 600,
+      generalLevel: 8,
+      catLevels: { miso: 8, pip: 8, clover: 8 },
+    };
+    const harder = createRun({ ...p, ...trained }, ["pip", "miso", "clover"]);
     expect(harder.difficulty.tier).toBeGreaterThan(first.difficulty.tier);
     expect(harder.enemies[0]!.maxHp).toBeGreaterThan(first.enemies[0]!.maxHp);
     expect(harder.enemies.length).toBe(3);
     expect(
-      createRun({ ...p, wins: 9999, spentGold: 9999, xp: 99999 }, [
-        "pip",
-        "miso",
-        "clover",
-      ]).enemies,
-    ).toHaveLength(4);
+      createRun({ ...p, ...trained, xp: 99999 }, ["pip", "miso", "clover"])
+        .enemies,
+    ).toHaveLength(3);
     const snapshot = structuredClone(harder.difficulty);
     expect(nextRoom(clear(harder)).difficulty).toEqual(snapshot);
   });
@@ -220,7 +225,7 @@ describe("training, migration and increasing challenge", () => {
     expect(q.catLevels.miso).toBe(12);
     expect(q.wins).toBe(1);
     expect(q.spentGold).toBe(1560);
-    expect(buildCat(q, "miso").maxHp).toBe(51);
+    expect(buildCat(q, "miso").maxHp).toBe(56);
     expect(parseProgress(JSON.stringify({ ...q, wins: -1 }))).toEqual(
       initialProgress(),
     );
@@ -244,7 +249,7 @@ describe("non-stacking effects and exact numeric outcomes", () => {
     pip.guard -= 2;
     pip.guardTurns = 1;
     r = act(r, "guard", "pip");
-    expect(r.party.find((u) => u.id === "pip")!.guard).toBe(6);
+    expect(r.party.find((u) => u.id === "pip")!.guard).toBe(8);
     expect(r.party.find((u) => u.id === "pip")!.guardTurns).toBe(2);
   });
   it("Inspired does not amplify itself, and support skills benefit", () => {
@@ -377,7 +382,7 @@ describe("enemy role actions", () => {
     r.order = ["pip", "e1", "e0", "miso", "clover"];
     r = endTurn(r);
     expect(r.log.some((l) => l.includes("Inspired +2"))).toBe(true);
-    expect(r.log.some((l) => l.includes("7 attack power"))).toBe(true);
+    expect(r.log.some((l) => l.includes("10 attack power"))).toBe(true);
   });
   it("tank foes have initial armor/guard and agile bats have higher initiative", () => {
     const r = nextRoom(clear(start()));
@@ -430,7 +435,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
       }
       r.tauntId = r.party[1]!.id;
       r = clear(r);
-      expect(r.party[0]!.hp).toBe(live.maxHp - 4);
+      expect(r.party[0]!.hp).toBe(live.maxHp - 12 + roomHeal(live.maxHp));
       for (let i = 1; i <= fallen; i++) {
         const c = r.party[i]!;
         expect(c.hp).toBe(Math.ceil(c.maxHp / 4));
@@ -481,7 +486,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
     tank.fury = 2;
     tank.furyTurns = 3;
     const guard = tank.abilities.find((a) => a.id === "guard")!;
-    expect(abilityPower(r, tank, guard)).toBe(8);
+    expect(abilityPower(r, tank, guard)).toBe(10);
     const mage = trained("luna");
     const luna = mage.party[0]!;
     luna.fury = 2;
@@ -529,7 +534,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
     expect(act(r, "guard", "pip")).toBe(r);
     target.guardTurns = 1;
     r = act(r, "guard", "pip");
-    expect(r.party.find((c) => c.id === "pip")!.guard).toBe(6);
+    expect(r.party.find((c) => c.id === "pip")!.guard).toBe(8);
     expect(r.party.find((c) => c.id === "pip")!.guardTurns).toBe(2);
   });
   it("prevents full-HP single and area healing without spending resources, while injured allies remain legal", () => {
@@ -612,7 +617,7 @@ describe("owner-start clocks, automatic exhaustion and expedition recovery", () 
       r = endTurn(r);
       expect(currentUnit(r)?.id).toBe(targetId);
       expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(1);
-      expect(r.party.find((c) => c.id === targetId)!.guard).toBe(6);
+      expect(r.party.find((c) => c.id === targetId)!.guard).toBe(8);
       // Completing the affected turn itself does not consume another duration.
       r.order = [targetId, otherId, "clover"];
       r.turn = 0;
@@ -836,7 +841,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     ).toBe(9);
     expect(
       buildCat(p, "miso").abilities.find((a) => a.id === "guard")!.power,
-    ).toBe(7);
+    ).toBe(9);
     expect(
       buildCat(p, "luna").abilities.find((a) => a.id === "fury")!.power,
     ).toBe(3);
@@ -868,7 +873,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r.turn = 0;
     r = endTurn(r);
     const after = r.party.find((c) => c.id === "luna")!;
-    expect(after.hp).toBe(7);
+    expect(after.hp).toBe(4);
     expect(after.iceCharges).toBe(2);
     expect(r.log.some((line) => line.includes("2 Ice Ward blocked"))).toBe(
       true,
@@ -885,7 +890,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r.turn = 0;
     r = endTurn(r);
     const mei = r.party.find((c) => c.id === "clover")!;
-    expect(mei.hp).toBe(7);
+    expect(mei.hp).toBe(4);
     expect(mei.reactiveHealCharges).toBe(2);
     mei.hp = 1;
     r.order = ["pip", "e0", "clover", "miso", "e1"];
@@ -1379,7 +1384,7 @@ describe("critical hits", () => {
     let r = createRun(initialProgress(), party, 1, { crit: 100 });
     r = act(r, "strike", "e0");
     expect(r.events[0]).toMatchObject({ type: "hit", crit: true, damage: 6 });
-    expect(r.enemies[0]!.hp).toBe(24 - 6);
+    expect(r.enemies[0]!.hp).toBe(31 - 6);
     expect(r.log.join(" ")).toContain(
       "Pip scores a critical hit on Crypt rat!",
     );

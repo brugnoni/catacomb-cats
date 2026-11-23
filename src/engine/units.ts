@@ -108,19 +108,19 @@ export function roomEnemies(room: number, d: Run["difficulty"]): Unit[] {
   const team =
     room === 0
       ? [
-          enemy("e0", "Crypt rat", 24, 14, 5),
-          enemy("e1", "Moss slime", 29, 7, 5),
+          enemy("e0", "Crypt rat", 31, 14, 8),
+          enemy("e1", "Moss slime", 38, 7, 8),
         ]
       : room === 1
         ? [
-            enemy("e0", "Bone sentry", 32, 13, 6),
-            enemy("e1", "Cave bat", 24, 22, 5),
-            enemy("e2", "Spore imp", 27, 9, 5),
+            enemy("e0", "Bone sentry", 43, 13, 9),
+            enemy("e1", "Cave bat", 31, 22, 8),
+            enemy("e2", "Spore imp", 36, 9, 8),
           ]
         : [
-            enemy("e0", "The Hollow King", 74, 11, 8),
-            enemy("e1", "Royal wisp", 29, 17, 5),
-            enemy("e2", "Bone squire", 36, 8, 6),
+            enemy("e0", "The Hollow King", 80, 11, 10),
+            enemy("e1", "Royal wisp", 32, 17, 8),
+            enemy("e2", "Bone squire", 40, 8, 9),
           ];
   for (let i = 0; i < d.extraEnemies; i++)
     team.push(

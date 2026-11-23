@@ -1,3 +1,4 @@
+import { ROOM_HEAL, roomReward } from "../progression";
 import { type Unit, type Run } from "./model";
 import { ITEMS } from "./data";
 
@@ -118,12 +119,13 @@ export function check(run: Run): boolean {
     return true;
   }
   if (run.enemies.every((u) => u.hp <= 0)) {
-    run.gold += 20 + run.room * 10;
-    run.xp += 30 + run.room * 15;
+    const reward = roomReward(run.room);
+    run.gold += reward.gold;
+    run.xp += reward.xp;
     run.status = run.room === 2 ? "victory" : "reward";
     run.items = [...new Set([...run.items, ITEMS[run.room]!])];
     run.log.push(
-      `Room rewards: +${20 + run.room * 10} gold, +${30 + run.room * 15} XP and ${ITEMS[run.room]}. Spoils are banked only after defeating the boss and returning to the lobby.`,
+      `Room rewards: +${reward.gold} gold, +${reward.xp} XP and ${ITEMS[run.room]}. Spoils are banked only after defeating the boss and returning to the lobby.`,
     );
     if (run.room < 2) {
       run.bonus++;
@@ -148,7 +150,13 @@ export function check(run: Run): boolean {
           `${c.name} resurrects at 25% HP (${c.hp}/${c.maxHp}); no additional room recovery.`,
         );
       } else if (run.room < 2) {
-        const healed = Math.min(8, c.maxHp - c.hp);
+        const healed = Math.min(
+          Math.max(
+            ROOM_HEAL.flat,
+            Math.ceil((c.maxHp * ROOM_HEAL.percent) / 100),
+          ),
+          c.maxHp - c.hp,
+        );
         c.hp += healed;
         run.log.push(`${c.name} recovers ${healed} HP (${c.hp}/${c.maxHp}).`);
       }

@@ -11,6 +11,11 @@ import {
 } from "./game";
 import {
   BASE_CRIT_CHANCE,
+  DIFFICULTY_TUNING,
+  EXPEDITION_REWARD,
+  ROOM_HEAL,
+  roomReward,
+  tierFacts,
   HEARTH_TRACK,
   MAX_TRAINING_RANK,
   masteryLevel,
@@ -135,19 +140,39 @@ function buildEntries(t: Translate): [string, string][] {
     [
       t("How does repeat-expedition difficulty work?"),
       t(
-        "Your first expedition has a fixed introductory difficulty. After your first boss victory, future expeditions become stronger based on recorded boss victories, total gold spent on upgrades and banked XP mastery. Buying upgrades or losing a run never lowers those recorded values. After the first victory, each boss win adds one tier, each 200 spent gold adds another, and each two mastery levels add another, up to tier 12. Enemy HP increases by 8% per tier; attack bonus is +1 for tiers 1–4, +2 for 5–8, and +3 for 9–12. Every four tiers add +1 initiative. Tier 5 adds one reinforcement per room and tier 10 adds a second; armored foes gain +1 armor at tiers 6 and 12. The lobby shows the next expedition's tier and modifiers; they are fixed when you enter and never change during combat. Each individual upgrade can still help within a tier. This is initial balance, not a promise that every team or strategy wins.",
+        "Your first expedition has a fixed introductory difficulty. Afterwards, difficulty follows the permanent power you have bought: the ranks of your three best cats, the Hearth blessing and your mastery level add up to Power, and every {per} Power adds one Ascension tier, up to tier {max}. Winning, spending gold or losing never change it on their own. Each tier gives enemies +{hp}% HP, +1 power every {pe} tiers and +1 initiative every {ie} tiers; from tier {r} there is one extra reinforcement per room and from tier {a} armored foes gain +1 armor. The lobby shows the next expedition's tier and modifiers; they are fixed when you enter and never change during combat. The balance aims for a careful player to win about four out of five expeditions, so some teams will find it harder than others.",
+        {
+          per: DIFFICULTY_TUNING.pointsPerTier,
+          max: DIFFICULTY_TUNING.maxTier,
+          hp: tierFacts(1).hpPercent,
+          pe: DIFFICULTY_TUNING.powerEveryTiers,
+          ie: DIFFICULTY_TUNING.initiativeEveryTiers,
+          r: DIFFICULTY_TUNING.reinforcementTiers[0],
+          a: DIFFICULTY_TUNING.armorEveryTiers,
+        },
       ),
     ],
     [
       t("When exactly do I receive Expedition Loot?"),
       t(
-        "Room rewards are provisional, carried loot. Clearing a room DOES NOT add its gold, XP or items to your permanent lobby inventory. Room 1 adds 20 gold and 30 XP, room 2 adds 30 gold and 45 XP, and the boss adds 40 gold and 60 XP to the expedition's carried total. To keep the loot, defeat the final boss AND choose Return to lobby. Only then are the full 90 gold, 135 XP and discovered items banked. Defeat, retreat or reloading during a run loses carried loot; previously banked progress is preserved. Carried items cannot be equipped mid-run.",
+        "Room rewards are provisional, carried loot. Clearing a room DOES NOT add its gold, XP or items to your permanent lobby inventory. Room 1 adds {g1} gold and {x1} XP, room 2 adds {g2} gold and {x2} XP, and the boss adds {g3} gold and {x3} XP to the expedition's carried total. To keep the loot, defeat the final boss AND choose Return to lobby. Only then are the full {gt} gold, {xt} XP and discovered items banked. Defeat, retreat or reloading during a run loses carried loot; previously banked progress is preserved. Carried items cannot be equipped mid-run.",
+        {
+          g1: roomReward(0).gold,
+          x1: roomReward(0).xp,
+          g2: roomReward(1).gold,
+          x2: roomReward(1).xp,
+          g3: roomReward(2).gold,
+          x3: roomReward(2).xp,
+          gt: EXPEDITION_REWARD.gold,
+          xt: EXPEDITION_REWARD.xp,
+        },
       ),
     ],
     [
       t("What applies immediately after a room?"),
       t(
-        "Room recovery and Expedition Strength are separate from carried loot. Clearing either of the first two rooms immediately restores up to 8 HP per surviving cat, capped at maximum HP, and grants +1 damage to all cat attacks for the rest of that run. They are already active on the reward screen. After either of the first two rooms, fallen cats revive at 25% maximum HP (rounded up, minimum 1 HP), without the extra +8 heal. Defeating the final boss fully heals and revives the whole party and clears combat effects, so the next expedition begins at full HP. If all cats fall before victory, the run is defeated and nobody revives. The strength stacks to +2 after room 2 and disappears when the run ends. Field Notes shows the actual HP restored.",
+        "Room recovery and Expedition Strength are separate from carried loot. Clearing either of the first two rooms immediately restores {pct}% of maximum HP (at least {flat}) to each surviving cat and grants +1 damage to all cat attacks for the rest of that run. They are already active on the reward screen. After either of the first two rooms, fallen cats revive at 25% maximum HP (rounded up, minimum 1 HP), without the extra heal. Defeating the final boss fully heals and revives the whole party and clears combat effects, so the next expedition begins at full HP. If all cats fall before victory, the run is defeated and nobody revives. The strength stacks to +2 after room 2 and disappears when the run ends. Field Notes shows the actual HP restored.",
+        { pct: ROOM_HEAL.percent, flat: ROOM_HEAL.flat },
       ),
     ],
     [

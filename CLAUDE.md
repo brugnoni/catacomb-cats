@@ -44,7 +44,7 @@ npm exec --yes --package=pnpm@11.25.0 -- pnpm <script>
 
 ## Tests
 
-Engine tests are in `src/game.test.ts` (rules), `src/progression.test.ts`, `src/balance.test.ts` (seeded simulations; they use seeds because enemy marks are random) and `src/abilityText.test.ts`. `tests/game.spec.ts` drives the built app; it picks targets by clicking `[data-unit="id"] .unit-target` and shows threads on hover.
+Balance lives in `DIFFICULTY_TUNING`, `ROOM_REWARD`, `ROOM_HEAL` and the enemy stats in `src/engine/units.ts`; measure changes with the simulator in `src/sim.ts` (`BALANCE_REPORT=1 SIM_OUT=file pnpm exec vitest run src/sim.test.ts`, it writes results to the file because vitest hides console output) and keep `outputs/balance-report.md` current. Engine tests are in `src/game.test.ts` (rules), `src/progression.test.ts`, `src/balance.test.ts` (seeded simulations; they use seeds because enemy marks are random) and `src/abilityText.test.ts`. `tests/game.spec.ts` drives the built app; it picks targets by clicking `[data-unit="id"] .unit-target` and shows threads on hover.
 
 ## Agent skills
 

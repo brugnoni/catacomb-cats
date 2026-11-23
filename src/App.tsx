@@ -63,6 +63,9 @@ import {
   MAX_TRAINING_RANK,
   MAX_MASTERY_LEVEL,
   XP_PER_MASTERY,
+  roomReward,
+  powerPoints,
+  ROOM_HEAL,
 } from "./progression";
 
 declare global {
@@ -578,14 +581,11 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                 </h3>
                 <p>{difficultyDescription(difficulty, t)}</p>
                 <p>
-                  {t(
-                    "{wins} victories · {gold} gold invested · Mastery {level}",
-                    {
-                      wins: progress.wins,
-                      gold: progress.spentGold,
-                      level: masteryLevel(progress.xp),
-                    },
-                  )}
+                  {t("{wins} victories · Power {points} · Mastery {level}", {
+                    wins: progress.wins,
+                    points: powerPoints(progress),
+                    level: masteryLevel(progress.xp),
+                  })}
                 </p>
                 <p>
                   {t(
@@ -893,8 +893,8 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                   <div className="reward-details">
                     <p>
                       {t("Room reward: +{gold} gold, +{xp} XP and {item}.", {
-                        gold: 20 + run.room * 10,
-                        xp: 30 + run.room * 15,
+                        gold: roomReward(run.room).gold,
+                        xp: roomReward(run.room).xp,
                         item: t(run.items[run.items.length - 1] ?? ""),
                       })}
                     </p>
@@ -905,8 +905,12 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                     </p>
                     <p>
                       {t(
-                        "Applied now: surviving cats recovered up to 8 HP (capped at max HP). Fallen cats returned at 25% max HP, rounded up, without extra recovery. Expedition Strength increased by +1 to +{n} damage.",
-                        { n: run.bonus },
+                        "Applied now: surviving cats recovered {pct}% of their max HP (at least {flat}). Fallen cats returned at 25% max HP, rounded up, without extra recovery. Expedition Strength increased by +1 to +{n} damage.",
+                        {
+                          n: run.bonus,
+                          pct: ROOM_HEAL.percent,
+                          flat: ROOM_HEAL.flat,
+                        },
                       )}
                     </p>
                     <p>

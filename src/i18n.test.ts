@@ -168,7 +168,12 @@ describe("Spanish dictionary", () => {
 describe("translated helpers match the English rules text", () => {
   it("builds the same English difficulty text as the engine", () => {
     for (let wins = 0; wins <= 14; wins++) {
-      const d = getDifficulty({ wins, spentGold: wins * 150, xp: wins * 90 });
+      const d = getDifficulty({
+        wins,
+        xp: wins * 90,
+        generalLevel: Math.min(8, wins),
+        catLevels: { miso: Math.min(8, wins), pip: Math.min(8, wins) },
+      });
       expect(difficultyLabel(d, identityT)).toBe(d.label);
       expect(difficultyDescription(d, identityT)).toBe(d.description);
     }
@@ -183,7 +188,7 @@ describe("translated helpers match the English rules text", () => {
       expect(nextHearthText(rank, identityT)).toBe(nextHearthDescription(rank));
   });
   it("renders Spanish for the lobby helpers", () => {
-    const d = getDifficulty({ wins: 3, spentGold: 0, xp: 0 });
+    const d = getDifficulty({ wins: 3, xp: 0, catLevels: { miso: 8, pip: 1 } });
     expect(difficultyLabel(d, es)).toBe("Ascensión 3");
     expect(nextTrainingText("miso", 0, es)).toBe(
       "Siguiente rango 1 · Patas robustas: +3 PV máx.",
