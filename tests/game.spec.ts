@@ -2,6 +2,13 @@ import { expect, test, type Page } from "@playwright/test";
 
 const saveKey = "catacomb-cats.progress.v1";
 
+// A fixed seed keeps the random enemy marks reproducible in every test.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as unknown as { __CATACOMB_SEED__: number }).__CATACOMB_SEED__ = 1;
+  });
+});
+
 async function seedLegacySave(
   page: Page,
   overrides: Record<string, unknown> = {},
@@ -388,7 +395,9 @@ test("attacks retain a living enemy target while ending a turn clears it", async
   });
   await rat.click();
   const strike = page.getByRole("button", { name: /^Claw strike/ });
-  await expect(strike.locator(".damage-preview")).toContainText("4 HP damage");
+  await expect(strike.locator(".damage-preview")).toContainText(
+    "Deals 4 · 20 HP left",
+  );
   await strike.click();
   await expect(page.getByLabel("Ability target")).toHaveValue("e0");
   await expect(rat).toHaveAttribute("aria-pressed", "true");
@@ -423,7 +432,7 @@ test("Inspired improves healing and cannot be applied twice at full duration", a
   await advanceToCat(page, "Mei");
   await page.getByLabel("Ability target").selectOption("luna");
   const heal = page.getByRole("button", { name: /^Healing purr/ });
-  await expect(heal).toContainText("9 healing");
+  await expect(heal).toContainText("Heal 1 ally for 9 HP");
   await heal.click();
   await expect(page.getByLabel("Ability target")).toHaveValue("");
   await page.getByLabel("Ability target").selectOption("luna");
@@ -466,9 +475,9 @@ test("effect icons expose themed descriptions on hover and keyboard focus and Gu
     .getByRole("button", { name: /^Guard:/ });
   await expect(guard).toBeVisible();
   await guard.hover();
-  await expect(page.getByRole("tooltip")).toContainText("Miso");
+  await expect(page.getByRole("tooltip")).toContainText("Guard");
   await expect(page.getByRole("tooltip")).toContainText("2");
-  await expect(page.getByRole("tooltip")).toContainText("turn starts");
+  await expect(page.getByRole("tooltip")).toContainText("Lasts 2 turns");
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await expect(page.locator(".command-deck h2")).toHaveText("Pip");
   await guard.focus();
@@ -543,14 +552,14 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
   await expect(renewal).toBeEnabled();
   await expect(renewal.locator(".ability-cooldown")).toHaveCount(0);
   await expect(revive.locator(".ability-cooldown")).toContainText(
-    "Ready in 3 Mei turn starts",
+    "Ready in 3 turns",
   );
   for (const remaining of [2, 1]) {
     await page.getByRole("button", { name: "End turn", exact: true }).click();
     await advanceToCat(page, "Mei");
     await expect(revive).toBeDisabled();
     await expect(revive.locator(".ability-cooldown")).toContainText(
-      `Ready in ${remaining} Mei turn starts`,
+      `Ready in ${remaining} turn`,
     );
     await expect(renewal.locator(".ability-cooldown")).toHaveCount(0);
     const values = await page
@@ -567,7 +576,7 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await advanceToCat(page, "Mei");
   await expect(revive.locator(".ability-cooldown")).toContainText(
-    "Ready · skips next 2 Mei turns after use",
+    "Cooldown: 2 turns",
   );
 });
 
@@ -588,7 +597,7 @@ test("Ember Flame paw has a two-turn cooldown while Claw strike has none", async
   const flame = page.getByRole("button", { name: /^Flame paw/ });
   await flame.click();
   await expect(flame.locator(".ability-cooldown")).toContainText(
-    "Ready in 3 Ember turn starts",
+    "Ready in 3 turns",
   );
   const claw = page.getByRole("button", { name: /^Claw strike/ });
   await expect(claw).toBeEnabled();
@@ -598,7 +607,7 @@ test("Ember Flame paw has a two-turn cooldown while Claw strike has none", async
   await page.getByLabel("Ability target").selectOption("e1");
   await expect(flame).toBeDisabled();
   await expect(flame.locator(".ability-cooldown")).toContainText(
-    "Ready in 2 Ember turn starts",
+    "Ready in 2 turns",
   );
   await expect(claw).toBeEnabled();
   await claw.click();
@@ -609,7 +618,7 @@ test("Ember Flame paw has a two-turn cooldown while Claw strike has none", async
   await page.getByLabel("Ability target").selectOption("e1");
   await expect(flame).toBeDisabled();
   await expect(flame.locator(".ability-cooldown")).toContainText(
-    "Ready in 1 Ember turn starts",
+    "Ready in 1 turn",
   );
 });
 
@@ -622,7 +631,7 @@ test("an eligible shield refresh restores consumed absorption as well as duratio
   await advanceToCat(page, "Miso");
   await page.getByLabel("Ability target").selectOption("luna");
   const guard = page.getByRole("button", { name: /^Nine lives/ });
-  await expect(guard).toContainText("8 Guard");
+  await expect(guard).toContainText("Shield 1 ally for 8");
   await guard.click();
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await advanceToCat(page, "Miso");
@@ -638,9 +647,7 @@ test("an eligible shield refresh restores consumed absorption as well as duratio
   const shield = luna.getByRole("button", { name: "Guard: 8", exact: true });
   await expect(shield).toBeVisible();
   await shield.hover();
-  await expect(page.getByRole("tooltip")).toContainText(
-    "2 more Luna turn starts",
-  );
+  await expect(page.getByRole("tooltip")).toContainText("Lasts 2 turns");
 });
 
 test("the field guide exposes all eight training ranks for every companion", async ({
@@ -663,4 +670,67 @@ test("the field guide exposes all eight training ranks for every companion", asy
   await expect(
     page.getByRole("list", { name: "Luna training ranks", exact: true }),
   ).toContainText("Ice");
+});
+
+test("selecting an enemy shows its marked cat and what it will do next", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  await page.getByRole("button", { name: "Target Crypt rat" }).click();
+  await expect(page.getByTestId("intent-note")).toContainText(
+    "Crypt rat next turn: Attack →",
+  );
+  await expect(page.locator(".intent-line.hostile")).toHaveCount(1);
+  await expect(page.locator(".combatant.marked")).toHaveCount(1);
+  await page.getByRole("button", { name: "Target Moss slime" }).click();
+  await expect(page.getByTestId("intent-note")).toContainText(
+    "Moss slime next turn: Inspire an ally → Crypt rat",
+  );
+  await expect(page.locator(".intent-line.friendly")).toHaveCount(1);
+  await expect(page.locator(".intent-line.hostile")).toHaveCount(0);
+  await expect(page.locator(".combatant.marked")).toHaveCount(0);
+  await page.getByRole("button", { name: "Target Miso" }).click();
+  await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
+});
+
+test("enemies do not always mark the same cat", async ({ page }) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  const marked = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    await page.getByRole("button", { name: "Target Crypt rat" }).click();
+    const note = await page.getByTestId("intent-note").textContent();
+    marked.add(note!.split("→")[1]!.trim());
+    await page.getByRole("button", { name: "End turn", exact: true }).click();
+    if (await page.getByText("Return to lobby").count()) break;
+  }
+  expect(marked.size).toBeGreaterThan(1);
+});
+
+test("a hit flashes the target's border, name, HP bar and HP numbers red", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  await page.getByRole("button", { name: "Target Crypt rat" }).click();
+  await page.getByRole("button", { name: /^Claw strike/ }).click();
+  const rat = page
+    .locator(".enemies .combatant")
+    .filter({ has: page.getByRole("heading", { name: "Crypt rat" }) });
+  await expect(rat).toHaveClass(/hit-[01]/);
+  const animations = await rat.evaluate((card) =>
+    ["h3", ".health", ".health span", ".health-value"].map(
+      (selector) =>
+        getComputedStyle(card.querySelector(selector)!).animationName,
+    ),
+  );
+  expect(animations.every((name) => name.startsWith("hit-"))).toBe(true);
+  expect(await rat.evaluate((c) => getComputedStyle(c).animationName)).toMatch(
+    /^hit-card/,
+  );
+  const miso = page
+    .locator(".allies .combatant")
+    .filter({ has: page.getByRole("heading", { name: "Miso" }) });
+  await expect(miso).not.toHaveClass(/hit-/);
 });

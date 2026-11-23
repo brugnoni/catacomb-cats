@@ -85,6 +85,10 @@ const entries = [
     "At rank 5, Miso and Ember gain an opening shield each room; Luna gains Ice Ward, reducing the next three incoming attacks by 2; Mei can recover 2 HP when an attack damages her and she survives, up to three times per room; Pip’s first damaging skill each room gains +2 power. Rank 8 improves these passives. Charges do not grow back mid-room, reflected damage cannot trigger healing loops, and healing response cannot revive a fallen cat. See each cat’s complete rank list below for exact changes and prices.",
   ],
   [
+    "How do enemies choose who to attack?",
+    "At the start of a room and at the end of each of its turns, every enemy marks one living cat at random. On its next turn it attacks that cat. If the marked cat has fallen, it picks another living cat. Taunt overrides the mark while it lasts. Select an enemy to see an arrow to the cat it has marked, or to the ally it will help, and a note with its next action. Curses still go to the cat with the least HP.",
+  ],
+  [
     "How do curses work?",
     "Some enemies reduce a cat's damage, healing or protection output by 1 or 2 for two turns of that cat. Output cannot go below zero. Reapplying a curse refreshes its duration without adding together penalties. Unit labels and Field Notes report the amount and duration.",
   ],

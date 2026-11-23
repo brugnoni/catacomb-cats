@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { Sprite } from "./Sprite";
 import { Faq } from "./Faq";
 import { UnitEffects } from "./UnitEffects";
+import { IntentArrows } from "./IntentArrows";
+import { cooldownText, describeAbility } from "./abilityText";
 import {
   CATS,
   cooldownRemaining,
@@ -9,6 +11,7 @@ import {
   abilityUnavailableReason,
   abilityTargetUnavailableReason,
   damagePreview,
+  enemyIntent,
   abilityLimit,
   abilityUses,
   abilityPower,
@@ -36,6 +39,14 @@ import {
   XP_PER_MASTERY,
 } from "./progression";
 
+declare global {
+  interface Window {
+    /** Optional fixed seed so browser tests get reproducible enemy marks. */
+    __CATACOMB_SEED__?: number;
+  }
+}
+const runSeed = () =>
+  window.__CATACOMB_SEED__ ?? crypto.getRandomValues(new Uint32Array(1))[0]!;
 const SAVE_KEY = "catacomb-cats.progress.v1";
 function loadProgress(): Progress {
   try {
@@ -58,6 +69,7 @@ export default function App() {
   const [target, setTarget] = useState("");
   const [notice, setNotice] = useState("");
   const [showFaq, setShowFaq] = useState(false);
+  const battlefieldRef = useRef<HTMLDivElement>(null);
   const storeProgress = (next: Progress) => {
     setProgress(next);
     try {
@@ -112,6 +124,27 @@ export default function App() {
   const current = run?.party.find((unit) => unit.id === currentId);
   const difficulty = getDifficulty(progress);
   const units = run ? [...run.party, ...run.enemies] : [];
+  const selectedEnemy = run?.enemies.find(
+    (unit) => unit.id === target && unit.hp > 0,
+  );
+  const selectedIntent =
+    run && selectedEnemy ? enemyIntent(run, selectedEnemy) : undefined;
+  // Units hit by the last action, in order, so each flash can start in turn.
+  const hits = new Map<string, number>();
+  run?.events.forEach((event, index) => {
+    if (event.type === "hit") hits.set(event.targetId, index);
+  });
+  const hitProps = (id: string) => {
+    const index = hits.get(id);
+    return index === undefined
+      ? {}
+      : {
+          "data-hit": run!.eventId,
+          style: { "--hit-delay": `${index * 0.35}s` } as CSSProperties,
+        };
+  };
+  const hitClass = (id: string) =>
+    hits.has(id) ? `hit hit-${run!.eventId % 2}` : "";
   const canSelectFallen =
     current?.abilities.some((ability) => ability.target === "fallen-ally") ??
     false;
@@ -179,7 +212,7 @@ export default function App() {
                 className="primary"
                 disabled={party.length !== 3}
                 onClick={() => {
-                  setRun(createRun(progress, party));
+                  setRun(createRun(progress, party, runSeed()));
                   setNotice("");
                 }}
               >
@@ -434,12 +467,14 @@ export default function App() {
           </nav>
           <div className="battle-layout">
             <main>
-              <div className="battlefield">
+              <div className="battlefield" ref={battlefieldRef}>
                 <div className="battle-team allies">
                   {run.party.map((unit) => (
                     <article
                       key={unit.id}
-                      className={`combatant ${unit.id === currentId ? "active" : ""} ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""}`}
+                      data-unit={unit.id}
+                      className={`combatant ${unit.id === currentId ? "active" : ""} ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${selectedIntent?.targetId === unit.id ? "marked" : ""} ${hitClass(unit.id)}`}
+                      {...hitProps(unit.id)}
                     >
                       <UnitEffects
                         unit={unit}
@@ -471,7 +506,9 @@ export default function App() {
                   {run.enemies.map((unit) => (
                     <article
                       key={unit.id}
-                      className={`combatant ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""}`}
+                      data-unit={unit.id}
+                      className={`combatant ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${hitClass(unit.id)}`}
+                      {...hitProps(unit.id)}
                     >
                       <UnitEffects
                         unit={unit}
@@ -499,6 +536,12 @@ export default function App() {
                     </article>
                   ))}
                 </div>
+                <IntentArrows
+                  containerRef={battlefieldRef}
+                  enemyId={selectedEnemy?.id}
+                  intent={selectedIntent}
+                  version={run.eventId}
+                />
               </div>
               <div
                 className="expedition-effects"
@@ -530,6 +573,20 @@ export default function App() {
                         ? "Heal your team or select a fallen ally to revive."
                         : "Choose a target, then an action."}
                     </p>
+                    {selectedEnemy && selectedIntent && (
+                      <p className="intent-note" data-testid="intent-note">
+                        {selectedEnemy.name} next turn:{" "}
+                        <strong>{selectedIntent.label}</strong>
+                        {selectedIntent.targetId &&
+                          ` → ${run.party.find((u) => u.id === selectedIntent.targetId)?.name}${selectedIntent.redirected ? " (Taunt)" : ""}`}
+                        {selectedIntent.allyId &&
+                          ` → ${run.enemies.find((u) => u.id === selectedIntent.allyId)?.name}`}
+                        {!selectedIntent.targetId &&
+                          !selectedIntent.allyId &&
+                          selectedIntent.kind === "attack" &&
+                          " → a new random cat"}
+                      </p>
+                    )}
                   </div>
                   <div className="actions">
                     <select
@@ -575,43 +632,21 @@ export default function App() {
                           ability,
                           actionTarget,
                         );
-                      const selectedEnemy = run.enemies.find(
+                      const previewEnemy = run.enemies.find(
                         (unit) => unit.id === actionTarget && unit.hp > 0,
                       );
                       const preview =
-                        selectedEnemy && ability.target === "enemy"
-                          ? damagePreview(run, current, ability, selectedEnemy)
+                        previewEnemy && ability.target === "enemy"
+                          ? damagePreview(run, current, ability, previewEnemy)
                           : undefined;
-                      const effect =
-                        ability.effect === "revive"
-                          ? "Revive one fallen ally at 60% max HP"
-                          : ability.effect === "heal"
-                            ? "healing"
-                            : ability.effect === "heal-all"
-                              ? "healing to each living ally"
-                              : ability.effect === "guard"
-                                ? "Guard · refresh restores full shield"
-                                : ability.effect === "fury"
-                                  ? "Inspired power · refresh only after duration decreases"
-                                  : ability.effect === "taunt"
-                                    ? "Taunt all attacks until your next turn"
-                                    : ability.effect === "ap"
-                                      ? "+2 AP and round capacity for this room"
-                                      : ability.effect === "pierce"
-                                        ? "damage · ignores armor"
-                                        : ability.effect === "cleave"
-                                          ? "damage to every enemy"
-                                          : "damage";
+                      const info = describeAbility(ability, power);
                       const usageLabel = ability.roomLimit
                         ? "this room"
                         : "this turn";
                       return (
                         <button
                           data-testid="ability"
-                          title={
-                            reason ??
-                            `${power} ${effect}. Target: ${ability.target}. ${Number.isFinite(limit) ? `${Math.max(0, limit - uses)} uses left ${usageLabel}.` : "Limited by shared AP."}`
-                          }
+                          title={reason ?? info.text}
                           key={ability.id}
                           disabled={Boolean(reason)}
                           onClick={() =>
@@ -624,22 +659,30 @@ export default function App() {
                           <span>
                             {ability.name} · {ability.cost} AP
                           </span>
-                          <span className="ability-detail">
-                            {ability.effect === "taunt" ||
-                            ability.effect === "ap" ||
-                            ability.effect === "revive"
-                              ? ""
-                              : power}{" "}
-                            {effect}
+                          <span className="ability-tags">
+                            <span className={`ability-tag kind-${info.kind}`}>
+                              {info.kindLabel}
+                            </span>
+                            <span className="ability-tag">
+                              {info.targetLabel}
+                            </span>
                           </span>
+                          <span className="ability-detail">{info.text}</span>
+                          {info.note && (
+                            <span className="ability-detail ability-note">
+                              {info.note}
+                            </span>
+                          )}
                           {preview && (
                             <span className="ability-detail damage-preview">
-                              {preview.damage} HP damage · {preview.armor} armor
-                              · {preview.blocked} Guard blocked ·{" "}
-                              {preview.iceBlocked > 0
-                                ? `${preview.iceBlocked} Ice Ward blocked · `
-                                : ""}
-                              {preview.remainingHp} HP left
+                              {preview.damage > 0
+                                ? `Deals ${preview.damage} · ${preview.remainingHp} HP left`
+                                : "Deals 0 damage"}
+                              {preview.armor +
+                                preview.blocked +
+                                preview.iceBlocked >
+                                0 &&
+                                ` (${preview.armor + preview.blocked + preview.iceBlocked} blocked)`}
                             </span>
                           )}
                           {reason && (target || cooldown > 0) && (
@@ -649,9 +692,7 @@ export default function App() {
                           )}
                           {ability.cooldownTurns ? (
                             <span className="ability-cooldown">
-                              {cooldown > 0
-                                ? `Ready in ${cooldown} ${current.name} turn starts`
-                                : `Ready · skips next ${ability.cooldownTurns} ${current.name} turn${ability.cooldownTurns === 1 ? "" : "s"} after use`}
+                              {cooldownText(ability.cooldownTurns, cooldown)}
                             </span>
                           ) : null}
                           <span className="ability-usage">

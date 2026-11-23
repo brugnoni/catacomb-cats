@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import type { Unit } from "./game";
+import { plural } from "./abilityText";
 type EffectKind =
   | "armor"
   | "guard"
@@ -98,63 +99,63 @@ export function UnitEffects({
       kind: "armor",
       label: "Armor",
       value: String(unit.armor),
-      description: `Reduces each incoming attack by ${unit.armor} before Guard. Armor-piercing attacks bypass this reduction. Lasts for this room.`,
+      description: `Reduces each hit by ${unit.armor}. Armor-piercing attacks ignore it.`,
     });
   if (unit.guard > 0)
     effects.push({
       kind: "guard",
       label: "Guard",
       value: String(unit.guard),
-      description: `Absorbs ${unit.guard} more damage. Expires after ${unit.guardTurns} more ${unit.name} turn starts. Other units ending their turns do not reduce it. An eligible refresh restores the full shield and duration without stacking.`,
+      description: `Absorbs ${unit.guard} more damage. Lasts ${plural(unit.guardTurns, "turn")}.`,
     });
   if (unit.fury > 0)
     effects.push({
       kind: "inspired",
       label: "Inspired",
       value: `+${unit.fury}`,
-      description: `Adds ${unit.fury} power to damage, healing and Guard. Expires after ${unit.furyTurns} more ${unit.name} turn starts. Does not increase AP, taunt or blessing potency. Does not stack.`,
+      description: `+${unit.fury} to damage, healing and shields. Lasts ${plural(unit.furyTurns, "turn")}.`,
     });
   if (unit.curse > 0)
     effects.push({
       kind: "curse",
       label: "Curse",
       value: `−${unit.curse}`,
-      description: `Reduces damage, healing and protection output by ${unit.curse}, down to zero. Expires after ${unit.curseTurns} more ${unit.name} turn starts.`,
+      description: `Damage, healing and shields are ${unit.curse} lower. Lasts ${plural(unit.curseTurns, "turn")}.`,
     });
   if (unit.reflect > 0)
     effects.push({
       kind: "reflect",
       label: "Reflect",
       value: String(unit.reflect),
-      description: `Returns ${unit.reflect} damage when an attack damages this unit's HP. Return damage bypasses armor and Guard and cannot reflect again. Expires after ${unit.reflectTurns} more ${unit.name} turn starts.`,
+      description: `Sends ${unit.reflect} damage back to whoever hurts this unit. Lasts ${plural(unit.reflectTurns, "turn")}.`,
     });
   if (unit.iceCharges > 0)
     effects.push({
       kind: "ice",
       label: "Ice Ward",
       value: String(unit.iceCharges),
-      description: `Reduces incoming attack damage by ${unit.iceArmor} for the next ${unit.iceCharges} attacks. Charges reset at the start of each room. Return damage is not an attack.`,
+      description: `Reduces the next ${plural(unit.iceCharges, "hit")} by ${unit.iceArmor}.`,
     });
   if (unit.reactiveHealCharges > 0)
     effects.push({
       kind: "recovery",
       label: "Healing response",
       value: String(unit.reactiveHealCharges),
-      description: `When an enemy attack removes HP and ${unit.name} survives, recover ${unit.reactiveHeal} HP, up to maximum HP. ${unit.reactiveHealCharges} responses remain this room. Does not revive or trigger from reflected damage.`,
+      description: `Recovers ${unit.reactiveHeal} HP when ${unit.name} is hurt and survives. ${plural(unit.reactiveHealCharges, "use")} left this room.`,
     });
   if (unit.openingAttack > 0)
     effects.push({
       kind: "ambush",
       label: "Ambush",
       value: `+${unit.openingAttack}`,
-      description: `The first damaging skill used this room gains ${unit.openingAttack} power. This bonus is consumed once and resets next room.`,
+      description: `The first damaging skill this room gets +${unit.openingAttack} damage.`,
     });
   if (taunting)
     effects.push({
       kind: "taunt",
       label: "Taunt",
       value: "active",
-      description: `Enemy attacks target ${unit.name} while alive. Ends at the start of ${unit.name}'s next turn. Does not redirect enemy support skills or curses.`,
+      description: `Enemy attacks target ${unit.name} until ${unit.name}'s next turn.`,
     });
   if (!effects.length) return null;
   return (

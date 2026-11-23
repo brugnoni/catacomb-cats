@@ -32,6 +32,9 @@ El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La
 - Inspired no acumula potencia al refrescarse: solo renueva duración. Un efecto con duración completa bloquea una repetición accidental.
 - Guard tampoco se acumula, pero un refresco permitido restaura **toda su potencia efectiva y duración**. Un escudo completamente consumido puede aplicarse de nuevo.
 - Un objetivo con HP completo no admite curación individual; la cura de grupo se bloquea si todos los aliados vivos están completos.
+- **Marcas enemigas:** al iniciar la sala y al terminar cada turno suyo, cada enemigo marca un gato vivo al azar (`Unit.mark`, generador con semilla `Run.rng`; `createRun(progress, party, seed)` usa semilla 1 por defecto para pruebas deterministas y `App.tsx` usa una aleatoria). Su siguiente ataque va a esa marca; Taunt la sustituye y, si la marca cayó, se vuelve a sortear. Las maldiciones siguen yendo al gato con menos HP. `enemyIntent()` expone la acción siguiente (también apoyo a aliados) y la UI dibuja flechas al seleccionar un enemigo. Los E2E fijan la semilla con `window.__CATACOMB_SEED__`.
+- **Eventos de combate:** cada transición (`act`, `endTurn`, `nextRoom`) reinicia `Run.events` con un evento `hit` por golpe y sube `Run.eventId`. La UI los usa para el destello rojo de 1 s (borde, nombre, barra y HP); alterna las clases `hit-0`/`hit-1` para reiniciar la animación.
+- **Descripciones:** `src/abilityText.ts` genera tipo (Damage/Heal/Shield/Buff/Utility), objetivo y una frase corta por habilidad. Duraciones se dicen en turnos ("Lasts 2 turns"), sin "turn starts".
 - Los intentos inválidos no consumen AP, usos ni cooldowns. Estas reglas se validan en el motor y también se explican en la interfaz.
 - Los iconos de estado encima de cada personaje muestran valor y reglas mediante tooltip al pasar el mouse o usar foco de teclado.
 

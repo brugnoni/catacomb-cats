@@ -244,9 +244,23 @@ export interface Unit {
   reactiveHealCharges: number;
   openingAttack: number;
   passives: ReturnType<typeof trainingPassives>;
+  /** Enemy only: the cat this enemy has marked for its next hostile action. */
+  mark?: string;
+}
+/** What just happened in the last action; the interface replays these. */
+export interface CombatEvent {
+  type: "hit";
+  targetId: string;
+  damage: number;
+  absorbed: number;
 }
 export interface Run {
   id: string;
+  /** State of the seeded random generator used for enemy target marks. */
+  rng: number;
+  events: CombatEvent[];
+  /** Increases on every state transition so the interface can restart animations. */
+  eventId: number;
   party: Unit[];
   enemies: Unit[];
   order: string[];
@@ -398,6 +412,26 @@ function roomEnemies(room: number, d: Run["difficulty"]): Unit[] {
 function units(run: Run): Unit[] {
   return [...run.party, ...run.enemies];
 }
+/** Seeded generator (mulberry32): the same seed always gives the same marks. */
+function random(run: Run): number {
+  run.rng = (run.rng + 0x6d2b79f5) >>> 0;
+  let t = run.rng;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+function pickLiving(run: Run, group: Unit[]): Unit | undefined {
+  const living = group.filter((u) => u.hp > 0);
+  return living[Math.floor(random(run) * living.length)];
+}
+function markTarget(run: Run, enemy: Unit) {
+  const cat = pickLiving(run, run.party);
+  if (cat) enemy.mark = cat.id;
+  else delete enemy.mark;
+}
+function markAll(run: Run) {
+  for (const e of run.enemies) if (e.hp > 0) markTarget(run, e);
+}
 function setOrder(run: Run) {
   run.order = units(run)
     .filter((u) => u.hp > 0)
@@ -441,7 +475,7 @@ function beginTurn(run: Run) {
   // Each duration advances only when the affected unit begins a turn.
   if (actor.guardTurns > 0 && --actor.guardTurns === 0) {
     actor.guard = 0;
-    run.log.push(`${actor.name}'s Guard expires at the start of their turn.`);
+    run.log.push(`${actor.name}'s Guard fades.`);
   }
   if (actor.furyTurns > 0 && --actor.furyTurns === 0) actor.fury = 0;
   if (actor.curseTurns > 0 && --actor.curseTurns === 0) {
@@ -454,7 +488,7 @@ function beginTurn(run: Run) {
     run.log.push(`${actor.name}'s taunt ends at the start of their turn.`);
   }
 }
-export function createRun(progress: Progress, party: string[]): Run {
+export function createRun(progress: Progress, party: string[], seed = 1): Run {
   if (
     party.length !== 3 ||
     new Set(party).size !== 3 ||
@@ -464,6 +498,9 @@ export function createRun(progress: Progress, party: string[]): Run {
   const difficulty = getDifficulty(progress);
   const run: Run = {
     id: crypto.randomUUID(),
+    rng: seed >>> 0,
+    events: [],
+    eventId: 0,
     party: party.map((id) => buildCat(progress, id)),
     enemies: roomEnemies(0, difficulty),
     order: [],
@@ -484,6 +521,7 @@ export function createRun(progress: Progress, party: string[]): Run {
   };
   for (const cat of run.party) prepareRoom(cat);
   setOrder(run);
+  markAll(run);
   beginTurn(run);
   resolveEnemies(run);
   return run;
@@ -555,7 +593,7 @@ function guard(run: Run, target: Unit, power: number, turns = 2) {
   target.guard = power;
   target.guardTurns = turns;
   run.log.push(
-    `${target.name}: ${active ? "refreshed" : "gained"} Guard ${target.guard} for ${turns} ${target.name} turn starts (replaces remaining shield with full current power; does not stack).`,
+    `${target.name} ${active ? "restores" : "gains"} a ${target.guard} shield for ${turns} turns.`,
   );
 }
 function fury(run: Run, target: Unit, power: number, turns = 3) {
@@ -563,7 +601,7 @@ function fury(run: Run, target: Unit, power: number, turns = 3) {
   if (!active) target.fury = power;
   target.furyTurns = turns;
   run.log.push(
-    `${target.name}: ${active ? "refreshed" : "gained"} Inspired +${target.fury} skill power for ${turns} turns (does not stack).`,
+    `${target.name} ${active ? "renews" : "gains"} Inspired +${target.fury} for ${turns} turns.`,
   );
 }
 export interface DamagePreview {
@@ -620,6 +658,12 @@ function hurt(run: Run, actor: Unit, target: Unit, ability: Ability) {
     target.guardTurns = 0;
   }
   target.hp = remainingHp;
+  run.events.push({
+    type: "hit",
+    targetId: target.id,
+    damage: dealt,
+    absorbed: armor + blocked + iceBlocked,
+  });
   run.log.push(
     `${actor.name} hits ${target.name}: ${dealt} damage (${power} attack power, ${armor} armor, ${blocked} Guard blocked, ${iceBlocked} Ice Ward blocked; ${target.hp}/${target.maxHp} HP).`,
   );
@@ -637,10 +681,110 @@ function hurt(run: Run, actor: Unit, target: Unit, ability: Ability) {
   ) {
     const reflected = Math.min(actor.hp, target.reflect);
     actor.hp -= reflected;
+    run.events.push({
+      type: "hit",
+      targetId: actor.id,
+      damage: reflected,
+      absorbed: 0,
+    });
     run.log.push(
       `${target.name} reflects ${reflected} damage to ${actor.name} (${actor.hp}/${actor.maxHp} HP).`,
     );
   }
+}
+type EnemyPlanKind =
+  "attack" | "curse" | "heal" | "inspire" | "ward" | "mirror" | "rally";
+interface EnemyPlan {
+  kind: EnemyPlanKind;
+  /** Hostile target: the weakest cat for a curse. Attacks use the mark. */
+  targetId?: string;
+  /** Friendly target of a support action. */
+  allyId?: string;
+}
+const weakestCat = (run: Run) =>
+  run.party
+    .filter((u) => u.hp > 0)
+    .sort((a, b) => a.hp - b.hp || a.id.localeCompare(b.id))[0];
+/** Single source of truth for what an enemy does in a given round. */
+function planEnemyAction(run: Run, actor: Unit, round: number): EnemyPlan {
+  const allies = run.enemies.filter((u) => u.hp > 0);
+  const ally = allies
+    .filter((u) => u.id !== actor.id)
+    .sort((a, b) => b.maxHp - a.maxHp)[0];
+  const wounded = allies
+    .filter((u) => u.hp < u.maxHp)
+    .sort((a, b) => b.maxHp - b.hp - (a.maxHp - a.hp))[0];
+  const phase = round % 3;
+  if (
+    actor.name === "Royal wisp" &&
+    wounded &&
+    phase === 1 &&
+    (run.roomUses[actor.id + ":heal"] ?? 0) < 2
+  )
+    return { kind: "heal", allyId: wounded.id };
+  if (actor.name === "Moss slime" && ally && phase === 1)
+    return { kind: "inspire", allyId: ally.id };
+  if (actor.name === "Spore imp" && ally && phase === 2)
+    return { kind: "ward", allyId: ally.id };
+  if (actor.name === "Spore imp" && phase === 0) return { kind: "mirror" };
+  if (
+    (actor.name === "Spore imp" || actor.name === "The Hollow King") &&
+    phase === 1
+  )
+    return { kind: "curse", targetId: weakestCat(run)?.id };
+  if (actor.name === "Bone squire" && phase === 1) return { kind: "rally" };
+  return { kind: "attack" };
+}
+export interface EnemyIntent {
+  kind: EnemyPlanKind;
+  label: string;
+  /** Cat that will be attacked or cursed. Undefined if it must be re-rolled. */
+  targetId?: string;
+  /** Enemy that will receive help. */
+  allyId?: string;
+  /** True when Taunt will redirect the attack away from the mark. */
+  redirected?: boolean;
+}
+const INTENT_LABELS: Record<EnemyPlanKind, string> = {
+  attack: "Attack",
+  curse: "Curse",
+  heal: "Heal an ally",
+  inspire: "Inspire an ally",
+  ward: "Shield an ally",
+  mirror: "Raise Mirror spores",
+  rally: "Rally",
+};
+/** What this enemy will do on its next turn and whom it has marked. */
+export function enemyIntent(run: Run, enemy: Unit): EnemyIntent | undefined {
+  if (run.status !== "combat" || enemy.hp <= 0) return undefined;
+  const index = run.order.indexOf(enemy.id);
+  if (index < 0) return undefined;
+  const plan = planEnemyAction(
+    run,
+    enemy,
+    index > run.turn ? run.round : run.round + 1,
+  );
+  const intent: EnemyIntent = {
+    kind: plan.kind,
+    label: INTENT_LABELS[plan.kind],
+    allyId: plan.allyId,
+    targetId: plan.targetId,
+  };
+  if (plan.kind !== "attack") return intent;
+  const nextTurn = (id: string) => {
+    const i = run.order.indexOf(id);
+    return i < 0 ? Infinity : i > run.turn ? i : i + run.order.length;
+  };
+  const taunter = run.party.find((u) => u.hp > 0 && u.id === run.tauntId);
+  if (taunter && nextTurn(enemy.id) < nextTurn(taunter.id)) {
+    intent.targetId = taunter.id;
+    intent.redirected = true;
+  } else {
+    intent.targetId = run.party.find(
+      (u) => u.hp > 0 && u.id === enemy.mark,
+    )?.id;
+  }
+  return intent;
 }
 function resolveEnemies(run: Run) {
   if (run.party.every((u) => u.hp <= 0)) {
@@ -659,25 +803,9 @@ function resolveEnemies(run: Run) {
     if (isCat)
       run.log.push(`${actor.name} automatically passes: no shared AP remain.`);
     if (run.enemies.some((u) => u.id === actor.id)) {
-      const living = run.party.filter((u) => u.hp > 0);
-      const weakest = [...living].sort(
-        (a, b) => a.hp - b.hp || a.id.localeCompare(b.id),
-      )[0]!;
-      const attackTarget = living.find((u) => u.id === run.tauntId) ?? weakest;
-      const allies = run.enemies.filter((u) => u.hp > 0);
-      const ally = allies
-        .filter((u) => u.id !== actor.id)
-        .sort((a, b) => b.maxHp - a.maxHp)[0];
-      const wounded = allies
-        .filter((u) => u.hp < u.maxHp)
-        .sort((a, b) => b.maxHp - b.hp - (a.maxHp - a.hp))[0];
-      const phase = run.round % 3;
-      if (
-        actor.name === "Royal wisp" &&
-        wounded &&
-        phase === 1 &&
-        (run.roomUses[actor.id + ":heal"] ?? 0) < 2
-      ) {
+      const plan = planEnemyAction(run, actor, run.round);
+      if (plan.kind === "heal") {
+        const wounded = run.enemies.find((u) => u.id === plan.allyId)!;
         run.roomUses[actor.id + ":heal"] =
           (run.roomUses[actor.id + ":heal"] ?? 0) + 1;
         const healed = Math.min(
@@ -688,32 +816,49 @@ function resolveEnemies(run: Run) {
         run.log.push(
           `${actor.name} heals ${wounded.name}: +${healed} HP (${wounded.hp}/${wounded.maxHp}).`,
         );
-      } else if (actor.name === "Moss slime" && ally && phase === 1) {
-        fury(run, ally, Math.max(0, 2 - actor.curse), 2);
-      } else if (actor.name === "Spore imp" && ally && phase === 2) {
-        guard(run, ally, Math.max(0, 5 + actor.fury - actor.curse), 2);
-      } else if (actor.name === "Spore imp" && phase === 0) {
+      } else if (plan.kind === "inspire") {
+        fury(
+          run,
+          run.enemies.find((u) => u.id === plan.allyId)!,
+          Math.max(0, 2 - actor.curse),
+          2,
+        );
+      } else if (plan.kind === "ward") {
+        guard(
+          run,
+          run.enemies.find((u) => u.id === plan.allyId)!,
+          Math.max(0, 5 + actor.fury - actor.curse),
+          2,
+        );
+      } else if (plan.kind === "mirror") {
         if (actor.reflectTurns === 0) actor.reflect = 2;
         actor.reflectTurns = 2;
         run.log.push(
           `${actor.name} raises Mirror spores: reflect ${actor.reflect} damage for 2 turns (does not stack).`,
         );
-      } else if (
-        (actor.name === "Spore imp" || actor.name === "The Hollow King") &&
-        phase === 1
-      ) {
+      } else if (plan.kind === "curse") {
+        const victim = run.party.find((u) => u.id === plan.targetId)!;
         const power = Math.max(
           0,
           (actor.name === "The Hollow King" ? 2 : 1) - actor.curse,
         );
-        weakest.curse = Math.max(weakest.curse, power);
-        weakest.curseTurns = 2;
+        victim.curse = Math.max(victim.curse, power);
+        victim.curseTurns = 2;
         run.log.push(
-          `${actor.name} curses ${weakest.name}: -${power} to all skill output for 2 turns (active -${weakest.curse}).`,
+          `${actor.name} curses ${victim.name}: -${power} to all skill output for 2 turns (active -${victim.curse}).`,
         );
-      } else if (actor.name === "Bone squire" && phase === 1) {
+      } else if (plan.kind === "rally") {
         fury(run, actor, Math.max(0, 2 - actor.curse), 3);
-      } else hurt(run, actor, attackTarget, actor.abilities[0]!);
+      } else {
+        // Taunt overrides the mark; a mark whose cat has fallen is re-rolled.
+        const target =
+          run.party.find((u) => u.hp > 0 && u.id === run.tauntId) ??
+          run.party.find((u) => u.hp > 0 && u.id === actor.mark) ??
+          pickLiving(run, run.party)!;
+        hurt(run, actor, target, actor.abilities[0]!);
+      }
+      // Every enemy turn ends by marking a new random cat for the next one.
+      if (actor.hp > 0) markTarget(run, actor);
       if (check(run)) return;
     }
     advance(run);
@@ -745,7 +890,7 @@ export function abilityUnavailableReason(
     return "Not your turn";
   const remaining = cooldownRemaining(actor, ability);
   if (remaining > 0)
-    return `Cooldown: ready in ${remaining} of ${actor.name} turn starts`;
+    return `Cooldown: ready in ${remaining} turn${remaining === 1 ? "" : "s"}`;
   if (ability.cost > run.ap) return "Not enough shared AP";
   if (abilityUses(run, ability.id) >= abilityLimit(ability))
     return "Turn limit reached";
@@ -807,9 +952,9 @@ export function abilityTargetUnavailableReason(
   if (ability.effect === "heal" && target.hp >= target.maxHp)
     return "Already at full HP";
   if (ability.effect === "guard" && target.guard > 0 && target.guardTurns >= 2)
-    return "Guard already has full duration; refresh when the protected cat begins a turn";
+    return "Guard is already at full duration";
   if (ability.effect === "fury" && target.furyTurns >= 3)
-    return "Inspired already has full duration; refresh when the target begins a turn";
+    return "Inspired is already at full duration";
   return undefined;
 }
 export function abilityTargets(
@@ -850,7 +995,7 @@ function applyAbility(run: Run, actor: Unit, ability: Ability, target: Unit) {
   else if (ability.effect === "taunt") {
     run.tauntId = actor.id;
     run.log.push(
-      `${actor.name} taunts: all enemy attacks target this cat until their next turn begins.`,
+      `${actor.name} taunts: enemies attack this cat until its next turn.`,
     );
   } else if (ability.effect === "ap") {
     run.maxAp += 2;
@@ -876,6 +1021,8 @@ export function act(state: Run, abilityId: string, targetId: string): Run {
   )
     return state;
   const run = clone(state);
+  run.events = [];
+  run.eventId++;
   const a = currentUnit(run)!;
   const t = units(run).find((u) => u.id === targetId)!;
   run.ap -= ability.cost;
@@ -902,6 +1049,8 @@ export function act(state: Run, abilityId: string, targetId: string): Run {
 export function endTurn(state: Run): Run {
   if (state.status !== "combat") return state;
   const run = clone(state);
+  run.events = [];
+  run.eventId++;
   advance(run);
   resolveEnemies(run);
   run.log = run.log.slice(-60);
@@ -910,6 +1059,8 @@ export function endTurn(state: Run): Run {
 export function nextRoom(state: Run): Run {
   if (state.status !== "reward") return state;
   const run = clone(state);
+  run.events = [];
+  run.eventId++;
   run.room++;
   run.enemies = roomEnemies(run.room, run.difficulty);
   run.round = 1;
@@ -923,6 +1074,7 @@ export function nextRoom(state: Run): Run {
     `Entering room ${run.room + 1}. Expedition Strength remains +${run.bonus} damage.`,
   );
   setOrder(run);
+  markAll(run);
   beginTurn(run);
   resolveEnemies(run);
   return run;

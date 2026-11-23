@@ -14,6 +14,7 @@ import {
   claimRewards,
   createRun,
   currentUnit,
+  enemyIntent,
   endTurn,
   equip,
   initialProgress,
@@ -925,5 +926,91 @@ describe("reactive passive preview consistency", () => {
     r = act(r, "strike", target.id);
     expect(r.enemies[0]!.hp).toBe(preview.remainingHp);
     expect(r.enemies[0]!.reactiveHealCharges).toBe(0);
+  });
+});
+
+describe("enemy marks and combat events", () => {
+  const catIds = ["pip", "miso", "clover"];
+  it("every living enemy starts marked on a living cat", () => {
+    const r = start();
+    for (const e of r.enemies) expect(catIds).toContain(e.mark);
+  });
+  it("marks are reproducible per seed and not always the same cat", () => {
+    const marks = (seed: number) =>
+      createRun(initialProgress(), catIds, seed).enemies.map((e) => e.mark);
+    expect(marks(7)).toEqual(marks(7));
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 40; seed++)
+      for (const m of marks(seed)) seen.add(m!);
+    expect(seen.size).toBe(3);
+  });
+  it("an enemy attacks the cat it marked, then marks a new living cat", () => {
+    let r = start();
+    expect(currentUnit(r)!.id).toBe("pip");
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    expect(r.log.join(" ")).toContain("Crypt rat hits Mei");
+    expect(catIds).toContain(r.enemies[0]!.mark);
+  });
+  it("re-rolls a mark whose cat has fallen instead of wasting the attack", () => {
+    let r = start();
+    r.party.find((c) => c.id === "clover")!.hp = 0;
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    expect(r.log.join(" ")).toMatch(/Crypt rat hits (Pip|Miso)/);
+  });
+  it("reports the intent with the marked cat and no arrow for a dead mark", () => {
+    const r = start();
+    const rat = r.enemies[0]!;
+    rat.mark = "miso";
+    expect(enemyIntent(r, rat)).toMatchObject({
+      kind: "attack",
+      label: "Attack",
+      targetId: "miso",
+    });
+    r.party.find((c) => c.id === "miso")!.hp = 0;
+    expect(enemyIntent(r, rat)!.targetId).toBeUndefined();
+    rat.hp = 0;
+    expect(enemyIntent(r, rat)).toBeUndefined();
+  });
+  it("Taunt redirects the shown intent only for enemies acting before the taunt ends", () => {
+    const r = start();
+    r.tauntId = "miso";
+    const rat = r.enemies[0]!;
+    rat.mark = "clover";
+    // Order: Pip (current), Crypt rat, Miso, Mei, Moss slime. The rat acts before Miso.
+    expect(enemyIntent(r, rat)).toMatchObject({
+      targetId: "miso",
+      redirected: true,
+    });
+    // Miso now begins a turn before the rat acts, so Taunt will already be over.
+    r.order = ["pip", "miso", "e0", "clover", "e1"];
+    expect(enemyIntent(r, rat)).toMatchObject({ targetId: "clover" });
+    expect(enemyIntent(r, rat)!.redirected).toBeUndefined();
+  });
+  it("support enemies show their ally instead of a hostile target", () => {
+    const r = createRun(initialProgress(), catIds);
+    const slime = r.enemies[1]!;
+    r.round = 1;
+    r.order = ["pip", "e0", "miso", "clover", "e1"];
+    r.turn = 0;
+    const intent = enemyIntent(r, slime)!;
+    expect(intent.kind).toBe("inspire");
+    expect(intent.allyId).toBe("e0");
+    expect(intent.targetId).toBeUndefined();
+  });
+  it("records a hit event for each damaging blow and bumps the event id", () => {
+    let r = start();
+    expect(r.events).toEqual([]);
+    const before = r.eventId;
+    r = act(r, "strike", "e0");
+    expect(r.eventId).toBe(before + 1);
+    expect(r.events).toEqual([
+      { type: "hit", targetId: "e0", damage: 4, absorbed: 0 },
+    ]);
+    r = endTurn(r);
+    expect(r.eventId).toBe(before + 2);
+    expect(r.events.every((e) => e.type === "hit")).toBe(true);
+    expect(r.events.length).toBeGreaterThan(0);
   });
 });
