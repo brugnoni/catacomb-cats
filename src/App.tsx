@@ -53,6 +53,7 @@ import {
   type Run,
   type Progress,
   isDamaging,
+  SIGNATURE_ABILITIES,
   type Ability,
 } from "./game";
 
@@ -469,13 +470,13 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                           })}
                         >
                           {rank >= 3
-                            ? t("Third skill unlocked: {name}", {
+                            ? t("New skill unlocked: {name}", {
                                 name: t(unit.abilities[2]?.name ?? ""),
                               })
-                            : t(
-                                "Third skill: {rank}/3 training ranks · first 3 cost 100 gold total",
-                                { rank },
-                              )}
+                            : t("Rank 3 unlocks {name} · now {rank}/3", {
+                                name: t(SIGNATURE_ABILITIES[cat.id]!.name),
+                                rank,
+                              })}
                         </div>
                         <div className="card-actions">
                           <button

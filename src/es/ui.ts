@@ -39,9 +39,9 @@ export const UI: Record<string, string> = {
   INIT: "INIC",
   AP: "PA",
   "{name} skill unlock": "Desbloqueo de habilidad de {name}",
-  "Third skill unlocked: {name}": "Tercera habilidad desbloqueada: {name}",
-  "Third skill: {rank}/3 training ranks · first 3 cost 100 gold total":
-    "Tercera habilidad: {rank}/3 rangos de entrenamiento · los 3 primeros cuestan 100 de oro en total",
+  "New skill unlocked: {name}": "Habilidad nueva desbloqueada: {name}",
+  "Rank 3 unlocks {name} · now {rank}/3":
+    "El rango 3 desbloquea {name} · ahora {rank}/3",
   "Add to party": "Añadir al equipo",
   "Remove from party": "Quitar del equipo",
   TRINKET: "AMULETO",

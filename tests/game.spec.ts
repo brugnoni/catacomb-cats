@@ -291,7 +291,7 @@ test("training explains and applies its permanent health and power improvement",
     "+3 max HP",
   );
   await expect(miso.getByLabel("Miso skill unlock")).toContainText(
-    "0/3 training ranks",
+    "Rank 3 unlocks Stand behind me · now 0/3",
   );
   await miso.getByRole("button", { name: /^Train Miso/ }).click();
   await expect(miso.locator(".stats")).toContainText("38");
