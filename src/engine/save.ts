@@ -1,0 +1,121 @@
+import { trainingCost, MAX_TRAINING_RANK } from "../progression";
+import { type Progress, type Run } from "./model";
+import { CATS, ITEMS, initialProgress } from "./data";
+
+export function claimRewards(progress: Progress, run: Run): Progress {
+  if (run.status !== "victory" || progress.claimedRuns.includes(run.id))
+    return progress;
+  return {
+    ...progress,
+    claimedRuns: [...progress.claimedRuns, run.id].slice(-100),
+    gold: progress.gold + run.gold,
+    xp: progress.xp + run.xp,
+    inventory: [...new Set([...progress.inventory, ...run.items])],
+    wins: progress.wins + 1,
+  };
+}
+
+export function upgradeCost(progress: Progress, catId?: string): number {
+  return catId
+    ? trainingCost(progress.catLevels[catId] ?? 0)
+    : 20 + 20 * progress.generalLevel;
+}
+
+export function buyUpgrade(progress: Progress, catId?: string): Progress {
+  if (catId && !CATS.some((c) => c.id === catId)) return progress;
+  const rank = catId ? (progress.catLevels[catId] ?? 0) : progress.generalLevel;
+  if (rank >= MAX_TRAINING_RANK) return progress;
+  const cost = upgradeCost(progress, catId);
+  if (progress.gold < cost) return progress;
+  return {
+    ...progress,
+    gold: progress.gold - cost,
+    spentGold: progress.spentGold + cost,
+    generalLevel: progress.generalLevel + (catId ? 0 : 1),
+    catLevels: catId
+      ? { ...progress.catLevels, [catId]: rank + 1 }
+      : progress.catLevels,
+  };
+}
+
+export function equip(
+  progress: Progress,
+  catId: string,
+  itemId: string,
+): Progress {
+  if (!CATS.some((c) => c.id === catId)) return progress;
+  const equipment = { ...progress.equipment };
+  if (itemId === "") {
+    delete equipment[catId];
+    return { ...progress, equipment };
+  }
+  if (!progress.inventory.includes(itemId)) return progress;
+  for (const id of Object.keys(equipment))
+    if (equipment[id] === itemId) delete equipment[id];
+  equipment[catId] = itemId;
+  return { ...progress, equipment };
+}
+
+export function parseProgress(raw: string | null): Progress {
+  try {
+    const parsed: unknown = JSON.parse(raw ?? "null");
+    if (!parsed || typeof parsed !== "object") return initialProgress();
+    const x = parsed as Progress;
+    const num = (n: unknown) =>
+      typeof n === "number" &&
+      Number.isSafeInteger(n) &&
+      n >= 0 &&
+      n <= 1000000;
+    if (
+      x.version !== 1 ||
+      !Array.isArray(x.claimedRuns) ||
+      x.claimedRuns.length > 100 ||
+      x.claimedRuns.some((id) => typeof id !== "string" || id.length > 100) ||
+      Array.isArray(x.catLevels) ||
+      Array.isArray(x.equipment) ||
+      !num(x.gold) ||
+      !num(x.xp) ||
+      !num(x.generalLevel) ||
+      !x.catLevels ||
+      typeof x.catLevels !== "object" ||
+      !x.equipment ||
+      typeof x.equipment !== "object" ||
+      !Array.isArray(x.inventory) ||
+      x.inventory.some((i) => !ITEMS.includes(i)) ||
+      Object.keys(x.catLevels).some(
+        (id) => !CATS.some((c) => c.id === id) || !num(x.catLevels[id]),
+      ) ||
+      Object.keys(x.equipment).some(
+        (id) =>
+          !CATS.some((c) => c.id === id) ||
+          !x.inventory.includes(x.equipment[id]!),
+      ) ||
+      new Set(Object.values(x.equipment)).size !==
+        Object.values(x.equipment).length ||
+      (x.wins !== undefined && !num(x.wins)) ||
+      (x.spentGold !== undefined && !num(x.spentGold))
+    )
+      return initialProgress();
+    const legacySpend =
+      Object.values(x.catLevels).reduce(
+        (sum, rank) => sum + 20 * rank + 10 * rank * (rank - 1),
+        0,
+      ) +
+      20 * x.generalLevel +
+      10 * x.generalLevel * (x.generalLevel - 1);
+    return {
+      version: 1,
+      gold: x.gold,
+      xp: x.xp,
+      generalLevel: x.generalLevel,
+      catLevels: { ...x.catLevels },
+      equipment: { ...x.equipment },
+      inventory: [...new Set(x.inventory)],
+      claimedRuns: [...x.claimedRuns],
+      wins: x.wins ?? x.claimedRuns.length,
+      spentGold: x.spentGold ?? Math.min(1000000, legacySpend),
+    };
+  } catch {
+    return initialProgress();
+  }
+}

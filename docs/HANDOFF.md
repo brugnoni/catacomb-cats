@@ -125,7 +125,7 @@ HP enemigo × `(1 + 0.08 × tier)`; potencia +`ceil(tier / 4)`; iniciativa +`flo
 
 | Área                                               | Ubicación                                                             |
 | -------------------------------------------------- | --------------------------------------------------------------------- |
-| Motor puro e inmutable, validadores y tipos        | `src/game.ts`                                                         |
+| Motor puro e inmutable, validadores y tipos        | `src/engine/*` (fachada pública en `src/game.ts`)                     |
 | Datos de rangos, pasivas, maestría y Ascension     | `src/progression.ts`                                                  |
 | Lobby, combate, selección y guardado del navegador | `src/App.tsx`                                                         |
 | FAQ en inglés con todas las reglas                 | `src/Faq.tsx`                                                         |
