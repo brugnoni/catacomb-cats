@@ -91,8 +91,8 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
           ? "Room reward: +20 gold, +30 XP"
           : "Room reward: +30 gold, +45 XP",
       );
-      await expect(page.getByLabel("Expedition effects")).toContainText(
-        `Expedition Strength +${roomsCleared}`,
+      await expect(page.locator(".difficulty-banner")).toContainText(
+        `Expedition Strength +${roomsCleared} (+${roomsCleared} damage to all cats)`,
       );
       await expect(page.locator(".run-loot")).toContainText(
         "Unbanked expedition loot",
@@ -583,6 +583,7 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
   const renewal = page.getByRole("button", { name: /^Circle of renewal/ });
   await expect(revive).toContainText("60% max HP");
   await revive.click();
+  await expect(luna).toHaveClass(/heal-[01]/);
   await expect(luna.locator(".health-value")).toHaveText("15 / 25 HP");
   await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
     0,
@@ -710,26 +711,68 @@ test("the field guide exposes all eight training ranks for every companion", asy
   ).toContainText("Ice");
 });
 
-test("selecting an enemy shows its marked cat and what it will do next", async ({
+test("hovering an enemy shows its marked cat and what it will do next", async ({
   page,
 }) => {
   await page.goto("/");
   await enterDungeon(page);
-  await page.getByRole("button", { name: "Target Crypt rat" }).click();
+  await page.getByRole("button", { name: "Target Crypt rat" }).hover();
   await expect(page.getByTestId("intent-note")).toContainText(
     "Crypt rat next turn: Attack →",
   );
   await expect(page.locator(".intent-line.hostile")).toHaveCount(1);
   await expect(page.locator(".combatant.marked")).toHaveCount(1);
-  await page.getByRole("button", { name: "Target Moss slime" }).click();
+  await page.getByRole("button", { name: "Target Moss slime" }).hover();
   await expect(page.getByTestId("intent-note")).toContainText(
     "Moss slime next turn: Inspire an ally → Crypt rat",
   );
   await expect(page.locator(".intent-line.friendly")).toHaveCount(1);
   await expect(page.locator(".intent-line.hostile")).toHaveCount(0);
   await expect(page.locator(".combatant.marked")).toHaveCount(0);
-  await page.getByRole("button", { name: "Target Miso" }).click();
+  await page.getByRole("button", { name: "Target Miso" }).hover();
   await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
+  await expect(page.locator(".combatant.marked")).toHaveCount(0);
+});
+
+test("hovering a cat or a helped enemy shows who will attack or help it", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  // Find which cat the Crypt rat marked, then hover that cat.
+  await page.locator('[data-unit="e0"] .unit-target').hover();
+  const markedCat = page.locator(".allies .combatant.marked");
+  await expect(markedCat).toHaveCount(1);
+  const markedId = (await markedCat.getAttribute("data-unit"))!;
+  await page.mouse.move(0, 0);
+  await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
+  await page.locator(`[data-unit="${markedId}"] .unit-target`).hover();
+  await expect(page.locator(".intent-line.hostile")).toHaveCount(1);
+  await expect(page.locator(`[data-unit="${markedId}"]`)).toHaveClass(/marked/);
+  // The Moss slime will inspire the rat, so hovering the rat shows both threads.
+  await page.locator('[data-unit="e0"] .unit-target').hover();
+  await expect(page.locator(".intent-line.friendly")).toHaveCount(1);
+  await expect(page.locator(".intent-line.hostile")).toHaveCount(1);
+  // Moving the mouse away clears the threads once the opening preview is over.
+  await page.mouse.move(0, 0);
+  await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
+});
+
+test("a shield puts a silver border on its holder until it ends", async ({
+  page,
+}) => {
+  await seedLegacySave(page, { catLevels: { miso: 3 } });
+  await page.goto("/");
+  await enterDungeon(page);
+  await advanceToCat(page, "Miso");
+  await expect(page.locator(".combatant.guarded")).toHaveCount(0);
+  await pickTarget(page, "miso");
+  await page.getByRole("button", { name: /^Nine lives/ }).click();
+  const miso = page.locator('[data-unit="miso"]');
+  await expect(miso).toHaveClass(/guarded/);
+  await expect(page.locator(".combatant.guarded")).toHaveCount(1);
+  const shadow = await miso.evaluate((el) => getComputedStyle(el).boxShadow);
+  expect(shadow).toContain("rgb(213, 221, 232)");
 });
 
 test("enemies do not always mark the same cat", async ({ page }) => {
@@ -806,7 +849,7 @@ test("threats are threads under the cards connecting an enemy to its mark", asyn
 }) => {
   await page.goto("/");
   await enterDungeon(page);
-  await page.getByRole("button", { name: "Target Crypt rat" }).click();
+  await page.getByRole("button", { name: "Target Crypt rat" }).hover();
   const line = page.locator(".intent-line.hostile");
   await expect(line).toHaveCount(1);
   const thread = await line.evaluate((el) => {
@@ -884,4 +927,15 @@ test("lobby cat cards line up row by row even with different skill texts", async
       ),
     );
   for (const tops of rows) expect(new Set(tops).size).toBe(1);
+});
+
+test("Expedition Strength is shown in the header under the room name", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  await expect(page.locator(".difficulty-banner")).toContainText(
+    "Expedition Strength +0 (+0 damage to all cats)",
+  );
+  await expect(page.locator(".expedition-effects")).toHaveCount(0);
 });

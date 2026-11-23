@@ -249,12 +249,9 @@ export interface Unit {
   mark?: string;
 }
 /** What just happened in the last action; the interface replays these. */
-export interface CombatEvent {
-  type: "hit";
-  targetId: string;
-  damage: number;
-  absorbed: number;
-}
+export type CombatEvent =
+  | { type: "hit"; targetId: string; damage: number; absorbed: number }
+  | { type: "heal"; targetId: string; amount: number };
 export interface Run {
   id: string;
   /** State of the seeded random generator used for enemy target marks. */
@@ -817,6 +814,15 @@ export function enemyIntent(run: Run, enemy: Unit): EnemyIntent | undefined {
   }
   return intent;
 }
+/** True if the current cat can still use at least one skill on some valid target. */
+function canAct(run: Run, actor: Unit): boolean {
+  const targets = [actor.id, ...units(run).map((u) => u.id)];
+  return actor.abilities.some(
+    (ability) =>
+      !abilityUnavailableReason(run, ability) &&
+      targets.some((id) => !abilityTargetUnavailableReason(run, ability, id)),
+  );
+}
 function resolveEnemies(run: Run) {
   if (run.party.every((u) => u.hp <= 0)) {
     check(run);
@@ -830,9 +836,13 @@ function resolveEnemies(run: Run) {
       continue;
     }
     const isCat = run.party.some((u) => u.id === actor.id);
-    if (isCat && run.ap > 0) return;
+    if (isCat && run.ap > 0 && canAct(run, actor)) return;
     if (isCat)
-      run.log.push(`${actor.name} automatically passes: no shared AP remain.`);
+      run.log.push(
+        run.ap > 0
+          ? `${actor.name} passes: no usable skills left this turn.`
+          : `${actor.name} automatically passes: no shared AP remain.`,
+      );
     if (run.enemies.some((u) => u.id === actor.id)) {
       const plan = planEnemyAction(run, actor, run.round);
       if (plan.kind === "heal") {
@@ -844,6 +854,7 @@ function resolveEnemies(run: Run) {
           Math.max(0, 6 + actor.fury - actor.curse),
         );
         wounded.hp += healed;
+        run.events.push({ type: "heal", targetId: wounded.id, amount: healed });
         run.log.push(
           `${actor.name} heals ${wounded.name}: +${healed} HP (${wounded.hp}/${wounded.maxHp}).`,
         );
@@ -1006,6 +1017,7 @@ function applyAbility(run: Run, actor: Unit, ability: Ability, target: Unit) {
     run.order = run.order.filter(
       (id, index) => id !== target.id || index <= run.turn,
     );
+    run.events.push({ type: "heal", targetId: target.id, amount: target.hp });
     run.log.push(
       `${actor.name} revives ${target.name} at 60% HP (${target.hp}/${target.maxHp}). They act next round.`,
     );
@@ -1017,6 +1029,7 @@ function applyAbility(run: Run, actor: Unit, ability: Ability, target: Unit) {
     for (const t of targets) {
       const healed = Math.min(t.maxHp - t.hp, power);
       t.hp += healed;
+      run.events.push({ type: "heal", targetId: t.id, amount: healed });
       run.log.push(
         `${actor.name} heals ${t.name}: +${healed} HP (${power} healing power; ${t.hp}/${t.maxHp} HP).`,
       );
@@ -1070,7 +1083,10 @@ export function act(state: Run, abilityId: string, targetId: string): Run {
     ability.effect === "cleave"
   )
     a.openingAttack = 0;
-  if (!check(run) && run.ap === 0) {
+  // The turn ends by itself when no AP remain or nothing usable is left.
+  if (!check(run) && (run.ap === 0 || !canAct(run, currentUnit(run)!))) {
+    if (run.ap > 0)
+      run.log.push(`${a.name} has no usable skills left and passes.`);
     advance(run);
     resolveEnemies(run);
   }

@@ -1091,3 +1091,30 @@ describe("Hearth blessing in combat", () => {
     expect(r.party.find((c) => c.id === "clover")!.hp).toBe(0);
   });
 });
+
+describe("automatic pass when no skill is usable", () => {
+  it("passes Ember's turn after three Claw strikes leave 1 AP and nothing else fits", () => {
+    let r = trained("ember");
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 200));
+    r.ap = 4;
+    r = act(r, "strike", "e0");
+    r = act(r, "strike", "e0");
+    expect(currentUnit(r)!.id).toBe("ember");
+    expect(r.ap).toBe(2);
+    r = act(r, "strike", "e0");
+    // The third use hits the per-turn limit; 1 AP remain but Flame paw and
+    // Sweeping embers cost 3, so the turn ends on its own.
+    expect(currentUnit(r)!.id).not.toBe("ember");
+    expect(r.log.join(" ")).toContain("Ember has no usable skills left");
+  });
+  it("keeps the turn while any skill is still usable", () => {
+    let r = trained("ember");
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 200));
+    r = act(r, "strike", "e0");
+    r = act(r, "strike", "e0");
+    r = act(r, "strike", "e0");
+    // 3 AP remain: Flame paw is usable, so Ember keeps acting.
+    expect(currentUnit(r)!.id).toBe("ember");
+    expect(r.ap).toBe(3);
+  });
+});

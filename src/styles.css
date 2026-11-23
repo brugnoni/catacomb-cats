@@ -1360,30 +1360,30 @@ hr {
 
 /* Hit feedback: the card border, name, HP bar and HP numbers flash red for 1s */
 .combatant.hit-0 {
-  animation: hit-card 1s ease-out var(--hit-delay, 0s);
+  animation: hit-card 1s ease-out var(--flash-delay, 0s);
 }
 .combatant.hit-1 {
-  animation: hit-card-alt 1s ease-out var(--hit-delay, 0s);
+  animation: hit-card-alt 1s ease-out var(--flash-delay, 0s);
 }
 .combatant.hit-0 h3,
 .combatant.hit-0 .health-value {
-  animation: hit-text 1s ease-out var(--hit-delay, 0s);
+  animation: hit-text 1s ease-out var(--flash-delay, 0s);
 }
 .combatant.hit-1 h3,
 .combatant.hit-1 .health-value {
-  animation: hit-text-alt 1s ease-out var(--hit-delay, 0s);
+  animation: hit-text-alt 1s ease-out var(--flash-delay, 0s);
 }
 .combatant.hit-0 .health {
-  animation: hit-bar 1s ease-out var(--hit-delay, 0s);
+  animation: hit-bar 1s ease-out var(--flash-delay, 0s);
 }
 .combatant.hit-1 .health {
-  animation: hit-bar-alt 1s ease-out var(--hit-delay, 0s);
+  animation: hit-bar-alt 1s ease-out var(--flash-delay, 0s);
 }
 .combatant.hit-0 .health span {
-  animation: hit-fill 1s ease-out var(--hit-delay, 0s);
+  animation: hit-fill 1s ease-out var(--flash-delay, 0s);
 }
 .combatant.hit-1 .health span {
-  animation: hit-fill-alt 1s ease-out var(--hit-delay, 0s);
+  animation: hit-fill-alt 1s ease-out var(--flash-delay, 0s);
 }
 @keyframes hit-card {
   0%,
@@ -1502,4 +1502,81 @@ hr {
 }
 .cat-info > .milestone-progress {
   align-self: start;
+}
+
+/* Guard: a silver border for as long as the shield lasts */
+.combatant.guarded {
+  box-shadow:
+    inset 0 0 0 3px #d5dde8,
+    0 0 12px #b8c6d85c;
+}
+
+/* Heal: the healed units' borders flash green for 1s */
+.combatant.heal-0 {
+  animation: heal-card 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.heal-1 {
+  animation: heal-card-alt 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.heal-0 .health {
+  animation: heal-bar 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.heal-1 .health {
+  animation: heal-bar-alt 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.heal-0 .health-value {
+  animation: heal-text 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.heal-1 .health-value {
+  animation: heal-text-alt 1s ease-out var(--flash-delay, 0s);
+}
+@keyframes heal-card {
+  0%,
+  55% {
+    box-shadow:
+      inset 0 0 0 3px #62e07a,
+      0 0 16px #3fd25ecc;
+    background-color: #14401f99;
+  }
+}
+@keyframes heal-card-alt {
+  0%,
+  55% {
+    box-shadow:
+      inset 0 0 0 3px #62e07a,
+      0 0 16px #3fd25ecc;
+    background-color: #14401f99;
+  }
+}
+@keyframes heal-bar {
+  0%,
+  55% {
+    border-color: #62e07a;
+    box-shadow: 0 0 10px #3fd25e;
+  }
+}
+@keyframes heal-bar-alt {
+  0%,
+  55% {
+    border-color: #62e07a;
+    box-shadow: 0 0 10px #3fd25e;
+  }
+}
+@keyframes heal-text {
+  0%,
+  55% {
+    color: #8cf0a0;
+    text-shadow: 0 0 8px #3fd25e;
+  }
+}
+@keyframes heal-text-alt {
+  0%,
+  55% {
+    color: #8cf0a0;
+    text-shadow: 0 0 8px #3fd25e;
+  }
+}
+.expedition-strength {
+  color: #f0d58a;
+  font-weight: 400;
 }

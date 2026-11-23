@@ -79,6 +79,8 @@ export default function App() {
   const battlefieldRef = useRef<HTMLDivElement>(null);
   // At the start of every turn each enemy's threat shows alone, one after another.
   const [preview, setPreview] = useState({ key: "", step: 0 });
+  // Hovering (or keyboard-focusing) a unit shows who threatens or helps whom.
+  const [hovered, setHovered] = useState("");
   const storeProgress = (next: Progress) => {
     setProgress(next);
     try {
@@ -136,8 +138,11 @@ export default function App() {
   const selectedEnemy = run?.enemies.find(
     (unit) => unit.id === target && unit.hp > 0,
   );
-  const selectedIntent =
-    run && selectedEnemy ? enemyIntent(run, selectedEnemy) : undefined;
+  const hoveredEnemy = run?.enemies.find(
+    (unit) => unit.id === hovered && unit.hp > 0,
+  );
+  const noteEnemy = hoveredEnemy ?? selectedEnemy;
+  const noteIntent = run && noteEnemy ? enemyIntent(run, noteEnemy) : undefined;
   const turnKey =
     run?.status === "combat"
       ? `${run.id}:${run.room}:${run.round}:${currentId}`
@@ -175,35 +180,47 @@ export default function App() {
   const arrowEntries: IntentEntry[] = [];
   if (run?.status === "combat")
     for (const enemy of run.enemies) {
-      if (
-        enemy.hp <= 0 ||
-        (enemy.id !== previewId && enemy.id !== selectedEnemy?.id)
-      )
-        continue;
+      if (enemy.hp <= 0) continue;
       const intent = enemyIntent(run, enemy);
-      if (intent) arrowEntries.push({ enemyId: enemy.id, intent });
+      if (!intent) continue;
+      // Hovering an enemy shows its own plan; hovering anyone it attacks or helps shows it too.
+      const related =
+        hovered !== "" &&
+        (enemy.id === hovered ||
+          intent.targetId === hovered ||
+          intent.allyId === hovered);
+      if (enemy.id === previewId || related)
+        arrowEntries.push({ enemyId: enemy.id, intent });
     }
   const markedIds = new Set(
     arrowEntries.flatMap(({ intent }) =>
       intent.targetId ? [intent.targetId] : [],
     ),
   );
-  // Units hit by the last action, in order, so each flash can start in turn.
-  const hits = new Map<string, number>();
-  run?.events.forEach((event, index) => {
-    if (event.type === "hit") hits.set(event.targetId, index);
-  });
-  const hitProps = (id: string) => {
-    const index = hits.get(id);
-    return index === undefined
-      ? {}
-      : {
-          "data-hit": run!.eventId,
-          style: { "--hit-delay": `${index * 0.35}s` } as CSSProperties,
-        };
+  // Units hit or healed by the last action, in order, so each flash starts in turn.
+  const flashes = new Map<string, { kind: "hit" | "heal"; index: number }>();
+  run?.events.forEach((event, index) =>
+    flashes.set(event.targetId, { kind: event.type, index }),
+  );
+  const flashProps = (id: string) => {
+    const flash = flashes.get(id);
+    return flash
+      ? {
+          "data-flash": `${flash.kind}-${run!.eventId}`,
+          style: { "--flash-delay": `${flash.index * 0.35}s` } as CSSProperties,
+        }
+      : {};
   };
-  const hitClass = (id: string) =>
-    hits.has(id) ? `hit hit-${run!.eventId % 2}` : "";
+  const flashClass = (id: string) => {
+    const flash = flashes.get(id);
+    return flash ? `${flash.kind} ${flash.kind}-${run!.eventId % 2}` : "";
+  };
+  const hoverProps = (id: string) => ({
+    onMouseEnter: () => setHovered(id),
+    onMouseLeave: () => setHovered(""),
+    onFocus: () => setHovered(id),
+    onBlur: () => setHovered(""),
+  });
   const canSelectFallen =
     current?.abilities.some((ability) => ability.target === "fallen-ally") ??
     false;
@@ -502,7 +519,10 @@ export default function App() {
             aria-label="Active expedition difficulty"
           >
             {run.difficulty.label} · Threat {run.difficulty.tier} · Fixed for
-            this expedition
+            this expedition ·{" "}
+            <strong className="expedition-strength">
+              Expedition Strength +{run.bonus} (+{run.bonus} damage to all cats)
+            </strong>
           </div>
           <nav className="room-path" aria-label="Expedition progress">
             {["Entrance", "Forgotten hall", "Boss chamber"].map(
@@ -530,8 +550,9 @@ export default function App() {
                     <article
                       key={unit.id}
                       data-unit={unit.id}
-                      className={`combatant ${unit.id === currentId ? "active" : ""} ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${hitClass(unit.id)}`}
-                      {...hitProps(unit.id)}
+                      className={`combatant ${unit.id === currentId ? "active" : ""} ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${flashClass(unit.id)}`}
+                      {...flashProps(unit.id)}
+                      {...hoverProps(unit.id)}
                     >
                       <UnitEffects
                         unit={unit}
@@ -564,8 +585,9 @@ export default function App() {
                     <article
                       key={unit.id}
                       data-unit={unit.id}
-                      className={`combatant ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${hitClass(unit.id)}`}
-                      {...hitProps(unit.id)}
+                      className={`combatant ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${flashClass(unit.id)}`}
+                      {...flashProps(unit.id)}
+                      {...hoverProps(unit.id)}
                     >
                       <UnitEffects
                         unit={unit}
@@ -599,15 +621,6 @@ export default function App() {
                   version={run.eventId}
                 />
               </div>
-              <div
-                className="expedition-effects"
-                aria-label="Expedition effects"
-              >
-                <strong>Expedition Strength +{run.bonus}</strong>
-                <span>
-                  +{run.bonus} damage to all cat attacks for this expedition.
-                </span>
-              </div>
               <div className="initiative" aria-label="Initiative order">
                 <span className="queue-label">TURN ORDER</span>
                 {run.order.map((id) => (
@@ -631,17 +644,17 @@ export default function App() {
                           ? `Target: ${targetUnit.name}`
                           : "Click a character to target, then pick an action."}
                     </p>
-                    {selectedEnemy && selectedIntent && (
+                    {noteEnemy && noteIntent && (
                       <p className="intent-note" data-testid="intent-note">
-                        {selectedEnemy.name} next turn:{" "}
-                        <strong>{selectedIntent.label}</strong>
-                        {selectedIntent.targetId &&
-                          ` → ${run.party.find((u) => u.id === selectedIntent.targetId)?.name}${selectedIntent.redirected ? " (Taunt)" : ""}`}
-                        {selectedIntent.allyId &&
-                          ` → ${run.enemies.find((u) => u.id === selectedIntent.allyId)?.name}`}
-                        {!selectedIntent.targetId &&
-                          !selectedIntent.allyId &&
-                          selectedIntent.kind === "attack" &&
+                        {noteEnemy.name} next turn:{" "}
+                        <strong>{noteIntent.label}</strong>
+                        {noteIntent.targetId &&
+                          ` → ${run.party.find((u) => u.id === noteIntent.targetId)?.name}${noteIntent.redirected ? " (Taunt)" : ""}`}
+                        {noteIntent.allyId &&
+                          ` → ${run.enemies.find((u) => u.id === noteIntent.allyId)?.name}`}
+                        {!noteIntent.targetId &&
+                          !noteIntent.allyId &&
+                          noteIntent.kind === "attack" &&
                           " → a new random cat"}
                       </p>
                     )}
