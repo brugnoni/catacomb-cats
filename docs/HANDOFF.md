@@ -1,0 +1,132 @@
+# Catacomb Cats — continuidad del proyecto
+
+Estado documentado: 23 de noviembre de 2026. Este archivo permite retomar el desarrollo sin depender del chat anterior. Las reglas ejecutables en `src/game.ts` y `src/progression.ts` prevalecen si una nota queda desactualizada.
+
+## Alcance y preferencias del usuario
+
+- Proyecto personal independiente. No usar información, código, credenciales ni integraciones laborales o de otros proyectos.
+- Juego de navegador para escritorio, con interfaz en inglés. La conversación y documentación de continuidad pueden estar en español.
+- El usuario quiere construir mediante vibecoding, con buenas prácticas, seguridad, pruebas y agentes con responsabilidades separadas.
+- Trabajar localmente. El único remoto es el repo privado https://github.com/brugnoni/catacomb-cats: hacer push solo después de un commit que pasó `pnpm check` y solo si el usuario lo aprueba en el chat. Nunca force-push ni publicar o desplegar. El agente principal integra y revisa; los agentes de módulos no hacen commits independientes.
+- Leer `AGENTS.md` y `README.md` antes de cambiar cosas. Usar las dos skills locales de `.agents/skills/` cuando corresponda.
+- Antes de cada commit, ejecutar `pnpm check`; no saltarse hooks ni ocultar errores.
+- No generar más imágenes hasta que el usuario vuelva a pedirlo. Se rechazó expresamente la estética genérica de dashboard y los gatos dibujados con CSS.
+
+## Idea y experiencia actual
+
+Un equipo de gatos explora una mazmorra por turnos, obtiene tesoros y vuelve a su refugio para mejorar. El tono combina un refugio acogedor con catacumbas oscuras. La primera expedición se llama **The Hollow Below** y su lobby **The Burrow**.
+
+Hay cinco gatos y se eligen tres: Miso (Vanguard), Luna (Mystic), Pip (Scout), Mei (Healer) y Ember (Brawler). **Mei conserva el ID interno `clover`** para no romper entrenamiento, equipo ni guardados anteriores. No renombrar ese ID solo para hacer coincidir el nombre visible.
+
+El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La primera sala tiene dos enemigos, la segunda tres y la última al Hollow King con dos acompañantes. Ascension puede añadir refuerzos. Todavía no existe un selector de expediciones ni más contenido que esas tres salas.
+
+## Reglas de combate que deben conservarse
+
+- Cola global por iniciativa, incluyendo enemigos y gatos vivos. El equipo comparte 6 AP por ronda.
+- Cada habilidad de 1 AP admite hasta tres usos por turno propio; cada habilidad de 2 AP admite hasta dos. Algunas habilidades tienen límites más estrictos.
+- Al llegar a 0 AP, termina el turno actual, se omiten gatos sin AP, actúan los enemigos y se devuelve el control al siguiente turno jugable. Una nueva ronda repone el máximo de AP correspondiente.
+- Un ataque conserva el objetivo enemigo vivo mientras continúe el mismo turno del mismo gato. Una habilidad de apoyo, End turn, un cambio automático de turno, la muerte del objetivo o el resultado de sala limpian la selección.
+- Los efectos temporales descuentan duración al **inicio del turno de la unidad afectada**, nunca por cada clic en End turn de otros personajes. Guard sobre Mei sigue los inicios de turno de Mei, aunque lo lance Miso.
+- Taunt dirige los ataques enemigos a Miso mientras viva y termina al comenzar su próximo turno. No desvía apoyo enemigo ni maldiciones.
+- Moon Blessing otorga **Inspired**, no “Fury” visible. Sus campos/efecto internos todavía se llaman `fury`. Mejora daño, curación y Guard; no aumenta AP, taunt ni la potencia de otra bendición.
+- Inspired no acumula potencia al refrescarse: solo renueva duración. Un efecto con duración completa bloquea una repetición accidental.
+- Guard tampoco se acumula, pero un refresco permitido restaura **toda su potencia efectiva y duración**. Un escudo completamente consumido puede aplicarse de nuevo.
+- Un objetivo con HP completo no admite curación individual; la cura de grupo se bloquea si todos los aliados vivos están completos.
+- Los intentos inválidos no consumen AP, usos ni cooldowns. Estas reglas se validan en el motor y también se explican en la interfaz.
+- Los iconos de estado encima de cada personaje muestran valor y reglas mediante tooltip al pasar el mouse o usar foco de teclado.
+
+## Habilidades desbloqueadas en rango 3
+
+| Gato  | Desbloqueo y restricciones                                                                                                                                                                                                                                |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Miso  | Stand behind me: Taunt, 2 AP, una vez por turno.                                                                                                                                                                                                          |
+| Luna  | Moonwell: 1 AP de coste, +2 AP actuales y +2 al máximo por ronda durante esa sala; una vez por sala. Ganancia inmediata neta de +1 AP. Se reinicia al cambiar de sala.                                                                                    |
+| Mei   | Circle of renewal: cura a todos los aliados vivos, 3 AP y una vez por turno; **sin cooldown de varios turnos**. El mismo desbloqueo agrega Return to the hearth para revivir a un aliado caído al 60% de su HP máximo, redondeado hacia arriba, por 3 AP. |
+| Pip   | Needle strike: 2 AP, ignora armadura pero no escudos; una vez por turno.                                                                                                                                                                                  |
+| Ember | Sweeping embers: 3 AP, daño a todos los enemigos vivos; una vez por turno y con cooldown propio.                                                                                                                                                          |
+
+La última aclaración expresa del usuario es que **solo Revive de Mei tiene cooldown de dos turnos**. No comparte cooldown con la cura de grupo ni con Healing purr. Usar Revive en el turno N lo bloquea en N+1 y N+2; vuelve en N+3. Se puede elegir un gato muerto desde su sprite o el selector. El revivido actúa desde la siguiente ronda, no gana un turno inmediato.
+
+**Todos los ataques de Ember**, incluido Claw strike, tienen cooldowns independientes de un turno: usado en N, bloqueado en N+1, disponible en N+2. Otro ataque de Ember que esté listo sigue siendo utilizable. Los cooldowns cuentan inicios de turno del propio gato y se reinician entre salas.
+
+## Progresión y pasivas
+
+`TRAINING_TRACKS`, `trainingTrack()`, `trainingBonuses()` y `trainingPassives()` en `src/progression.ts` son la fuente común del motor, la FAQ y el texto de próxima mejora del lobby.
+
+- Ocho rangos individuales por gato. Precios: 20, 30, 50, 70, 90, 110, 130 y 150 de oro. El desbloqueo de rango 3 cuesta 100 en total.
+- Cada rango tiene un beneficio concreto; el rango 3 conserva la habilidad especial, el 5 introduce una pasiva y el 8 la mejora.
+- Miso prioriza HP y Guard; Luna, ataques y bendiciones; Mei, curación; Pip, iniciativa y ataques; Ember, HP y ataques.
+- Miso empieza cada sala con Guard 4 en rango 5, que pasa a 6 en rango 8. Ember empieza con Guard 3, después 5.
+- Luna obtiene Ice Ward: reducción de 2 para los próximos tres ataques entrantes válidos; cuatro cargas en rango 8. No es un temporizador de turnos.
+- Mei obtiene Soothing Spirit: recupera 2 HP cuando un ataque le quita HP y sobrevive, hasta tres veces por sala; cinco en rango 8. No revive ni produce bucles con daño reflejado.
+- Pip obtiene +2 de potencia en su primera habilidad dañina de cada sala; +3 en rango 8. Se consume una vez por lanzamiento, no una vez por objetivo.
+- La FAQ muestra los ocho rangos completos y su coste. El lobby muestra solo la próxima mejora, con texto breve y legible.
+- Cada 150 XP bancados da un nivel de maestría compartida: +2 HP para todos. Cada tres niveles añade +1 a potencia numérica de ataques, curación, Guard y bendiciones. Maestría máxima 10.
+- Maestría no modifica AP, taunt, el 60% fijo de Revive ni los valores fijos de pasivas. `masteryBonuses().attack` es un alias de `power`; no sumar ambos.
+- Hearth añade +2 HP a todos por rango, máximo ocho rangos.
+- Equipo único: Iron bell +6 HP; Silk ribbon +3 iniciativa; Lucky fang +1 ataque. Empty slot desequipa sin perder el objeto.
+
+## Daño, enemigos y dificultad
+
+El motor comparte `damagePreview()` entre resolución y UI: potencia modificada → armadura → Ice Ward → Guard → pérdida real de HP; también contempla curación reactiva. No aplicar esa curación dos veces.
+
+El caso reportado de 1/37 HP, armadura 2 y ataque de potencia 6 está cubierto: muere sin escudo adicional. Guard suficiente puede absorber los 4 restantes; el preview y Field Notes muestran esa diferencia.
+
+Los enemigos tienen roles: tanques con armadura/Guard, ágiles con iniciativa alta, mejoras de ataque, maldiciones, protección, reflexión y curación limitada de aliados. Reflejar causa daño de retorno fijo y no vuelve a reflejarse.
+
+Tras la primera victoria, se fija al entrar una dificultad de Ascension según victorias, oro gastado y maestría; el oro sin gastar no cuenta. El nivel no cambia durante la run. Fórmula actual:
+
+`tier = min(12, wins + floor(spentGold / 200) + floor(masteryLevel / 2))`
+
+HP enemigo × `(1 + 0.08 × tier)`; potencia +`ceil(tier / 4)`; iniciativa +`floor(tier / 4)`. En tier 5 aparece un refuerzo por sala, en tier 10 un segundo. Enemigos ya acorazados ganan hasta dos de armadura adicional, en tiers 6 y 12. Antes de la primera victoria el tier es 0.
+
+## Recompensas, recuperación y guardado
+
+- Sala 1: 20 oro/30 XP; sala 2: 30 oro/45 XP; jefe: 40 oro/60 XP. Total completo: 90 oro y 135 XP, más objetos descubiertos.
+- Oro, XP y objetos de salas son **Expedition Loot provisional**. Solo se bancan tras vencer al jefe **y pulsar Return to lobby**. No se equipan objetos encontrados a mitad de run.
+- Tras las primeras dos salas, los supervivientes recuperan hasta 8 HP y todos ganan +1 de daño para el resto de la run. Los caídos reviven al 25% de HP máximo, redondeado arriba, sin recibir además los +8.
+- Vencer al jefe cura y revive a todo el grupo al máximo y limpia efectos temporales. La siguiente expedición comienza sana.
+- Derrota total, retirada o recarga pierden loot provisional. Una derrota total no activa resurrección.
+- El progreso permanente está en `localStorage`, clave **`catacomb-cats.progress.v1`**. La run activa no se guarda.
+- **Mover esta carpeta no mueve automáticamente el progreso del navegador.** El almacenamiento depende también del origen/puerto y perfil. Exportar/importar progreso no es una función del juego actual; consultar la guía de traslado incluida para el procedimiento disponible.
+- Mantener migración y validación de guardados. No cambiar IDs o versión sin plan de compatibilidad. Los rangos antiguos se conservan aunque sus efectos sigan las reglas nuevas.
+
+## Arquitectura y herramientas
+
+| Área                                               | Ubicación                                                             |
+| -------------------------------------------------- | --------------------------------------------------------------------- |
+| Motor puro e inmutable, validadores y tipos        | `src/game.ts`                                                         |
+| Datos de rangos, pasivas, maestría y Ascension     | `src/progression.ts`                                                  |
+| Lobby, combate, selección y guardado del navegador | `src/App.tsx`                                                         |
+| FAQ en inglés con todas las reglas                 | `src/Faq.tsx`                                                         |
+| Sprites, estados y estilos                         | `src/Sprite.tsx`, `src/UnitEffects.tsx`, `src/styles.css`             |
+| Pruebas de reglas y simulaciones                   | `src/*.test.ts`                                                       |
+| Pruebas Chromium de la aplicación compilada        | `tests/game.spec.ts`                                                  |
+| Arte final y procedencia/prompts                   | `public/art/`                                                         |
+| Capturas y mediciones                              | `outputs/`                                                            |
+| Skills del proyecto                                | `.agents/skills/catacomb-feature/`, `.agents/skills/catacomb-review/` |
+| Hook y CI preparado                                | `.githooks/`, `.github/`                                              |
+
+Stack: React, TypeScript estricto y Vite. Node 24 LTS es el objetivo; `package.json` fija pnpm 11.25.0 y `pnpm-lock.yaml` fija dependencias. No crear un segundo lockfile con npm.
+
+Comandos desde la raíz: `pnpm install --frozen-lockfile`, `pnpm exec playwright install chromium`, `pnpm dev` y `pnpm check`. Con dependencias ya instaladas, `npm run dev` también arranca el juego. No asumir que pnpm está en el PATH de otra máquina: en el entorno original solo estaba expuesto internamente a Codex.
+
+`pnpm check` ejecuta formato, lint, tipos, pruebas unitarias, build y E2E. `pnpm install` configura el hook si hay `.git`; en una copia sin `.git` revisar la guía de traslado para inicializarlo. CI incluye auditoría, secretos, CodeQL y Dependabot, pero todavía necesita habilitarse y verificarse en el alojamiento futuro. No publicar para probarlo sin permiso.
+
+Verificación repetida al preparar el traslado: **71 pruebas de motor/progresión/balance y 21 de navegador pasaron**, además de formato, lint, tipos y build, mediante la ruta npm/pnpm documentada. El archivo `outputs/VALIDACION-TRASLADO.md` describe el alcance de la comprobación y del paquete.
+
+## Estado visual y límites conocidos
+
+Los escenarios y atlas son recursos raster de estilo pixel generados, inspeccionados e integrados; no se afirmaron dibujados manualmente. Las fuentes pixel se empaquetan localmente. No hay cuentas, servidor, telemetría ni nube. El diseño es de escritorio; móvil no es objetivo de esta versión.
+
+El balance está documentado en `outputs/balance-report.md`, con simulaciones reproducibles mediante `src/balance.test.ts`. Esas políticas prueban ejemplos concretos, no una tasa universal de victoria ni la dificultad justa de todas las combinaciones. Las resurrecciones y nuevas mejoras hicieron el juego más permisivo; no se retocaron enemigos solo para ocultarlo.
+
+## Siguiente trabajo solicitado, aún no implementado
+
+1. Explorar más salas y varias expediciones.
+2. Permitir elegir expedición mediante un selector/botón en el lobby.
+3. Mostrar dificultad, parámetros y objetivos de cada expedición antes de entrar.
+4. Diseñar desbloqueos por objetivos/progreso, con equilibrio entre crecimiento y desafío.
+5. Seguir probando balance con partidas humanas y combinaciones distintas; evitar volver a mejoras genéricas sin propósito para cada clase.
+
+No empezar esta ampliación durante el cierre/traslado. Retomarla cuando el usuario pida continuar.

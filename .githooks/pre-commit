@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+npm exec --yes --package=pnpm@11.25.0 -- pnpm check
