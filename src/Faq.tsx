@@ -87,7 +87,7 @@ const entries = [
   ],
   [
     "How do enemies choose who to attack?",
-    "At the start of a room and at the end of each of its turns, every enemy marks one living cat at random. On its next turn it attacks that cat. If the marked cat has fallen, it picks another living cat. Taunt overrides the mark while it lasts. Select an enemy to see an arrow to the cat it has marked, or to the ally it will help, and a note with its next action. Curses still go to the cat with the least HP.",
+    "At the start of a room and at the end of each of its turns, every enemy marks one living cat at random. On its next turn it attacks that cat. If the marked cat has fallen, it picks another living cat. Taunt overrides the mark while it lasts. At the start of each turn a red thread under the cards briefly connects each enemy to its marked cat, one enemy at a time. Select an enemy to see its thread again, or the green thread to the ally it will help, plus a note with its next action. Curses still go to the cat with the least HP.",
   ],
   [
     "How do curses work?",

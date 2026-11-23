@@ -10,11 +10,13 @@ interface Line {
   kind: "hostile" | "friendly";
   d: string;
 }
-/** How far above a unit card the arrows start and end, clearing its status icons. */
-const CLEARANCE = 38;
+/** Gap between the unit cards and the first thread, and between stacked threads. */
+const BASE_GAP = 14;
+const STACK_GAP = 7;
 /**
- * Draws enemy intents over the battlefield as high arcs above the characters:
- * a red arrow to the cat an enemy has marked, a green one to the enemy it will help.
+ * Draws enemy intents as threads under the battlefield cards: down from the
+ * enemy, along the floor, and up to the cat it marked (red) or the enemy it
+ * will help (green).
  */
 export function IntentArrows({
   containerRef,
@@ -23,7 +25,7 @@ export function IntentArrows({
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   entries: IntentEntry[];
-  /** Changes whenever the battle state changes so arrows are measured again. */
+  /** Changes whenever the battle state changes so threads are measured again. */
   version: number;
 }) {
   const [lines, setLines] = useState<Line[]>([]);
@@ -42,37 +44,44 @@ export function IntentArrows({
     }
     const measure = () => {
       const box = container.getBoundingClientRect();
-      const anchor = (id: string) => {
-        const card = container
+      // The absolutely positioned svg starts inside the container's border.
+      const originX = box.left + container.clientLeft;
+      const originY = box.top + container.clientTop;
+      const card = (id: string) => {
+        const rect = container
           .querySelector(`[data-unit="${id}"]`)
           ?.getBoundingClientRect();
-        return card
-          ? ([
-              card.left + card.width / 2 - box.left,
-              card.top - box.top - CLEARANCE,
-            ] as const)
+        return rect
+          ? {
+              x: rect.left + rect.width / 2 - originX,
+              bottom: rect.bottom - originY,
+            }
           : undefined;
       };
+      const floor = Math.max(
+        0,
+        ...[...container.querySelectorAll("[data-unit]")].map(
+          (el) => el.getBoundingClientRect().bottom - originY,
+        ),
+      );
       const next: Line[] = [];
-      entries.forEach(({ enemyId, intent }, index) => {
-        const from = anchor(enemyId);
+      let stack = 0;
+      for (const { enemyId, intent } of entries) {
+        const from = card(enemyId);
         for (const [id, kind] of [
           [intent.targetId, "hostile"],
           [intent.allyId, "friendly"],
         ] as const) {
-          const to = id ? anchor(id) : undefined;
+          const to = id ? card(id) : undefined;
           if (!from || !to) continue;
-          // Higher arcs for farther targets; each enemy gets its own height.
-          const top = Math.min(from[1], to[1]);
-          const rise = 26 + Math.min(40, Math.abs(to[0] - from[0]) / 6);
-          const arc = Math.max(6, top - rise - index * 10);
+          const y = floor + BASE_GAP + stack++ * STACK_GAP;
           next.push({
             key: `${enemyId}-${kind}-${id}`,
             kind,
-            d: `M${from[0]} ${from[1]} C${from[0]} ${arc} ${to[0]} ${arc} ${to[0]} ${to[1]}`,
+            d: `M${from.x} ${from.bottom} V${y} H${to.x} V${to.bottom}`,
           });
         }
-      });
+      }
       setSize({ width: box.width, height: box.height });
       setLines(next);
     };
@@ -96,15 +105,14 @@ export function IntentArrows({
         {(["hostile", "friendly"] as const).map((kind) => (
           <marker
             key={kind}
-            id={`intent-head-${kind}`}
-            viewBox="0 0 10 10"
-            refX="8"
-            refY="5"
-            markerWidth="5"
-            markerHeight="5"
-            orient="auto"
+            id={`intent-dot-${kind}`}
+            viewBox="0 0 6 6"
+            refX="3"
+            refY="3"
+            markerWidth="2.4"
+            markerHeight="2.4"
           >
-            <path d="M0 0L10 5L0 10Z" className={`intent-head ${kind}`} />
+            <circle cx="3" cy="3" r="3" className={`intent-dot ${kind}`} />
           </marker>
         ))}
       </defs>
@@ -112,9 +120,11 @@ export function IntentArrows({
         <path
           key={line.key}
           d={line.d}
+          pathLength={1}
           className={`intent-line ${line.kind}`}
           data-kind={line.kind}
-          markerEnd={`url(#intent-head-${line.kind})`}
+          markerStart={`url(#intent-dot-${line.kind})`}
+          markerEnd={`url(#intent-dot-${line.kind})`}
         />
       ))}
     </svg>

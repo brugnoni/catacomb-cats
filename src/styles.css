@@ -1306,26 +1306,31 @@ hr {
 }
 .intent-line {
   fill: none;
-  stroke-width: 4;
-  stroke-dasharray: 10 7;
-  stroke-linecap: butt;
-  animation: intent-march 0.8s linear infinite;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: intent-draw 0.3s ease-out both;
 }
 .intent-line.hostile {
-  stroke: #ff6a5c;
+  stroke: #ff4a3d;
+  filter: drop-shadow(0 0 3px #ff4a3d99);
 }
 .intent-line.friendly {
   stroke: #8fd67f;
+  filter: drop-shadow(0 0 3px #8fd67f99);
 }
-.intent-head.hostile {
-  fill: #ff6a5c;
+.intent-dot.hostile {
+  fill: #ff4a3d;
 }
-.intent-head.friendly {
+.intent-dot.friendly {
   fill: #8fd67f;
 }
-@keyframes intent-march {
+@keyframes intent-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
   to {
-    stroke-dashoffset: -17;
+    stroke-dashoffset: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1466,4 +1471,35 @@ hr {
 }
 .ap-pips i.on {
   background: var(--gold);
+}
+
+/* Room for the threads under the cards */
+.battlefield {
+  padding-bottom: 42px;
+}
+
+/* Lobby roster: every row lines up across the five cats */
+.roster {
+  row-gap: 0;
+  column-gap: 8px;
+}
+.cat-card {
+  display: grid;
+  grid-row: span 9;
+  grid-template-rows: subgrid;
+}
+.cat-info {
+  display: grid;
+  grid-row: 2 / span 8;
+  grid-template-rows: subgrid;
+  align-content: start;
+}
+.card-actions {
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  row-gap: 6px;
+}
+.cat-info > .milestone-progress {
+  align-self: start;
 }

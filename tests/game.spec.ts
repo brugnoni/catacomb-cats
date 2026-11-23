@@ -773,40 +773,52 @@ test("a hit flashes the target's border, name, HP bar and HP numbers red", async
   await expect(miso).not.toHaveClass(/hit-/);
 });
 
-test("every turn starts with a one-second preview of all enemy arrows", async ({
+test("each turn shows enemy threats one at a time, then stops", async ({
   page,
 }) => {
   await page.goto("/");
   await enterDungeon(page);
-  await expect(page.locator(".intent-line")).not.toHaveCount(0);
-  await expect(page.locator(".intent-line")).toHaveCount(0, { timeout: 3000 });
-  await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
+  const watch = () =>
+    page.evaluate(async () => {
+      const seen = new Set<string>();
+      let most = 0;
+      for (let i = 0; i < 50; i++) {
+        const paths = [...document.querySelectorAll(".intent-line")];
+        most = Math.max(most, paths.length);
+        for (const path of paths) seen.add(path.getAttribute("d")!);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return { distinct: seen.size, most };
+    });
+  const first = await watch();
+  expect(first.most).toBe(1);
+  expect(first.distinct).toBeGreaterThanOrEqual(2);
+  await expect(page.locator(".intent-line")).toHaveCount(0);
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await expect(page.locator(".command-deck h2")).toHaveText("Luna");
-  await expect(page.locator(".intent-line")).not.toHaveCount(0);
-  await expect(page.locator(".intent-line")).toHaveCount(0, { timeout: 3000 });
+  const second = await watch();
+  expect(second.most).toBe(1);
+  expect(second.distinct).toBeGreaterThanOrEqual(2);
 });
 
-test("arrows are drawn above the characters, not across them", async ({
+test("threats are threads under the cards connecting an enemy to its mark", async ({
   page,
 }) => {
   await page.goto("/");
   await enterDungeon(page);
-  await expect(page.locator(".intent-line").first()).toBeVisible();
-  const box = await page.locator(".battlefield").boundingBox();
-  const cards = await page
-    .locator(".combatant")
-    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().top));
-  const arrows = await page
-    .locator(".intent-line")
-    .evaluateAll((els) =>
-      els.map(
-        (el) => (el as SVGGraphicsElement).getBoundingClientRect().bottom,
-      ),
+  await page.getByRole("button", { name: "Target Crypt rat" }).click();
+  const line = page.locator(".intent-line.hostile");
+  await expect(line).toHaveCount(1);
+  const thread = await line.evaluate((el) => {
+    const box = (el as SVGGraphicsElement).getBoundingClientRect();
+    const bottoms = [...document.querySelectorAll("[data-unit]")].map(
+      (card) => card.getBoundingClientRect().bottom,
     );
-  expect(box).not.toBeNull();
-  // Every arrow ends above the top edge of the highest unit card.
-  for (const bottom of arrows) expect(bottom).toBeLessThan(Math.min(...cards));
+    return { top: box.top, bottom: box.bottom, cards: Math.max(...bottoms) };
+  });
+  // The horizontal run sits below every card, joining the two units.
+  expect(thread.bottom).toBeGreaterThan(thread.cards);
+  expect(Math.abs(thread.top - thread.cards)).toBeLessThan(1);
 });
 
 test("targets are picked by clicking characters; there is no target dropdown", async ({
@@ -846,4 +858,30 @@ test("ability tags are centered in their button", async ({ page }) => {
     .locator(".ability-tags")
     .evaluate((el) => getComputedStyle(el).justifyContent);
   expect(centered).toBe("center");
+});
+
+test("lobby cat cards line up row by row even with different skill texts", async ({
+  page,
+}) => {
+  await seedLegacySave(page, {
+    catLevels: { clover: 3, ember: 3, luna: 1, pip: 2, miso: 1 },
+  });
+  await page.goto("/");
+  await expect(page.locator(".cat-card")).toHaveCount(5);
+  const rows = await page
+    .locator(".cat-card")
+    .evaluateAll((cards) =>
+      [
+        ".milestone-progress",
+        ".party-toggle",
+        ".equipment-label",
+        ".training-description",
+        ".train-button",
+      ].map((selector) =>
+        cards.map((card) =>
+          Math.round(card.querySelector(selector)!.getBoundingClientRect().top),
+        ),
+      ),
+    );
+  for (const tops of rows) expect(new Set(tops).size).toBe(1);
 });

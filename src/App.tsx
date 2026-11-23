@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { Sprite } from "./Sprite";
 import { Faq } from "./Faq";
 import { UnitEffects } from "./UnitEffects";
@@ -71,8 +77,8 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [showFaq, setShowFaq] = useState(false);
   const battlefieldRef = useRef<HTMLDivElement>(null);
-  // At the start of every turn all enemy intents show for one second.
-  const [previewedTurn, setPreviewedTurn] = useState("");
+  // At the start of every turn each enemy's threat shows alone, one after another.
+  const [preview, setPreview] = useState({ key: "", step: 0 });
   const storeProgress = (next: Progress) => {
     setProgress(next);
     try {
@@ -136,16 +142,43 @@ export default function App() {
     run?.status === "combat"
       ? `${run.id}:${run.room}:${run.round}:${currentId}`
       : "";
-  const previewAll = turnKey !== "" && previewedTurn !== turnKey;
+  // Enemies that threaten someone, in the order they will act (next one first).
+  const threatening =
+    run?.status === "combat"
+      ? [...run.order.slice(run.turn + 1), ...run.order.slice(0, run.turn + 1)]
+          .map((id) => run.enemies.find((e) => e.id === id && e.hp > 0))
+          .filter((enemy) => {
+            const intent = enemy && enemyIntent(run, enemy);
+            return Boolean(intent?.targetId || intent?.allyId);
+          })
+          .map((enemy) => enemy!.id)
+      : [];
+  const previewSlot = Math.min(
+    800,
+    Math.floor(3000 / Math.max(1, threatening.length)),
+  );
+  const previewStep = preview.key === turnKey ? preview.step : 0;
+  const previewId = turnKey ? threatening[previewStep] : undefined;
+  const startPreview = useEffectEvent(() => {
+    const timers = threatening.map((_, index) =>
+      setTimeout(
+        () => setPreview({ key: turnKey, step: index + 1 }),
+        previewSlot * (index + 1),
+      ),
+    );
+    return () => timers.forEach(clearTimeout);
+  });
   useEffect(() => {
     if (!turnKey) return;
-    const timer = setTimeout(() => setPreviewedTurn(turnKey), 1000);
-    return () => clearTimeout(timer);
+    return startPreview();
   }, [turnKey]);
   const arrowEntries: IntentEntry[] = [];
   if (run?.status === "combat")
     for (const enemy of run.enemies) {
-      if (enemy.hp <= 0 || !(previewAll || enemy.id === selectedEnemy?.id))
+      if (
+        enemy.hp <= 0 ||
+        (enemy.id !== previewId && enemy.id !== selectedEnemy?.id)
+      )
         continue;
       const intent = enemyIntent(run, enemy);
       if (intent) arrowEntries.push({ enemyId: enemy.id, intent });
