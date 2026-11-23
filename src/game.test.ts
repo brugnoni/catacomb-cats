@@ -26,7 +26,12 @@ import {
   type Progress,
   type Run,
 } from "./game";
-import { EXPEDITION_REWARD, GUARD_TURNS, ROOM_HEAL } from "./progression";
+import {
+  EXPEDITION_REWARD,
+  GUARD_TURNS,
+  ROOM_HEAL,
+  evadeChance,
+} from "./progression";
 /** Healing a surviving cat gets when a room is cleared. */
 const roomHeal = (maxHp: number) =>
   Math.max(ROOM_HEAL.flat, Math.ceil((maxHp * ROOM_HEAL.percent) / 100));
@@ -1529,5 +1534,118 @@ describe("lifesteal and Miso's shield", () => {
     let r = turn(start(), "miso");
     r = act(r, "guard", "pip");
     expect(r.party.find((c) => c.id === "pip")!.guardTurns).toBe(3);
+  });
+});
+
+describe("curse lowers received shields", () => {
+  it("a cursed ally receives a smaller Nine lives shield", () => {
+    let r = turn(start(), "miso");
+    const pip = r.party.find((c) => c.id === "pip")!;
+    pip.curse = 2;
+    pip.curseTurns = 2;
+    r = act(r, "guard", "pip");
+    expect(r.party.find((c) => c.id === "pip")!.guard).toBe(6);
+    expect(r.log.join(" ")).toContain("Pip gains a 6 shield");
+  });
+  it("never goes below zero", () => {
+    let r = turn(start(), "miso");
+    const pip = r.party.find((c) => c.id === "pip")!;
+    pip.curse = 99;
+    pip.curseTurns = 2;
+    r = act(r, "guard", "pip");
+    expect(r.party.find((c) => c.id === "pip")!.guard).toBe(0);
+  });
+  it("an uncursed ally still gets the full shield", () => {
+    const r = act(turn(start(), "miso"), "guard", "pip");
+    expect(r.party.find((c) => c.id === "pip")!.guard).toBe(8);
+  });
+});
+
+describe("misses and evasion", () => {
+  const party = ["pip", "miso", "clover"];
+  it("evade chance is one percent per initiative above 12, capped", () => {
+    expect([5, 12, 13, 20, 24, 99].map(evadeChance)).toEqual([
+      0, 0, 1, 8, 12, 12,
+    ]);
+  });
+  it("are off unless luck is on, so tests stay deterministic", () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const r = createRun(initialProgress(), party, seed);
+      expect(r.luck).toBe(false);
+      expect(
+        act(r, "strike", "e0").events.every((e) => e.type !== "avoid"),
+      ).toBe(true);
+    }
+  });
+  it("happen about one hit in fourteen at the starting fight and deal nothing", () => {
+    let tries = 0;
+    let avoided = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const r = createRun(initialProgress(), party, seed, { crit: "on" });
+      r.enemies[0]!.hp = r.enemies[0]!.maxHp = 500;
+      const after = act(r, "strike", "e0");
+      tries++;
+      const miss = after.events.find((e) => e.type === "avoid");
+      if (miss) {
+        avoided++;
+        expect(after.enemies[0]!.hp).toBe(500);
+        expect(after.ap).toBe(r.ap - 1);
+        expect(after.log.join(" ")).toMatch(
+          /misses Crypt rat!|Crypt rat evades Pip's attack!/,
+        );
+      }
+    }
+    expect(avoided / tries).toBeGreaterThan(0.03);
+    expect(avoided / tries).toBeLessThan(0.14);
+  });
+  it("a fast target evades more often than a slow one", () => {
+    const rate = (index: number, initiative: number) => {
+      let avoided = 0;
+      for (let seed = 1; seed <= 400; seed++) {
+        const r = createRun(initialProgress(), party, seed, { crit: "on" });
+        r.enemies[index]!.initiative = initiative;
+        r.enemies[index]!.hp = r.enemies[index]!.maxHp = 500;
+        const after = act(r, "strike", r.enemies[index]!.id);
+        if (after.events.some((e) => e.type === "avoid" && e.kind === "evade"))
+          avoided++;
+      }
+      return avoided / 400;
+    };
+    expect(rate(0, 24)).toBeGreaterThan(rate(1, 5) + 0.05);
+  });
+  it("healing and shields never miss", () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      let r = turn(
+        createRun(initialProgress(), party, seed, { crit: "on" }),
+        "miso",
+      );
+      r = act(r, "guard", "pip");
+      expect(r.party.find((c) => c.id === "pip")!.guard).toBe(8);
+    }
+  });
+});
+
+describe("cooldown ready events", () => {
+  it("announces when a cooling-down skill becomes usable again", () => {
+    let r = trained("ember");
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 500));
+    r = act(r, "slam", "e0");
+    const slam = r.party[0]!.abilities.find((a) => a.id === "slam")!;
+    expect(cooldownRemaining(r.party[0]!, slam)).toBe(3);
+    let ready: string | undefined;
+    for (let i = 0; i < 20 && !ready; i++) {
+      r = endTurn(r);
+      const event = r.events.find(
+        (e) => e.type === "ready" && e.targetId === "ember",
+      );
+      if (event && event.type === "ready") ready = event.name;
+    }
+    expect(ready).toBe("Flame paw");
+    expect(
+      cooldownRemaining(
+        r.party.find((c) => c.id === "ember")!,
+        slam,
+      ),
+    ).toBe(0);
   });
 });

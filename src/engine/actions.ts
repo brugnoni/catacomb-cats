@@ -59,6 +59,7 @@ export function createRun(
     id: crypto.randomUUID(),
     rng: seed >>> 0,
     critRng: (seed ^ 0x9e3779b9) >>> 0,
+    luck: crit === "on",
     critChance:
       crit === "off"
         ? 0

@@ -1,6 +1,6 @@
 import { CRIT_MULTIPLIER } from "../progression";
 import { type Ability, type Unit, type Run, type DamagePreview } from "./model";
-import { rollCrit, clearEffects } from "./state";
+import { rollCrit, rollAvoid, clearEffects } from "./state";
 import { abilityPower } from "./abilities";
 
 /**
@@ -67,6 +67,16 @@ export function hurt(
   ability: Ability,
   scale = 1,
 ) {
+  const avoided = rollAvoid(run, target);
+  if (avoided) {
+    run.events.push({ type: "avoid", targetId: target.id, kind: avoided });
+    run.log.push(
+      avoided === "miss"
+        ? `${actor.name} misses ${target.name}!`
+        : `${target.name} evades ${actor.name}'s attack!`,
+    );
+    return;
+  }
   const crit = rollCrit(run, actor);
   const {
     power,

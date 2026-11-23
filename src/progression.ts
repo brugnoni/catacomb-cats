@@ -537,6 +537,11 @@ export const EXPEDITION_REWARD = {
   gold: ROOM_REWARD.gold.reduce((a, b) => a + b, 0),
   xp: ROOM_REWARD.xp.reduce((a, b) => a + b, 0),
 };
+/** Chance in percent that any hit misses; only when luck is on. */
+export const MISS_CHANCE = 5;
+/** Fast units dodge: one percent per initiative point above 12, at most 12. */
+export const evadeChance = (initiative: number) =>
+  Math.max(0, Math.min(12, Math.floor(initiative) - 12));
 /** Turns a Guard shield lasts. */
 export const GUARD_TURNS = 3;
 /** Healing a surviving cat gets when a room is cleared: the larger of a flat amount and a share of max HP. */

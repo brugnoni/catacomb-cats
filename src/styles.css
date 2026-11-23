@@ -1752,3 +1752,73 @@ hr {
     }
   }
 }
+
+/* Pops over a unit: critical, miss/evade and skill ready */
+.pop {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 1px 8px;
+  font-size: 18px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: crit-pop 1s ease-out var(--flash-delay, 0s) both;
+}
+.pop-avoid {
+  color: #101820;
+  background: #dfe6ee;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 10px #c9d4e0aa;
+}
+.pop-ready {
+  color: #082410;
+  background: #8fe39a;
+  border: 2px solid #d4ffd9;
+  box-shadow: 0 0 12px #62e07acc;
+  top: 18px;
+}
+
+/* Opening enemy turn: a banner while the first hits wait */
+.intro-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  padding: 6px 16px;
+  font-size: 22px;
+  color: #ffd2ca;
+  background: #2a0d0dcc;
+  border: 2px solid #ff6a5c;
+  box-shadow: 0 0 14px #ff3b3077;
+}
+
+/* Shared AP note */
+.ap-label {
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--gold);
+}
+.ap-note {
+  font-size: 13px;
+  color: #9fb0bd;
+  text-align: center;
+  max-width: 130px;
+  line-height: 1.15;
+}
+
+/* Skill hover: soft yellow outline on every unit it can reach */
+.combatant.aimed {
+  box-shadow:
+    inset 0 0 0 3px #ffd84a,
+    0 0 14px #ffd84a88;
+}
+.ability-slot {
+  display: contents;
+}
+.effect-cooldown {
+  color: #f0b277;
+}

@@ -55,6 +55,7 @@ import {
   isDamaging,
   SIGNATURE_ABILITIES,
   type Ability,
+  type Unit,
 } from "./game";
 
 import {
@@ -80,6 +81,26 @@ const runSeed = () =>
   window.__CATACOMB_SEED__ ?? crypto.getRandomValues(new Uint32Array(1))[0]!;
 const runCrit = () => window.__CATACOMB_CRIT__ ?? "on";
 const SAVE_KEY = "catacomb-cats.progress.v1";
+/** How long the opening enemy hits wait before they are shown. */
+const INTRO_MS = 1600;
+const PARTY_KEY = "catacomb-cats.party";
+const defaultParty = () => CATS.slice(0, 3).map((cat) => cat.id);
+/** The last chosen party, or the default when nothing valid was saved. */
+function loadParty(): string[] {
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(PARTY_KEY) ?? "null");
+    if (
+      Array.isArray(raw) &&
+      raw.length <= 3 &&
+      new Set(raw).size === raw.length &&
+      raw.every((id) => CATS.some((cat) => cat.id === id))
+    )
+      return raw as string[];
+  } catch {
+    /* Fall back to the default party. */
+  }
+  return defaultParty();
+}
 function loadProgress(): Progress {
   try {
     return parseProgress(localStorage.getItem(SAVE_KEY));
@@ -107,9 +128,14 @@ export default function App() {
 function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   const { lang, t } = useT();
   const [progress, setProgress] = useState(loadProgress);
-  const [party, setParty] = useState<string[]>(
-    CATS.slice(0, 3).map((cat) => cat.id),
-  );
+  const [party, setParty] = useState<string[]>(loadParty);
+  useEffect(() => {
+    try {
+      localStorage.setItem(PARTY_KEY, JSON.stringify(party));
+    } catch {
+      /* The party simply is not remembered. */
+    }
+  }, [party]);
   const [run, setRun] = useState<Run | null>(null);
   const [target, setTarget] = useState("");
   const [notice, setNotice] = useState("");
@@ -119,6 +145,17 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   const [preview, setPreview] = useState({ key: "", step: 0 });
   // Hovering (or keyboard-focusing) a unit shows who threatens or helps whom.
   const [hovered, setHovered] = useState("");
+  // The enemies that strike first are shown after a short pause, so the hit is understood.
+  const [intro, setIntro] = useState(false);
+  // Skill under the mouse or keyboard focus: its possible targets are outlined in yellow.
+  const [aim, setAim] = useState("");
+  const beginRun = (next: Run) => {
+    setRun(next);
+    setTarget("");
+    const struck = next.events.some((event) => event.type === "hit");
+    setIntro(struck);
+    if (struck) setTimeout(() => setIntro(false), INTRO_MS);
+  };
   const storeProgress = (next: Progress) => {
     setProgress(next);
     try {
@@ -176,11 +213,6 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   const selectedEnemy = run?.enemies.find(
     (unit) => unit.id === target && unit.hp > 0,
   );
-  const hoveredEnemy = run?.enemies.find(
-    (unit) => unit.id === hovered && unit.hp > 0,
-  );
-  const noteEnemy = hoveredEnemy ?? selectedEnemy;
-  const noteIntent = run && noteEnemy ? enemyIntent(run, noteEnemy) : undefined;
   const turnKey =
     run?.status === "combat"
       ? `${run.id}:${run.room}:${run.round}:${currentId}`
@@ -202,6 +234,15 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   );
   const previewStep = preview.key === turnKey ? preview.step : 0;
   const previewId = turnKey ? threatening[previewStep] : undefined;
+  // While the opening hits or the threat preview play, hovering shows nothing.
+  const previewing =
+    intro || (turnKey !== "" && previewStep < threatening.length);
+  const hoverId = previewing ? "" : hovered;
+  const hoveredEnemy = run?.enemies.find(
+    (unit) => unit.id === hoverId && unit.hp > 0,
+  );
+  const noteEnemy = hoveredEnemy ?? selectedEnemy;
+  const noteIntent = run && noteEnemy ? enemyIntent(run, noteEnemy) : undefined;
   const startPreview = useEffectEvent(() => {
     const timers = threatening.map((_, index) =>
       setTimeout(
@@ -223,11 +264,11 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
       if (!intent) continue;
       // Hovering an enemy shows its own plan; hovering anyone it attacks or helps shows it too.
       const related =
-        hovered !== "" &&
-        (enemy.id === hovered ||
-          intent.targetId === hovered ||
-          intent.allyId === hovered);
-      if (enemy.id === previewId || related)
+        hoverId !== "" &&
+        (enemy.id === hoverId ||
+          intent.targetId === hoverId ||
+          intent.allyId === hoverId);
+      if ((enemy.id === previewId && !intro) || related)
         arrowEntries.push({ enemyId: enemy.id, intent });
     }
   const markedIds = new Set(
@@ -240,13 +281,36 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
     string,
     { kind: "hit" | "heal"; index: number; crit: boolean }
   >();
-  run?.events.forEach((event, index) =>
-    flashes.set(event.targetId, {
-      kind: event.type,
-      index,
-      crit: Boolean(event.crit),
-    }),
-  );
+  const pops = new Map<
+    string,
+    { text: string; kind: string; index: number }[]
+  >();
+  const addPop = (id: string, text: string, kind: string, index: number) =>
+    pops.set(id, [...(pops.get(id) ?? []), { text, kind, index }]);
+  if (!intro)
+    run?.events.forEach((event, index) => {
+      if (event.type === "hit" || event.type === "heal") {
+        flashes.set(event.targetId, {
+          kind: event.type,
+          index,
+          crit: Boolean(event.crit),
+        });
+        if (event.crit) addPop(event.targetId, t("CRITICAL!"), "crit", index);
+      } else if (event.type === "avoid")
+        addPop(
+          event.targetId,
+          event.kind === "miss" ? t("MISS!") : t("EVADED!"),
+          "avoid",
+          index,
+        );
+      else
+        addPop(
+          event.targetId,
+          t("{name} ready!", { name: t(event.name) }),
+          "ready",
+          index,
+        );
+    });
   const flashProps = (id: string) => {
     const flash = flashes.get(id);
     return flash
@@ -263,20 +327,76 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
       : "";
   };
   const critPop = (id: string) =>
-    flashes.get(id)?.crit ? (
-      <span className="crit-pop" key={`crit-${run!.eventId}`}>
-        {t("CRITICAL!")}
+    (pops.get(id) ?? []).map((pop) => (
+      <span
+        className={`pop pop-${pop.kind} ${pop.kind === "crit" ? "crit-pop" : ""}`}
+        key={`${run!.eventId}-${pop.index}`}
+        style={{ "--flash-delay": `${pop.index * 0.35}s` } as CSSProperties}
+      >
+        {pop.text}
       </span>
-    ) : null;
+    ));
   const hoverProps = (id: string) => ({
-    onMouseEnter: () => setHovered(id),
+    onMouseEnter: () => !previewing && setHovered(id),
     onMouseLeave: () => setHovered(""),
-    onFocus: () => setHovered(id),
+    onFocus: () => !previewing && setHovered(id),
     onBlur: () => setHovered(""),
   });
+  // HP shown while the opening hits are still hidden.
+  const shownHp = (unit: Unit) => {
+    if (!intro || !run) return unit.hp;
+    const back = run.events.reduce(
+      (sum, event) =>
+        event.targetId !== unit.id
+          ? sum
+          : event.type === "hit"
+            ? sum + event.damage
+            : event.type === "heal"
+              ? sum - event.amount
+              : sum,
+      0,
+    );
+    return Math.max(0, Math.min(unit.maxHp, unit.hp + back));
+  };
   const canSelectFallen =
     current?.abilities.some((ability) => ability.target === "fallen-ally") ??
     false;
+  // Who the hovered skill can reach.
+  const aimedIds = new Set<string>();
+  const aimAbility = current?.abilities.find((ability) => ability.id === aim);
+  if (run?.status === "combat" && current && aimAbility) {
+    const livingFoes = run.enemies.filter((unit) => unit.hp > 0);
+    const livingCats = run.party.filter((unit) => unit.hp > 0);
+    const legal = (group: Unit[]) =>
+      group.filter(
+        (unit) => !abilityTargetUnavailableReason(run, aimAbility, unit.id),
+      );
+    const chosen = target;
+    const pickOne = (group: Unit[]) =>
+      group.some((unit) => unit.id === chosen)
+        ? group.filter((unit) => unit.id === chosen)
+        : group;
+    let ids: Unit[];
+    if (aimAbility.effect === "line") {
+      const from = livingFoes.findIndex((unit) => unit.id === chosen);
+      ids = from >= 0 ? livingFoes.slice(from, from + 3) : livingFoes;
+    } else if (aimAbility.target === "enemy") ids = pickOne(livingFoes);
+    else if (aimAbility.target === "all-enemies") ids = livingFoes;
+    else if (aimAbility.target === "all-allies") ids = livingCats;
+    else if (aimAbility.target === "ally") ids = pickOne(legal(livingCats));
+    else if (aimAbility.target === "fallen-ally")
+      ids = run.party.filter((unit) => unit.hp <= 0);
+    else ids = [current];
+    ids.forEach((unit) => aimedIds.add(unit.id));
+  }
+  // Who acts after the current cat in this round: the button passes the turn to them.
+  const nextCat =
+    run?.status === "combat"
+      ? run.order
+          .slice(run.turn + 1)
+          .map((id) => run.party.find((unit) => unit.id === id && unit.hp > 0))
+          .find(Boolean)
+      : undefined;
   const targetUnit = units.find(
     (unit) => unit.id === target && (unit.hp > 0 || canSelectFallen),
   );
@@ -362,7 +482,7 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                 className="primary"
                 disabled={party.length !== 3}
                 onClick={() => {
-                  setRun(
+                  beginRun(
                     createRun(progress, party, runSeed(), { crit: runCrit() }),
                   );
                   setNotice("");
@@ -652,13 +772,22 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
           </nav>
           <div className="battle-layout">
             <main>
-              <div className="battlefield" ref={battlefieldRef}>
+              <div
+                className="battlefield"
+                ref={battlefieldRef}
+                data-previewing={previewing ? "true" : "false"}
+              >
+                {intro && (
+                  <div className="intro-banner" role="status">
+                    {t("The enemies strike first!")}
+                  </div>
+                )}
                 <div className="battle-team allies">
                   {run.party.map((unit) => (
                     <article
                       key={unit.id}
                       data-unit={unit.id}
-                      className={`combatant ${unit.id === currentId ? "active" : ""} ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${flashClass(unit.id)}`}
+                      className={`combatant ${unit.id === currentId ? "active" : ""} ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${aimedIds.has(unit.id) ? "aimed" : ""} ${flashClass(unit.id)}`}
                       {...flashProps(unit.id)}
                       {...hoverProps(unit.id)}
                     >
@@ -680,11 +809,13 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                       <h3>{t(unit.name)}</h3>
                       <div className="health">
                         <span
-                          style={{ width: `${(unit.hp / unit.maxHp) * 100}%` }}
+                          style={{
+                            width: `${(shownHp(unit) / unit.maxHp) * 100}%`,
+                          }}
                         />
                       </div>
                       <span className="health-value">
-                        {unit.hp} / {unit.maxHp} {t("HP")}
+                        {shownHp(unit)} / {unit.maxHp} {t("HP")}
                       </span>
                     </article>
                   ))}
@@ -694,7 +825,7 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                     <article
                       key={unit.id}
                       data-unit={unit.id}
-                      className={`combatant ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${flashClass(unit.id)}`}
+                      className={`combatant ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${aimedIds.has(unit.id) ? "aimed" : ""} ${flashClass(unit.id)}`}
                       {...flashProps(unit.id)}
                       {...hoverProps(unit.id)}
                     >
@@ -772,7 +903,14 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                     )}
                   </div>
                   <div className="actions">
-                    <div className="round-counter" aria-label={t("Shared AP")}>
+                    <div
+                      className="round-counter"
+                      aria-label={t("Shared AP")}
+                      title={t(
+                        "Ability points are shared by the whole party, not owned by one cat.",
+                      )}
+                    >
+                      <span className="ap-label">{t("SHARED AP")}</span>
                       <span>{t("ROUND {n}", { n: run.round })}</span>
                       <strong>
                         {run.ap}
@@ -781,6 +919,9 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                           / {run.maxAp} {t("AP")}
                         </small>
                       </strong>
+                      <span className="ap-note">
+                        {t("Shared by all your cats")}
+                      </span>
                       <span className="ap-pips" aria-hidden="true">
                         {Array.from(
                           { length: Math.max(run.ap, run.maxAp) },
@@ -825,63 +966,79 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                         ? t("this room")
                         : t("this turn");
                       return (
-                        <button
-                          data-testid="ability"
-                          title={
-                            reason ? translateEngine(t, reason) : info.text
-                          }
+                        <span
+                          className="ability-slot"
                           key={ability.id}
-                          disabled={Boolean(reason)}
-                          onClick={() =>
-                            applyCombatAction(
-                              act(run, ability.id, actionTarget),
-                              ability,
-                            )
-                          }
+                          onMouseEnter={() => setAim(ability.id)}
+                          onMouseLeave={() => setAim("")}
+                          onFocus={() => setAim(ability.id)}
+                          onBlur={() => setAim("")}
                         >
-                          <AbilityHead ability={ability} power={power} />
-                          {preview && (
-                            <span className="ability-detail damage-preview">
-                              {preview.damage > 0
-                                ? t("Deals {n} · {left} HP left", {
-                                    n: preview.damage,
-                                    left: preview.remainingHp,
+                          <button
+                            data-testid="ability"
+                            title={
+                              reason ? translateEngine(t, reason) : info.text
+                            }
+                            disabled={Boolean(reason) || intro}
+                            onClick={() =>
+                              applyCombatAction(
+                                act(run, ability.id, actionTarget),
+                                ability,
+                              )
+                            }
+                          >
+                            <AbilityHead ability={ability} power={power} />
+                            {preview && (
+                              <span className="ability-detail damage-preview">
+                                {preview.damage > 0
+                                  ? t("Deals {n} · {left} HP left", {
+                                      n: preview.damage,
+                                      left: preview.remainingHp,
+                                    })
+                                  : t("Deals 0 damage")}
+                                {preview.armor +
+                                  preview.blocked +
+                                  preview.iceBlocked >
+                                  0 &&
+                                  ` (${t("{n} blocked", { n: preview.armor + preview.blocked + preview.iceBlocked })})`}
+                              </span>
+                            )}
+                            {reason && (target || cooldown > 0) && (
+                              <span className="ability-detail ability-blocked">
+                                {translateEngine(t, reason)}
+                              </span>
+                            )}
+                            {ability.cooldownTurns ? (
+                              <span className="ability-cooldown">
+                                {cooldownText(
+                                  ability.cooldownTurns,
+                                  cooldown,
+                                  t,
+                                )}
+                              </span>
+                            ) : null}
+                            <span className="ability-usage">
+                              {Number.isFinite(limit)
+                                ? t("{left}/{limit} uses left {when}", {
+                                    left: Math.max(0, limit - uses),
+                                    limit,
+                                    when: usageLabel,
                                   })
-                                : t("Deals 0 damage")}
-                              {preview.armor +
-                                preview.blocked +
-                                preview.iceBlocked >
-                                0 &&
-                                ` (${t("{n} blocked", { n: preview.armor + preview.blocked + preview.iceBlocked })})`}
+                                : t("AP limited")}
                             </span>
-                          )}
-                          {reason && (target || cooldown > 0) && (
-                            <span className="ability-detail ability-blocked">
-                              {translateEngine(t, reason)}
-                            </span>
-                          )}
-                          {ability.cooldownTurns ? (
-                            <span className="ability-cooldown">
-                              {cooldownText(ability.cooldownTurns, cooldown, t)}
-                            </span>
-                          ) : null}
-                          <span className="ability-usage">
-                            {Number.isFinite(limit)
-                              ? t("{left}/{limit} uses left {when}", {
-                                  left: Math.max(0, limit - uses),
-                                  limit,
-                                  when: usageLabel,
-                                })
-                              : t("AP limited")}
-                          </span>
-                        </button>
+                          </button>
+                        </span>
                       );
                     })}
                     <button
                       className="quiet end-turn"
+                      data-testid="end-turn"
+                      disabled={intro}
                       onClick={() => applyCombatAction(endTurn(run))}
                     >
-                      {t("End turn")}
+                      {nextCat
+                        ? t("Pass to {name}", { name: nextCat.name })
+                        : t("End turn")}
                     </button>
                   </div>
                 </section>
@@ -925,8 +1082,7 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                   <button
                     className="primary"
                     onClick={() => {
-                      setRun(nextRoom(run));
-                      setTarget("");
+                      beginRun(nextRoom(run));
                     }}
                   >
                     {t("Continue to next room →")}

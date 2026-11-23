@@ -11,6 +11,8 @@ import {
 } from "./game";
 import {
   BASE_CRIT_CHANCE,
+  MISS_CHANCE,
+  evadeChance,
   DIFFICULTY_TUNING,
   EXPEDITION_REWARD,
   ROOM_HEAL,
@@ -27,7 +29,7 @@ function buildEntries(t: Translate): [string, string][] {
     [
       t("How do turns and AP work?"),
       t(
-        "All living cats and monsters act in initiative order. Your team normally shares 6 AP each round. Each cat can use each 1 AP skill at most 3 times and each 2 AP skill at most twice during its own turn. Signature skills can have stricter limits, shown on the button. End turn leaves AP for later cats. Moonwell raises the team's AP ceiling for the current room only.",
+        "All living cats and monsters act in initiative order. Your team normally shares 6 AP each round: AP belong to the whole party, not to one cat, and any cat can spend them on its turn. The turn button says Pass to the next cat in the order; on the last cat it says End turn and the enemies act. Each cat can use each 1 AP skill at most 3 times and each 2 AP skill at most twice during its own turn. Signature skills can have stricter limits, shown on the button. End turn leaves AP for later cats. Moonwell raises the team's AP ceiling for the current room only.",
       ),
     ],
     [
@@ -204,6 +206,13 @@ function buildEntries(t: Translate): [string, string][] {
       t(
         "Every hit and every heal, from cats and from enemies, has a {base}% chance to be critical and deal 50% more damage or healing (rounded up). The chance is fixed: attack, healing and mastery bonuses do not change it. The Hearth blessing adds +5% critical chance for your cats at rank 6 and another +5% at rank 8. Area attacks and Dagger line roll separately for each target. A critical hit shows CRITICAL! over its target and is written in Field Notes.",
         { base: BASE_CRIT_CHANCE },
+      ),
+    ],
+    [
+      t("Can attacks miss or be evaded?"),
+      t(
+        "Every hit, from cats and from enemies, has a {miss}% chance to miss. Fast units can also evade: 1% for each point of initiative above 12, at most {max}% (for example Pip with 20 initiative evades 8% of hits). A miss or an evasion deals no damage, is announced over the target, and its skill still costs AP. Healing, shields and blessings never miss. Area attacks and Dagger line roll for each target.",
+        { miss: MISS_CHANCE, max: evadeChance(99) },
       ),
     ],
     [

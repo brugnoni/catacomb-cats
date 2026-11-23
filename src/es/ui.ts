@@ -115,6 +115,16 @@ export const UI: Record<string, string> = {
   "{left}/{limit} uses left {when}": "{left}/{limit} usos restantes en {when}",
   "AP limited": "Limitado por PA",
   "End turn": "Terminar turno",
+  "Pass to {name}": "Pasar a {name}",
+  "Cooldown · {name}": "Enfriamiento · {name}",
+  "SHARED AP": "PA COMPARTIDOS",
+  "Shared by all your cats": "Compartidos por todos tus gatos",
+  "Ability points are shared by the whole party, not owned by one cat.":
+    "Los puntos de habilidad son del grupo entero, no de un solo gato.",
+  "The enemies strike first!": "¡Los enemigos atacan primero!",
+  "MISS!": "¡FALLO!",
+  "EVADED!": "¡ESQUIVADO!",
+  "{name} ready!": "¡{name} lista!",
   "CHAMBER CLEARED": "CÁMARA SUPERADA",
   "The way opens.": "El camino se abre.",
   "Room reward: +{gold} gold, +{xp} XP and {item}.":
@@ -212,8 +222,8 @@ export const UI: Record<string, string> = {
     "Absorbe {n} de daño más. Dura {turns}.",
   "+{n} to damage, healing and shields. Lasts {turns}.":
     "+{n} al daño, la curación y los escudos. Dura {turns}.",
-  "Damage, healing and shields are {n} lower. Lasts {turns}.":
-    "El daño, la curación y los escudos son {n} menores. Dura {turns}.",
+  "Its damage, healing and shields, and the shields it receives, are {n} lower. Lasts {turns}.":
+    "Su daño, curación y escudos, y los escudos que recibe, son {n} menores. Dura {turns}.",
   "Sends {n} damage back to whoever hurts this unit. Lasts {turns}.":
     "Devuelve {n} de daño a quien hiera a esta unidad. Dura {turns}.",
   "Reduces the next {hits} by {n}.": "Reduce en {n} los próximos {hits}.",

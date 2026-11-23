@@ -90,6 +90,13 @@ export interface Unit {
 /** What just happened in the last action; the interface replays these. */
 export type CombatEvent =
   | {
+      type: "avoid";
+      targetId: string;
+      kind: "miss" | "evade";
+      crit?: undefined;
+    }
+  | { type: "ready"; targetId: string; name: string; crit?: undefined }
+  | {
       type: "hit";
       targetId: string;
       damage: number;
@@ -133,6 +140,8 @@ export interface Run {
   enemyCritChance: number;
   /** Separate generator for critical rolls, so marks never depend on them. */
   critRng: number;
+  /** Misses and evasion are active (they share the critical-hit option). */
+  luck: boolean;
 }
 
 export interface RunOptions {

@@ -225,6 +225,8 @@ export const GAME: Record<string, string> = {
   "{1} scores a critical hit on {2}!": "¡{1} asesta un golpe crítico a {2}!",
   "{1} lands a critical heal on {2}!":
     "¡{1} logra una curación crítica en {2}!",
+  "{1} misses {2}!": "¡{1} falla contra {2}!",
+  "{1} evades {2}'s attack!": "¡{1} esquiva el ataque de {2}!",
   "{1} drains {2} HP from {3}.": "{1} drena {2} PV de {3}.",
   "{1} uses {2}.": "{1} usa {2}.",
   // Refusal reasons

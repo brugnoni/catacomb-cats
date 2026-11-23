@@ -1,4 +1,10 @@
-import { GUARD_TURNS, ROOM_HEAL, roomReward } from "../progression";
+import {
+  GUARD_TURNS,
+  MISS_CHANCE,
+  ROOM_HEAL,
+  evadeChance,
+  roomReward,
+} from "../progression";
 import { type Unit, type Run } from "./model";
 import { ITEMS } from "./data";
 
@@ -30,6 +36,17 @@ export function rollCrit(run: Run, actor: Unit): boolean {
     ? run.critChance
     : run.enemyCritChance;
   return chance > 0 && critRandom(run) * 100 < chance;
+}
+
+/** Rolls a miss (attacker) and then an evasion (target); undefined if the hit lands. */
+export function rollAvoid(
+  run: Run,
+  target: Unit,
+): "miss" | "evade" | undefined {
+  if (!run.luck) return undefined;
+  if (critRandom(run) * 100 < MISS_CHANCE) return "miss";
+  if (critRandom(run) * 100 < evadeChance(target.initiative)) return "evade";
+  return undefined;
 }
 
 export function pickLiving(run: Run, group: Unit[]): Unit | undefined {
@@ -91,7 +108,18 @@ export function beginTurn(run: Run) {
   if (!actor || actor.hp <= 0) return;
   for (const key of Object.keys(actor.cooldowns)) {
     actor.cooldowns[key] = Math.max(0, actor.cooldowns[key]! - 1);
-    if (actor.cooldowns[key] === 0) delete actor.cooldowns[key];
+    if (actor.cooldowns[key] === 0) {
+      delete actor.cooldowns[key];
+      const ability = actor.abilities.find(
+        (a) => (a.cooldownGroup ?? a.id) === key,
+      );
+      if (ability)
+        run.events.push({
+          type: "ready",
+          targetId: actor.id,
+          name: ability.name,
+        });
+    }
   }
   // Each duration advances only when the affected unit begins a turn.
   if (actor.guardTurns > 0 && --actor.guardTurns === 0) {
@@ -190,7 +218,8 @@ export function guard(
   turns = GUARD_TURNS,
 ) {
   const active = target.guard > 0 && target.guardTurns > 0;
-  target.guard = power;
+  // A curse lowers the shields a cat receives, too.
+  target.guard = Math.max(0, power - target.curse);
   target.guardTurns = turns;
   run.log.push(
     `${target.name} ${active ? "restores" : "gains"} a ${target.guard} shield for ${turns} turns.`,

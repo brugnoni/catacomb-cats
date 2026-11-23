@@ -1,5 +1,7 @@
 import { useId, useState } from "react";
 import type { Unit } from "./game";
+import { cooldownText } from "./abilityText";
+import { cooldownRemaining } from "./game";
 import { plural, useT } from "./i18n";
 type EffectKind =
   | "armor"
@@ -10,7 +12,8 @@ type EffectKind =
   | "taunt"
   | "ice"
   | "recovery"
-  | "ambush";
+  | "ambush"
+  | "cooldown";
 function EffectIcon({ kind }: { kind: EffectKind }) {
   const paths: Record<EffectKind, string> = {
     armor: "M4 1H7V4H9V1H12V3H14V7H12V14H4V7H2V3H4Z M6 7V12H10V7Z",
@@ -23,6 +26,7 @@ function EffectIcon({ kind }: { kind: EffectKind }) {
     ice: "M7 0H9V5L12 2L14 4L10 8L14 12L12 14L9 11V16H7V11L4 14L2 12L6 8L2 4L4 2L7 5Z",
     recovery: "M6 1H10V6H15V10H10V15H6V10H1V6H6Z",
     ambush: "M11 0H15L11 6H14L4 16L6 9H2Z",
+    cooldown: "M3 1H13V4L10 8L13 12V15H3V12L6 8L3 4Z M5 3V4L8 7L11 4V3Z",
   };
   return (
     <svg
@@ -130,7 +134,7 @@ export function UnitEffects({
       label: t("Curse"),
       value: `−${unit.curse}`,
       description: t(
-        "Damage, healing and shields are {n} lower. Lasts {turns}.",
+        "Its damage, healing and shields, and the shields it receives, are {n} lower. Lasts {turns}.",
         { n: unit.curse, turns: plural(t, unit.curseTurns, "turn") },
       ),
     });
@@ -186,6 +190,17 @@ export function UnitEffects({
         name: unit.name,
       }),
     });
+  // One badge per skill that is cooling down, with the turns still to wait.
+  for (const ability of unit.abilities) {
+    const left = cooldownRemaining(unit, ability);
+    if (left > 0 && ability.cooldownTurns)
+      effects.push({
+        kind: "cooldown",
+        label: t("Cooldown · {name}", { name: t(ability.name) }),
+        value: String(left),
+        description: cooldownText(ability.cooldownTurns, left, t),
+      });
+  }
   if (!effects.length) return null;
   return (
     <div
@@ -193,7 +208,7 @@ export function UnitEffects({
       aria-label={t("Active effects on {name}", { name: unit.name })}
     >
       {effects.map((effect) => (
-        <Badge key={effect.kind} {...effect} />
+        <Badge key={`${effect.kind}-${effect.label}`} {...effect} />
       ))}
     </div>
   );
