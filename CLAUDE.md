@@ -45,3 +45,17 @@ npm exec --yes --package=pnpm@11.25.0 -- pnpm <script>
 ## Tests
 
 Engine tests are in `src/game.test.ts` (rules), `src/progression.test.ts`, `src/balance.test.ts` (seeded simulations; they use seeds because enemy marks are random) and `src/abilityText.test.ts`. `tests/game.spec.ts` drives the built app; it picks targets by clicking `[data-unit="id"] .unit-target` and shows threads on hover.
+
+## Agent skills
+
+### Issue tracker
+
+Local markdown under `.scratch/` (git-ignored). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root, created lazily. See `docs/agents/domain.md`.
