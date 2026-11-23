@@ -1,4 +1,4 @@
-import { ROOM_HEAL, roomReward } from "../progression";
+import { GUARD_TURNS, ROOM_HEAL, roomReward } from "../progression";
 import { type Unit, type Run } from "./model";
 import { ITEMS } from "./data";
 
@@ -183,7 +183,12 @@ export function advance(run: Run) {
   beginTurn(run);
 }
 
-export function guard(run: Run, target: Unit, power: number, turns = 2) {
+export function guard(
+  run: Run,
+  target: Unit,
+  power: number,
+  turns = GUARD_TURNS,
+) {
   const active = target.guard > 0 && target.guardTurns > 0;
   target.guard = power;
   target.guardTurns = turns;

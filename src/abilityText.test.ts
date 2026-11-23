@@ -45,7 +45,7 @@ describe("ability descriptions", () => {
   it("explains Guard simply: duration in turns and the single refresh rule", () => {
     const guard = all.find((a) => a.effect === "guard")!;
     const info = describeAbility(guard, 8);
-    expect(info.text).toBe("Shield 1 ally for 8. Lasts 2 turns.");
+    expect(info.text).toBe("Shield 1 ally for 8. Lasts 3 turns.");
     expect(info.note).toBe(
       "Refreshing this ability restores full shield and duration (does not stack).",
     );

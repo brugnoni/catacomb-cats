@@ -1,4 +1,5 @@
 import { LINE_FALLOFF, type Ability } from "./game";
+import { GUARD_TURNS } from "./progression";
 import { identityT, plural, type Translate } from "./i18n";
 
 export type AbilityKind = "damage" | "heal" | "shield" | "buff" | "utility";
@@ -13,7 +14,6 @@ export interface AbilityDescription {
   /** Optional second sentence for the one rule players must know. */
   note?: string;
 }
-export const GUARD_TURNS = 2;
 export const INSPIRED_TURNS = 3;
 
 function kindOf(ability: Ability): AbilityKind {
@@ -122,7 +122,13 @@ function textOf(
         ),
       };
     case "taunt":
-      return { text: t("Enemies attack this cat until its next turn.") };
+      return {
+        text: t("Enemies attack this cat until its next turn."),
+        note: t("Also gives it a {power} shield. Lasts {turns}.", {
+          power,
+          turns: plural(t, GUARD_TURNS, "turn"),
+        }),
+      };
     case "ap":
       return {
         text: t("Gain +{power} AP now and each round in this room.", { power }),
@@ -131,6 +137,17 @@ function textOf(
     default:
       return { text: t("Deal {power} damage to 1 enemy.", { power }) };
   }
+}
+function withLifesteal(
+  d: Pick<AbilityDescription, "text" | "note">,
+  ability: Ability,
+  t: Translate,
+) {
+  if (!ability.lifesteal) return d;
+  const drain = t("Heals the caster for {pct}% of the damage dealt.", {
+    pct: ability.lifesteal,
+  });
+  return { ...d, note: d.note ? `${d.note} ${drain}` : drain };
 }
 export function describeAbility(
   ability: Ability,
@@ -142,7 +159,7 @@ export function describeAbility(
     kind,
     kindLabel: kindLabel(kind, t),
     targetLabel: targetOf(ability, t),
-    ...textOf(ability, power, t),
+    ...withLifesteal(textOf(ability, power, t), ability, t),
   };
 }
 /** "Ready in 3 turns" while cooling down, "Cooldown: 2 turns" when ready. */

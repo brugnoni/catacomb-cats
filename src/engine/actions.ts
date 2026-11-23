@@ -2,6 +2,7 @@ import {
   hearthBonuses,
   getDifficulty,
   BASE_CRIT_CHANCE,
+  GUARD_TURNS,
   CRIT_MULTIPLIER,
 } from "../progression";
 import {
@@ -138,11 +139,12 @@ export function applyAbility(
         `${actor.name} heals ${t.name}: +${healed} HP (${amount} healing power; ${t.hp}/${t.maxHp} HP).`,
       );
     }
-  } else if (ability.effect === "guard") guard(run, target, power, 2);
+  } else if (ability.effect === "guard") guard(run, target, power, GUARD_TURNS);
   else if (ability.effect === "fury") fury(run, target, power);
   else if (ability.effect === "taunt") {
     run.tauntId = actor.id;
     for (const enemy of run.enemies) if (enemy.hp > 0) enemy.mark = actor.id;
+    if (power > 0) guard(run, actor, power, GUARD_TURNS);
     run.log.push(
       `${actor.name} taunts: enemies attack this cat until its next turn.`,
     );

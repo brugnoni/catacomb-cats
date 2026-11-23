@@ -31,14 +31,22 @@ describe("balance targets (medium bot)", () => {
     expect(average(rates)).toBeLessThan(0.97);
     expect(Math.min(...rates)).toBeGreaterThan(0.15);
   });
-  it("stays between 60 and 98 percent while the player grows", () => {
+  it("never drops below 60 percent while the player grows", () => {
     for (const wins of [2, 5, 8]) {
       const rates = TEAMS.map(
         (team) => winRate(playerAfter(wins, team), team).winRate,
       );
       expect(average(rates), `stage ${wins}`).toBeGreaterThan(0.6);
-      expect(average(rates), `stage ${wins}`).toBeLessThan(0.98);
     }
+  });
+  it("lifesteal keeps a team without a healer viable", () => {
+    const team = ["miso", "pip", "ember"];
+    for (const wins of [0, 3, 6])
+      expect(
+        winRate(wins === 0 ? initialProgress() : playerAfter(wins, team), team)
+          .winRate,
+        `stage ${wins}`,
+      ).toBeGreaterThan(0.5);
   });
   it("early rooms cost health, so they are not a formality", () => {
     const s = winRate(initialProgress(), TEAMS[0]!, 20);

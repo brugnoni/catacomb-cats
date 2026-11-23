@@ -60,3 +60,19 @@ Average about 88%; optimal bot 100% at stages 0-12 (measured before the final ca
 - The optimal bot is above its 92-97% target (100%): the game is fully winnable with perfect play, but there is little margin at the top. Raising enemy HP and power by about 10% at high tiers is the first lever if the endgame feels easy.
 - The Hearth is capped by `playerAfter` at half the training rank, so endgame stages are modelled with Hearth 4.
 - Critical hits were off in every measurement (10% base in the real game adds variance but no average change).
+
+## Round 2: sustain without a healer (lifesteal, 3-turn Guard, Miso's shield)
+
+Changes: Ember's Flame paw and Sweeping embers heal the caster for 30% of the HP damage they deal; Pip's Dagger line 15% (per target, rounded up, only damage that reaches HP, critical hits do not raise it). Nine lives lasts 3 turns (was 2). Stand behind me also gives Miso a 5 point shield for 3 turns. Enemy HP per tier 13% (was 12%).
+
+Medium bot, 16 seeds, 10 teams, stages 0 / 3 / 6 / 10:
+
+| Setup                      | Overall win rate                   | Weakest teams (average)                             |
+| -------------------------- | ---------------------------------- | --------------------------------------------------- |
+| Before round 2             | about 88%                          | Miso + Pip + Ember 37-69%, Pip + Clover + Ember 68% |
+| Round 2 at 12% HP per tier | 85 / 95 / 96 / 99% (too easy)      | all teams 85% or more                               |
+| 17%                        | 85 / 88 / 86 / 59% (too hard late) | Miso + Pip + Ember 50%                              |
+| 14.5%                      | 85 / 81 / 87 / 63%                 | Miso + Pip + Ember 53%                              |
+| **13% (kept)**             | **85 / 89 / 96 / 86%**             | Miso + Pip + Ember 77%, Miso + Pip + Clover 80%     |
+
+Per-team averages now range 77-99% (Luna teams 85-99%, Miso + Clover + Ember 99%). Lifesteal lifted the healer-less teams without making them better than the healer teams. Remaining gap: at tier 11+ Miso + Pip + Clover and Miso + Pip + Ember fall to about 38%. Not tuned further.

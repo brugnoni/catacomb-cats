@@ -53,7 +53,7 @@ function buildEntries(t: Translate): [string, string][] {
     [
       t("What does Miso's taunt do?"),
       t(
-        "At training rank 3, Miso learns a taunt. It costs 2 AP and can be used once per turn. Enemy damaging attacks target Miso while he is alive, until the start of his next turn. It does not redirect enemy support spells or curses. It adds no permanent armor and cannot protect the party after Miso falls.",
+        "At training rank 3, Miso learns a taunt. It costs 2 AP and can be used once per turn. Enemy damaging attacks target Miso while he is alive, until the start of his next turn. It does not redirect enemy support spells or curses. It also gives Miso a shield, but it adds no permanent armor and cannot protect the party after Miso falls.",
       ),
     ],
     [
@@ -190,7 +190,7 @@ function buildEntries(t: Translate): [string, string][] {
     [
       t("When do timed effects lose a turn?"),
       t(
-        "Guard, Inspired, curses and reflection each count the affected unit’s turn starts, not End turn clicks by other units. A 2-turn Guard lasts until the protected cat begins its next turn (2 to 1), then expires at the beginning of that cat’s following turn (1 to 0). Guard can also be depleted by damage. Taunt ends exactly when Miso’s next turn begins or he is no longer alive. Hover or keyboard-focus an effect icon above a character to inspect its rules, value and remaining turn starts.",
+        "Guard, Inspired, curses and reflection each count the affected unit’s turn starts, not End turn clicks by other units. A 3-turn Guard drops to 2 when the protected cat begins its next turn, to 1 at the turn after, and expires at the beginning of the third turn (1 to 0). Guard can also be depleted by damage. Taunt ends exactly when Miso’s next turn begins or he is no longer alive. Hover or keyboard-focus an effect icon above a character to inspect its rules, value and remaining turn starts.",
       ),
     ],
     [

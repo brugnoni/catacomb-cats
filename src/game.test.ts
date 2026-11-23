@@ -26,7 +26,7 @@ import {
   type Progress,
   type Run,
 } from "./game";
-import { EXPEDITION_REWARD, ROOM_HEAL } from "./progression";
+import { EXPEDITION_REWARD, GUARD_TURNS, ROOM_HEAL } from "./progression";
 /** Healing a surviving cat gets when a room is cleared. */
 const roomHeal = (maxHp: number) =>
   Math.max(ROOM_HEAL.flat, Math.ceil((maxHp * ROOM_HEAL.percent) / 100));
@@ -250,7 +250,7 @@ describe("non-stacking effects and exact numeric outcomes", () => {
     pip.guardTurns = 1;
     r = act(r, "guard", "pip");
     expect(r.party.find((u) => u.id === "pip")!.guard).toBe(8);
-    expect(r.party.find((u) => u.id === "pip")!.guardTurns).toBe(2);
+    expect(r.party.find((u) => u.id === "pip")!.guardTurns).toBe(GUARD_TURNS);
   });
   it("Inspired does not amplify itself, and support skills benefit", () => {
     let r = turn(
@@ -535,7 +535,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
     target.guardTurns = 1;
     r = act(r, "guard", "pip");
     expect(r.party.find((c) => c.id === "pip")!.guard).toBe(8);
-    expect(r.party.find((c) => c.id === "pip")!.guardTurns).toBe(2);
+    expect(r.party.find((c) => c.id === "pip")!.guardTurns).toBe(GUARD_TURNS);
   });
   it("prevents full-HP single and area healing without spending resources, while injured allies remain legal", () => {
     const r = trained("clover");
@@ -604,7 +604,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
 
 describe("owner-start clocks, automatic exhaustion and expedition recovery", () => {
   it.each(["miso", "pip"])(
-    "Guard on %s lasts its next two starts and ignores unrelated End turns",
+    "Guard on %s lasts its next three starts and ignores unrelated End turns",
     (targetId) => {
       let r = turn(start(), "miso");
       r = act(r, "guard", targetId);
@@ -613,18 +613,23 @@ describe("owner-start clocks, automatic exhaustion and expedition recovery", () 
       r.turn = 0;
       r = endTurn(r);
       expect(currentUnit(r)?.id).toBe("clover");
-      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(2);
+      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(3);
       r = endTurn(r);
       expect(currentUnit(r)?.id).toBe(targetId);
-      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(1);
+      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(2);
       expect(r.party.find((c) => c.id === targetId)!.guard).toBe(8);
       // Completing the affected turn itself does not consume another duration.
       r.order = [targetId, otherId, "clover"];
       r.turn = 0;
       r = endTurn(r);
-      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(1);
+      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(2);
       r.party.find((c) => c.id === targetId)!.initiative = 100;
       r = endTurn(endTurn(r));
+      expect(currentUnit(r)?.id).toBe(targetId);
+      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(1);
+      r.order = [otherId, targetId, "clover"];
+      r.turn = 0;
+      r = endTurn(r);
       expect(currentUnit(r)?.id).toBe(targetId);
       expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(0);
       expect(r.party.find((c) => c.id === targetId)!.guard).toBe(0);
@@ -1448,5 +1453,81 @@ describe("critical hits", () => {
         (e) => e.mark,
       );
     expect(marks("on")).toEqual(marks("off"));
+  });
+});
+
+describe("lifesteal and Miso's shield", () => {
+  const foes = (r: Run) =>
+    r.enemies.forEach((e) => {
+      e.hp = e.maxHp = 500;
+      e.armor = e.guard = 0;
+    });
+  it("Flame paw heals Ember for 30 percent of the damage dealt, rounded up", () => {
+    let r = trained("ember");
+    foes(r);
+    r.party[0]!.hp = 10;
+    const power = abilityPower(r, r.party[0]!, r.party[0]!.abilities[1]!);
+    r = act(r, "slam", "e0");
+    expect(r.party[0]!.hp).toBe(10 + Math.ceil(power * 0.3));
+    expect(
+      r.events.some((e) => e.type === "heal" && e.targetId === "ember"),
+    ).toBe(true);
+    expect(r.log.join(" ")).toContain(
+      `Ember drains ${Math.ceil(power * 0.3)} HP from Crypt rat.`,
+    );
+  });
+  it("only drains from damage that reaches HP and never over max HP", () => {
+    let r = trained("ember");
+    foes(r);
+    r.enemies[0]!.armor = 999;
+    r.party[0]!.hp = 10;
+    r = act(r, "slam", "e0");
+    expect(r.party[0]!.hp).toBe(10);
+    r = trained("ember");
+    foes(r);
+    r.party[0]!.hp = r.party[0]!.maxHp - 1;
+    r = act(r, "slam", "e0");
+    expect(r.party[0]!.hp).toBe(r.party[0]!.maxHp);
+  });
+  it("Sweeping embers drains once per enemy hit", () => {
+    let r = trained("ember");
+    foes(r);
+    r.party[0]!.hp = 5;
+    const sweep = r.party[0]!.abilities.find((a) => a.id === "cleave")!;
+    const power = abilityPower(r, r.party[0]!, sweep);
+    r = act(r, "cleave", "ember");
+    expect(r.party[0]!.hp).toBe(5 + 2 * Math.ceil(power * 0.3));
+  });
+  it("Dagger line drains 15 percent per target hit and critical hits do not raise it", () => {
+    let r = turn(
+      createRun(initialProgress(), ["pip", "miso", "clover"], 1, { crit: 100 }),
+      "pip",
+    );
+    foes(r);
+    r.party[0]!.hp = 5;
+    r = act(r, "line", "e0");
+    const hits = r.events.filter((e) => e.type === "hit" && "damage" in e);
+    const gained = r.party[0]!.hp - 5;
+    const expected = hits.reduce(
+      (sum, e) =>
+        sum + Math.ceil(((e as { damage: number }).damage * 15) / 100),
+      0,
+    );
+    expect(gained).toBe(expected);
+    expect(hits.every((e) => (e as { crit?: boolean }).crit)).toBe(true);
+  });
+  it("Miso's Stand behind me also shields him for three turns", () => {
+    let r = trained("miso");
+    foes(r);
+    r = act(r, "taunt", "miso");
+    expect(r.tauntId).toBe("miso");
+    expect(r.party[0]!.guard).toBe(5);
+    expect(r.party[0]!.guardTurns).toBe(GUARD_TURNS);
+  });
+  it("a Guard shield now lasts three turns", () => {
+    expect(GUARD_TURNS).toBe(3);
+    let r = turn(start(), "miso");
+    r = act(r, "guard", "pip");
+    expect(r.party.find((c) => c.id === "pip")!.guardTurns).toBe(3);
   });
 });

@@ -22,6 +22,8 @@ export interface Ability {
   roomLimit?: number;
   cooldownTurns?: number;
   cooldownGroup?: string;
+  /** Percent of the HP damage this skill deals that heals the caster. */
+  lifesteal?: number;
 }
 
 /** Attacks that hurt enemies: every skill without a support effect. */

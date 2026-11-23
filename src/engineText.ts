@@ -127,6 +127,7 @@ export const RULES: [RegExp, string][] = [
     /^(.+) lands a critical heal on (.+)!$/,
     "{1} lands a critical heal on {2}!",
   ],
+  [/^(.+) drains (\d+) HP from (.+)\.$/, "{1} drains {2} HP from {3}."],
   [/^(.+) uses (.+)\.$/, "{1} uses {2}."],
   // Refusal reasons shown on skill buttons.
   [/^Not your turn$/, "Not your turn"],

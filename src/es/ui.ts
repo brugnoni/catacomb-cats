@@ -162,6 +162,10 @@ export const UI: Record<string, string> = {
   "1 ally": "1 aliado",
   "1 fallen ally": "1 aliado caído",
   Self: "Uno mismo",
+  "Also gives it a {power} shield. Lasts {turns}.":
+    "También le da un escudo de {power}. Dura {turns}.",
+  "Heals the caster for {pct}% of the damage dealt.":
+    "Cura a quien lanza el {pct}% del daño causado.",
   "Ignores armor, shields and Ice Ward.":
     "Ignora la armadura, los escudos y la Barrera de hielo.",
   "Line of enemies": "Fila de enemigos",

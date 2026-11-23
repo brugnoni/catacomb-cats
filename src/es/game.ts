@@ -225,6 +225,7 @@ export const GAME: Record<string, string> = {
   "{1} scores a critical hit on {2}!": "¡{1} asesta un golpe crítico a {2}!",
   "{1} lands a critical heal on {2}!":
     "¡{1} logra una curación crítica en {2}!",
+  "{1} drains {2} HP from {3}.": "{1} drena {2} PV de {3}.",
   "{1} uses {2}.": "{1} usa {2}.",
   // Refusal reasons
   "Not your turn": "No es tu turno",

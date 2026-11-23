@@ -1,3 +1,4 @@
+import { GUARD_TURNS } from "../progression";
 import { isDamaging, type Ability, type Unit, type Run } from "./model";
 import { currentUnit } from "./state";
 
@@ -90,7 +91,11 @@ export function abilityTargetUnavailableReason(
   if (!target) return "Choose a living " + ability.target;
   if (ability.effect === "heal" && target.hp >= target.maxHp)
     return "Already at full HP";
-  if (ability.effect === "guard" && target.guard > 0 && target.guardTurns >= 2)
+  if (
+    ability.effect === "guard" &&
+    target.guard > 0 &&
+    target.guardTurns >= GUARD_TURNS
+  )
     return "Guard is already at full duration";
   if (ability.effect === "fury" && target.furyTurns >= 3)
     return "Inspired is already at full duration";

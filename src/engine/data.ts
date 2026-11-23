@@ -65,6 +65,7 @@ export const CATS: Cat[] = [
         effect: "line",
         turnLimit: 1,
         cooldownTurns: 1,
+        lifesteal: 15,
       },
     ],
   },
@@ -103,6 +104,7 @@ export const CATS: Cat[] = [
         power: 20,
         target: "enemy",
         cooldownTurns: 2,
+        lifesteal: 30,
       },
     ],
   },
@@ -113,7 +115,7 @@ export const SIGNATURE_ABILITIES: Record<string, Ability> = {
     id: "taunt",
     name: "Stand behind me",
     cost: 2,
-    power: 0,
+    power: 5,
     target: "self",
     effect: "taunt",
     turnLimit: 1,
@@ -155,6 +157,7 @@ export const SIGNATURE_ABILITIES: Record<string, Ability> = {
     effect: "cleave",
     turnLimit: 1,
     cooldownTurns: 1,
+    lifesteal: 30,
   },
 };
 

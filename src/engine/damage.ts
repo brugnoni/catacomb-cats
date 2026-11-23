@@ -93,6 +93,18 @@ export function hurt(
   });
   if (crit)
     run.log.push(`${actor.name} scores a critical hit on ${target.name}!`);
+  if (ability.lifesteal && dealt > 0 && actor.hp > 0) {
+    // Only real HP damage drains; critical hits do not raise the percentage.
+    const drained = Math.min(
+      actor.maxHp - actor.hp,
+      Math.ceil((dealt * ability.lifesteal) / 100),
+    );
+    if (drained > 0) {
+      actor.hp += drained;
+      run.events.push({ type: "heal", targetId: actor.id, amount: drained });
+      run.log.push(`${actor.name} drains ${drained} HP from ${target.name}.`);
+    }
+  }
   run.log.push(
     `${actor.name} hits ${target.name}: ${dealt} damage (${power} attack power, ${armor} armor, ${blocked} Guard blocked, ${iceBlocked} Ice Ward blocked; ${target.hp}/${target.maxHp} HP).`,
   );

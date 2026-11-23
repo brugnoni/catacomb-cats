@@ -164,7 +164,7 @@ describe("ascension snapshot calculation", () => {
         generalLevel: 8,
         catLevels: { a: 8, b: 8, c: 8 },
       }).hpMultiplier,
-    ).toBeCloseTo(2.68, 5);
+    ).toBeCloseTo(2.82, 5);
     expect(
       getDifficulty({
         wins: 10000,

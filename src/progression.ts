@@ -520,7 +520,7 @@ export const DIFFICULTY_TUNING = {
   maxTier: 14,
   /** Power points (see powerPoints) for one tier. */
   pointsPerTier: 3,
-  hpPerTier: 0.12,
+  hpPerTier: 0.13,
   powerEveryTiers: 2,
   initiativeEveryTiers: 4,
   /** Tiers that add a reinforcement to every room (first and second). */
@@ -537,6 +537,8 @@ export const EXPEDITION_REWARD = {
   gold: ROOM_REWARD.gold.reduce((a, b) => a + b, 0),
   xp: ROOM_REWARD.xp.reduce((a, b) => a + b, 0),
 };
+/** Turns a Guard shield lasts. */
+export const GUARD_TURNS = 3;
 /** Healing a surviving cat gets when a room is cleared: the larger of a flat amount and a share of max HP. */
 export const ROOM_HEAL = { flat: 8, percent: 33 };
 /** The numbers a tier adds to every enemy; shared by the engine, lobby text and FAQ. */

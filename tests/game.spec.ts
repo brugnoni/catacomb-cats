@@ -519,21 +519,21 @@ test("effect icons expose themed descriptions on hover and keyboard focus and Gu
   await expect(guard).toBeVisible();
   await guard.hover();
   await expect(page.getByRole("tooltip")).toContainText("Guard");
-  await expect(page.getByRole("tooltip")).toContainText("2");
-  await expect(page.getByRole("tooltip")).toContainText("Lasts 2 turns");
+  await expect(page.getByRole("tooltip")).toContainText("3");
+  await expect(page.getByRole("tooltip")).toContainText("Lasts 3 turns");
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await expect(page.locator(".command-deck h2")).toHaveText("Pip");
   await guard.focus();
   await expect(page.getByRole("tooltip")).toBeVisible();
-  await expect(page.getByRole("tooltip")).toContainText("2");
+  await expect(page.getByRole("tooltip")).toContainText("Lasts 3 turns");
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await expect(page.locator(".command-deck h2")).toHaveText("Luna");
   await guard.hover();
-  await expect(page.getByRole("tooltip")).toContainText("2");
+  await expect(page.getByRole("tooltip")).toContainText("Lasts 3 turns");
   await page.getByRole("button", { name: "End turn", exact: true }).click();
   await expect(page.locator(".command-deck h2")).toHaveText("Miso");
   await guard.hover();
-  await expect(page.getByRole("tooltip")).toContainText("1");
+  await expect(page.getByRole("tooltip")).toContainText("Lasts 2 turns");
 });
 
 test("an attack clears a defeated target even when the same cat still has AP", async ({
@@ -702,7 +702,7 @@ test("an eligible shield refresh restores consumed absorption as well as duratio
   const shield = luna.getByRole("button", { name: "Guard: 10", exact: true });
   await expect(shield).toBeVisible();
   await shield.hover();
-  await expect(page.getByRole("tooltip")).toContainText("Lasts 2 turns");
+  await expect(page.getByRole("tooltip")).toContainText("Lasts 3 turns");
 });
 
 test("the field guide exposes all eight training ranks for every companion", async ({
