@@ -5,14 +5,17 @@ import { Faq } from "./Faq";
 import { LanguageScreen } from "./LanguageScreen";
 import { Lobby } from "./Lobby";
 import { Battle } from "./Battle";
+import { useTutorial } from "./useTutorial";
+import {
+  PARTY_KEY,
+  SAVE_KEY,
+  loadParty,
+  loadProgress,
+  runCrit,
+  runSeed,
+} from "./storage";
 import { TutorialCoach, TutorialOffer } from "./Tutorial";
 import { preloadArt } from "./preload";
-import {
-  TUTORIAL_STEPS,
-  loadTutorialFlag,
-  practiceRun,
-  saveTutorialFlag,
-} from "./tutorialSteps";
 
 import {
   LangContext,
@@ -23,53 +26,12 @@ import {
   type Lang,
 } from "./i18n";
 import {
-  CATS,
-  initialProgress,
   createRun,
   nextRoom,
   claimRewards,
-  parseProgress,
   type Run,
   type Progress,
 } from "./game";
-
-declare global {
-  interface Window {
-    /** Optional fixed seed so browser tests get reproducible enemy marks. */
-    __CATACOMB_SEED__?: number;
-    /** Browser tests: "off" disables critical hits, a number fixes the chance. */
-    __CATACOMB_CRIT__?: "off" | number;
-  }
-}
-const runSeed = () =>
-  window.__CATACOMB_SEED__ ?? crypto.getRandomValues(new Uint32Array(1))[0]!;
-const runCrit = () => window.__CATACOMB_CRIT__ ?? "on";
-const SAVE_KEY = "catacomb-cats.progress.v1";
-const PARTY_KEY = "catacomb-cats.party";
-const defaultParty = () => CATS.slice(0, 3).map((cat) => cat.id);
-/** The last chosen party, or the default when nothing valid was saved. */
-function loadParty(): string[] {
-  try {
-    const raw: unknown = JSON.parse(localStorage.getItem(PARTY_KEY) ?? "null");
-    if (
-      Array.isArray(raw) &&
-      raw.length <= 3 &&
-      new Set(raw).size === raw.length &&
-      raw.every((id) => CATS.some((cat) => cat.id === id))
-    )
-      return raw as string[];
-  } catch {
-    /* Fall back to the default party. */
-  }
-  return defaultParty();
-}
-function loadProgress(): Progress {
-  try {
-    return parseProgress(localStorage.getItem(SAVE_KEY));
-  } catch {
-    return initialProgress();
-  }
-}
 
 export default function App() {
   const [lang, setLang] = useState<Lang | null>(loadLang);
@@ -101,13 +63,6 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   const [run, setRun] = useState<Run | null>(null);
   const [notice, setNotice] = useState("");
   const [showFaq, setShowFaq] = useState(false);
-  // Tutorial: asked once on the first visit, always reachable from the top bar.
-  const [offer, setOffer] = useState(() => loadTutorialFlag() === null);
-  const [tutorial, setTutorial] = useState<{
-    step: number;
-    mark: string;
-  } | null>(null);
-  const [practice, setPractice] = useState(false);
   // True while the battle art loads before a run begins.
   const [entering, setEntering] = useState(false);
   const startRun = async (make: () => Run, after?: () => void) => {
@@ -120,6 +75,21 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   const beginRun = (next: Run) => {
     setRun(next);
   };
+  const {
+    offer,
+    tutorial,
+    practice,
+    stepIndex,
+    startTutorial,
+    endTutorial,
+    nextTutorialStep,
+  } = useTutorial({
+    run,
+    showFaq,
+    onCloseFaq: () => setShowFaq(false),
+    startRun,
+    onLeavePractice: () => setRun(null),
+  });
   const storeProgress = (next: Progress) => {
     setProgress(next);
     try {
@@ -140,24 +110,6 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
           ? [...previous, id]
           : previous,
     );
-  const endTutorial = (flag: "done" | "skipped") => {
-    saveTutorialFlag(flag);
-    setOffer(false);
-    setTutorial(null);
-    if (practice) {
-      setPractice(false);
-      setRun(null);
-    }
-  };
-  const startTutorial = () => {
-    setShowFaq(false);
-    setOffer(false);
-    if (practice) {
-      endTutorial("skipped");
-      return;
-    }
-    setTutorial({ step: 0, mark: "" });
-  };
   const leave = () => {
     if (practice) {
       endTutorial("skipped");
@@ -174,51 +126,6 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
       setNotice(t("The expedition is over. Your permanent upgrades are safe."));
     setRun(null);
   };
-  const currentId = run?.order[run.turn];
-  const turnMark = run ? `${run.round}:${currentId}` : "";
-  // A step that asks the player to act is skipped as soon as they have done it.
-  const gateDone = (step: (typeof TUTORIAL_STEPS)[number]) =>
-    !!run &&
-    (step.gate === "attack"
-      ? run.ap < run.maxAp
-      : step.gate === "pass"
-        ? turnMark !== tutorial?.mark
-        : step.gate === "reward"
-          ? run.status === "reward"
-          : false);
-  let stepIndex = tutorial?.step ?? 0;
-  while (
-    tutorial &&
-    TUTORIAL_STEPS[stepIndex]?.gate &&
-    stepIndex < TUTORIAL_STEPS.length - 1 &&
-    gateDone(TUTORIAL_STEPS[stepIndex]!)
-  )
-    stepIndex++;
-  const tutorialStep = tutorial ? TUTORIAL_STEPS[stepIndex] : undefined;
-  const nextTutorialStep = () => {
-    if (!tutorial || !tutorialStep) return;
-    if (tutorialStep.next === "finish") {
-      endTutorial("done");
-      return;
-    }
-    if (tutorialStep.next === "practice") {
-      void startRun(practiceRun, () => {
-        setPractice(true);
-        setTutorial({ step: stepIndex + 1, mark: "" });
-      });
-      return;
-    }
-    setTutorial({ step: stepIndex + 1, mark: turnMark });
-  };
-  // Outline what the current step is about.
-  const spot = showFaq ? undefined : tutorialStep?.spot;
-  useEffect(() => {
-    if (!spot) return;
-    const found = [...document.querySelectorAll(spot)];
-    found.forEach((el) => el.classList.add("tutorial-spot"));
-    found[0]?.scrollIntoView({ block: "center", behavior: "smooth" });
-    return () => found.forEach((el) => el.classList.remove("tutorial-spot"));
-  }, [spot, run?.status, run?.room, stepIndex]);
   return (
     <>
       <div className={`app ${run ? "battle-mode" : "lobby-mode"}`}>
