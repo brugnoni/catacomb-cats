@@ -1279,7 +1279,7 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await previewDone(page);
   await expect(page.locator(".intent-line")).toHaveCount(0);
   await page.getByTestId("threats-button").hover();
-  await expect(page.locator(".next-target").first()).toContainText(/^→/);
+  await expect(page.locator(".next-target").first()).toContainText(/\w/);
   expect(await page.locator(".intent-line").count()).toBeGreaterThan(1);
   await page.mouse.move(0, 0);
   await expect(page.locator(".intent-line")).toHaveCount(0);
@@ -1290,9 +1290,9 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await page.mouse.move(0, 0);
   await expect(page.locator(".intent-line")).toHaveCount(0);
   await page.getByTestId("threats-button").hover();
-  // Each label sits above its enemy, centred on the card, with just the target's name.
+  // Each label sits above its enemy, centred on the card, with a crosshair and just the target's name.
   const tag = (await page.locator(".next-target").first().boundingBox())!;
-  await expect(page.locator(".next-target").first()).toHaveText(/^→ \w/);
+  await expect(page.locator(".next-target").first()).toHaveText(/^\w/);
   const cards = await page
     .locator(".enemies .combatant")
     .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()));
@@ -1308,7 +1308,7 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await expect(page.getByTestId("intent-note")).toContainText(
     "Moss slime next turn: Inspire an ally → Crypt rat",
   );
-  await expect(page.locator(".next-target.friendly")).toHaveText("→ Crypt rat");
+  await expect(page.locator(".next-target.friendly")).toHaveText("Crypt rat");
   await expect(page.locator(".intent-line.friendly")).toHaveCount(1);
   await expect(page.locator(".intent-line.hostile")).toHaveCount(0);
   await expect(page.locator(".combatant.marked")).toHaveCount(0);

@@ -1433,9 +1433,11 @@ hr {
   right: 3px;
   font-size: 12px;
   letter-spacing: 1px;
-  padding: 0 5px;
+  padding: 0 5px 0 19px;
   color: #1b0d0c;
-  background: #ff6a5c;
+  /* A dark crosshair reads on the red tag. */
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%231b0d0c' stroke-width='1.6'%3E%3Ccircle cx='8' cy='8' r='4.6'/%3E%3Cpath d='M8 .5v4M8 11.5v4M.5 8h4M11.5 8h4' stroke-width='2'/%3E%3Ccircle cx='8' cy='8' r='.9' fill='%231b0d0c' stroke='none'/%3E%3C/svg%3E")
+    no-repeat 4px 50% / 11px #ff6a5c;
 }
 .intent-note {
   margin: 6px 0 0;
@@ -2175,13 +2177,24 @@ hr {
   transform: translate(-50%, -100%);
   z-index: 30;
   white-space: nowrap;
-  padding: 0 7px;
+  padding: 0 7px 0 4px;
   font-size: 14px;
   line-height: 18px;
   color: #ffd2ca;
   background: #2a0d0dd9;
   border: 1px solid #ff6a5c;
   pointer-events: none;
+}
+/* A light crosshair reads on the dark label. */
+.next-target:before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  vertical-align: -1px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fff' stroke-width='1.6'%3E%3Ccircle cx='8' cy='8' r='4.6'/%3E%3Cpath d='M8 .5v4M8 11.5v4M.5 8h4M11.5 8h4' stroke-width='2'/%3E%3Ccircle cx='8' cy='8' r='.9' fill='%23fff' stroke='none'/%3E%3C/svg%3E")
+    no-repeat center / contain;
 }
 .next-target.curse {
   color: #e6d2ff;
