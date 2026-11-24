@@ -1,5 +1,5 @@
 import { AbilityButton } from "./AbilityButton";
-import { BattleResult, FieldNotes, NextTarget } from "./BattleParts";
+import { BattleResult, FieldNotes } from "./BattleParts";
 import { useBattleView } from "./useBattleView";
 import { useEffect, useRef, useState } from "react";
 import { Sprite } from "./Sprite";
@@ -202,11 +202,6 @@ export function Battle({
                   {...hoverProps(unit.id)}
                 >
                   {critPop(unit.id)}
-                  <NextTarget
-                    run={run}
-                    entries={arrowEntries}
-                    enemyId={unit.id}
-                  />
                   <UnitEffects
                     unit={unit}
                     units={units}

@@ -3,7 +3,6 @@ import { useT } from "./i18n";
 import { ROOM_HEAL } from "./progression";
 import { roomReward } from "./expeditions";
 import type { Run } from "./game";
-import type { IntentEntry } from "./IntentArrows";
 
 /** What follows a fight: the room reward, the victory or the defeat. */
 export function BattleResult({
@@ -130,33 +129,4 @@ export function FieldNotes({
       <p className="muted">{t("Leave the expedition's spoils behind.")}</p>
     </aside>
   );
-}
-
-/** Tells who an enemy's visible thread points at, so it is not read as the hit just seen. */
-export function NextTarget({
-  run,
-  entries,
-  enemyId,
-}: {
-  run: Run;
-  entries: IntentEntry[];
-  enemyId: string;
-}) {
-  const { t } = useT();
-  const intent = entries.find((entry) => entry.enemyId === enemyId)?.intent;
-  const cat = run.party.find((unit) => unit.id === intent?.targetId);
-  const ally = run.enemies.find((unit) => unit.id === intent?.allyId);
-  if (cat)
-    return (
-      <span className="next-target">
-        {t("Next target: {name}", { name: t(cat.name) })}
-      </span>
-    );
-  if (ally)
-    return (
-      <span className="next-target friendly">
-        {t("Next: supports {name}", { name: t(ally.name) })}
-      </span>
-    );
-  return null;
 }

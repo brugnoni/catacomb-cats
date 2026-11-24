@@ -1288,6 +1288,18 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await expect(page.locator(".next-target")).toHaveCount(1);
   await expect(page.locator(".next-target")).toContainText(/^Next/);
   await expect(page.locator(".intent-line")).toHaveCount(1);
+  // The label sits just under the thread, centred where the thread starts.
+  const tag = (await page.locator(".next-target").boundingBox())!;
+  const line = (await page.locator(".intent-line").boundingBox())!;
+  expect(tag.y).toBeGreaterThanOrEqual(line.y + line.height - 1);
+  const centres = await page
+    .locator(".enemies .combatant")
+    .evaluateAll((cards) =>
+      cards.map((c) => c.getBoundingClientRect()).map((r) => r.x + r.width / 2),
+    );
+  expect(centres.some((x) => Math.abs(x - (tag.x + tag.width / 2)) < 2)).toBe(
+    true,
+  );
   await previewDone(page);
   await page.getByRole("button", { name: "Target Moss slime" }).hover();
   await expect(page.getByTestId("intent-note")).toContainText(
@@ -1405,6 +1417,30 @@ test("hovering a skill outlines the units it can reach in yellow", async ({
   await expect(page.locator(".enemies .combatant.aimed")).toHaveCount(1);
   await page.mouse.move(0, 0);
   await expect(page.locator(".combatant.aimed")).toHaveCount(0);
+});
+
+test("a skill under the mouse is outlined only after the threat preview and a short delay", async ({
+  page,
+}) => {
+  await realTiming(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Enter the dungeon" }).click();
+  const claw = page.getByRole("button", { name: /^Claw strike/ });
+  await claw.hover();
+  const aimed = page.locator(".enemies .combatant.aimed");
+  // The cursor rests on the skill while the enemy phase and threads play.
+  await expect(
+    page.locator('.battlefield[data-previewing="true"]'),
+  ).toBeVisible();
+  await expect(aimed).toHaveCount(0);
+  await previewDone(page);
+  await expect(aimed).toHaveCount(0);
+  await expect(aimed).toHaveCount(2, { timeout: 3000 });
+  // A fresh hover after that is immediate.
+  await page.mouse.move(0, 0);
+  await expect(aimed).toHaveCount(0);
+  await claw.hover();
+  expect(await aimed.count()).toBe(2);
 });
 
 test("Mei's group heal outlines all living allies and Sweeping embers all enemies", async ({

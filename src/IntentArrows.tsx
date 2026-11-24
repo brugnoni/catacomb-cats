@@ -4,15 +4,26 @@ import type { EnemyIntent } from "./game";
 export interface IntentEntry {
   enemyId: string;
   intent: EnemyIntent;
+  /** Who the thread points at, written under its start (the Next target). */
+  label: string;
 }
 interface Line {
   key: string;
   kind: "hostile" | "friendly" | "curse";
   d: string;
 }
+interface Tag {
+  key: string;
+  friendly: boolean;
+  text: string;
+  x: number;
+  y: number;
+}
 /** Gap between the unit cards and the first thread, and between stacked threads. */
 const BASE_GAP = 14;
 const STACK_GAP = 7;
+/** Space between a thread's floor run and the label hung under its start. */
+const TAG_GAP = 4;
 /**
  * Draws enemy intents as threads under the battlefield cards: down from the
  * enemy, along the floor, and up to the cat it marked (red) or the enemy it
@@ -29,6 +40,7 @@ export function IntentArrows({
   version: number;
 }) {
   const [lines, setLines] = useState<Line[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const signature = entries
     .map(
@@ -40,6 +52,7 @@ export function IntentArrows({
     const container = containerRef.current;
     if (!container || !signature) {
       setLines([]);
+      setTags([]);
       return;
     }
     const measure = () => {
@@ -67,9 +80,11 @@ export function IntentArrows({
         ),
       );
       const next: Line[] = [];
+      const nextTags: Tag[] = [];
       let stack = 0;
-      for (const { enemyId, intent } of entries) {
+      for (const { enemyId, intent, label } of entries) {
         const from = card(enemyId);
+        let tagged = false;
         for (const [id, kind] of [
           [intent.targetId, intent.kind === "curse" ? "curse" : "hostile"],
           [intent.allyId, "friendly"],
@@ -82,10 +97,21 @@ export function IntentArrows({
             kind,
             d: `M${from.x} ${from.bottom} V${y} H${to.x} V${to.bottom}`,
           });
+          if (!tagged && label) {
+            tagged = true;
+            nextTags.push({
+              key: enemyId,
+              friendly: kind === "friendly",
+              text: label,
+              x: from.x,
+              y: y + TAG_GAP,
+            });
+          }
         }
       }
       setSize({ width: box.width / scale, height: box.height / scale });
       setLines(next);
+      setTags(nextTags);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -95,40 +121,51 @@ export function IntentArrows({
   }, [containerRef, signature, version]);
   if (!lines.length) return null;
   return (
-    <svg
-      className="intent-layer"
-      width={size.width}
-      height={size.height}
-      viewBox={`0 0 ${size.width} ${size.height}`}
-      aria-hidden="true"
-      data-testid="intent-arrows"
-    >
-      <defs>
-        {(["hostile", "friendly", "curse"] as const).map((kind) => (
-          <marker
-            key={kind}
-            id={`intent-dot-${kind}`}
-            viewBox="0 0 6 6"
-            refX="3"
-            refY="3"
-            markerWidth="2.4"
-            markerHeight="2.4"
-          >
-            <circle cx="3" cy="3" r="3" className={`intent-dot ${kind}`} />
-          </marker>
+    <>
+      <svg
+        className="intent-layer"
+        width={size.width}
+        height={size.height}
+        viewBox={`0 0 ${size.width} ${size.height}`}
+        aria-hidden="true"
+        data-testid="intent-arrows"
+      >
+        <defs>
+          {(["hostile", "friendly", "curse"] as const).map((kind) => (
+            <marker
+              key={kind}
+              id={`intent-dot-${kind}`}
+              viewBox="0 0 6 6"
+              refX="3"
+              refY="3"
+              markerWidth="2.4"
+              markerHeight="2.4"
+            >
+              <circle cx="3" cy="3" r="3" className={`intent-dot ${kind}`} />
+            </marker>
+          ))}
+        </defs>
+        {lines.map((line) => (
+          <path
+            key={line.key}
+            d={line.d}
+            pathLength={1}
+            className={`intent-line ${line.kind}`}
+            data-kind={line.kind}
+            markerStart={`url(#intent-dot-${line.kind})`}
+            markerEnd={`url(#intent-dot-${line.kind})`}
+          />
         ))}
-      </defs>
-      {lines.map((line) => (
-        <path
-          key={line.key}
-          d={line.d}
-          pathLength={1}
-          className={`intent-line ${line.kind}`}
-          data-kind={line.kind}
-          markerStart={`url(#intent-dot-${line.kind})`}
-          markerEnd={`url(#intent-dot-${line.kind})`}
-        />
+      </svg>
+      {tags.map((tag) => (
+        <span
+          key={tag.key}
+          className={`next-target ${tag.friendly ? "friendly" : ""}`}
+          style={{ left: tag.x, top: tag.y }}
+        >
+          {tag.text}
+        </span>
       ))}
-    </svg>
+    </>
   );
 }

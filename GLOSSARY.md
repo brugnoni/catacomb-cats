@@ -45,5 +45,9 @@ The line drawn under the battlefield from an enemy to the cat it marked (or the 
 _Avoid_: Arrow, intent line, objective line
 
 **Next target**:
-The label beside an enemy that names who its Threat thread points to, i.e. who it will act on in its following turn rather than the hit just seen.
+The label hung under the start of an enemy's Threat thread that names who the thread points to, i.e. who it will act on in its following turn rather than the hit just seen.
 _Avoid_: Threat objective, mark label
+
+**Aim outline**:
+The yellow outline on every unit the skill under the mouse or keyboard focus can reach. It stays hidden during the Enemy phase and the Threat thread preview, then appears after a short delay if the cursor is still resting on the skill.
+_Avoid_: Target selector, highlight

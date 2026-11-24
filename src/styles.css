@@ -2071,8 +2071,6 @@ hr {
 }
 .next-target {
   position: absolute;
-  top: -26px;
-  left: 50%;
   transform: translateX(-50%);
   z-index: 30;
   white-space: nowrap;
