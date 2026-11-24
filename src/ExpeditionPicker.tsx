@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useT } from "./i18n";
 import type { Progress } from "./game";
 import { powerPoints } from "./progression";
@@ -20,6 +21,14 @@ export function ExpeditionPicker({
   onSelect: (id: string) => void;
 }) {
   const { t } = useT();
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && close();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
   const power = powerPoints(progress);
   /** What a player still needs to know about an Expedition: how to open it, or how ready they are. */
   const note = (e: Expedition) => {
@@ -47,33 +56,52 @@ export function ExpeditionPicker({
     ) : null;
   };
   return (
-    <details className="expedition-picker">
-      <summary>{t("Choose expedition")}</summary>
-      <ul>
-        {EXPEDITIONS.map((e) => {
-          const open = expeditionUnlocked(progress, e);
-          const loot = expeditionReward(e.id);
-          return (
-            <li key={e.id} data-expedition={e.id} data-locked={!open}>
-              <button
-                aria-pressed={e.id === selected}
-                disabled={!open}
-                onClick={() => onSelect(e.id)}
-              >
-                <strong>{t(e.name)}</strong>
-                <span>{t(e.theme)}</span>
-                <span>
-                  {t("3 chambers · {gold} gold · {xp} XP", {
-                    gold: loot.gold,
-                    xp: loot.xp,
-                  })}
-                </span>
-                {note(e)}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </details>
+    <div className="expedition-picker">
+      <button className="expedition-toggle" onClick={() => setOpen(true)}>
+        {t("Choose expedition")}
+      </button>
+      {open && (
+        <div
+          className="expedition-modal"
+          onClick={(event) => event.target === event.currentTarget && close()}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("Choose expedition")}
+          >
+            <h2>{t("Choose expedition")}</h2>
+            <ul>
+              {EXPEDITIONS.map((e) => {
+                const unlocked = expeditionUnlocked(progress, e);
+                const loot = expeditionReward(e.id);
+                return (
+                  <li key={e.id} data-expedition={e.id} data-locked={!unlocked}>
+                    <button
+                      aria-pressed={e.id === selected}
+                      disabled={!unlocked}
+                      onClick={() => {
+                        onSelect(e.id);
+                        close();
+                      }}
+                    >
+                      <strong>{t(e.name)}</strong>
+                      <span>{t(e.theme)}</span>
+                      <span>
+                        {t("3 chambers · {gold} gold · {xp} XP", {
+                          gold: loot.gold,
+                          xp: loot.xp,
+                        })}
+                      </span>
+                      {note(e)}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </div>
+      )}
+    </div>
   );
 }

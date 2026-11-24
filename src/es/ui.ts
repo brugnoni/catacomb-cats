@@ -267,8 +267,8 @@ export const UI: Record<string, string> = {
   "Frequently Asked Questions": "Preguntas frecuentes",
   "Frequently asked questions": "Preguntas frecuentes",
   Companions: "Compañeros",
-  "Companion training & skills":
-    "Entrenamiento y habilidades de los compañeros",
+  "Choose a companion": "Elige un compañero",
+  "Training ranks": "Rangos de entrenamiento",
   "{name} training ranks": "Rangos de entrenamiento de {name}",
   "{cost} gold · permanent training":
     "{cost} de oro · entrenamiento permanente",

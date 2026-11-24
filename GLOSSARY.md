@@ -4,6 +4,14 @@ A browser roguelite where a party of cats fights through fixed expeditions and s
 
 ## Language
 
+**Companion**:
+A playable cat of the camp; three of them make the party of a Run.
+_Avoid_: Cat (in visible text), hero, character
+
+**Field Guide**:
+The rules screen opened from FAQ, with a short list of frequently asked questions and one sheet per Companion showing its skills and training ranks.
+_Avoid_: Help, manual, wiki
+
 **Expedition**:
 A named, fixed route of rooms with its own enemies, boss and rewards.
 _Avoid_: Dungeon, level, stage, map

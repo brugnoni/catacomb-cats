@@ -47,11 +47,21 @@ test("the expedition picker shows locked routes and enters an unlocked one", asy
     expeditionWins: { catacombs: 3 },
   });
   await page.goto("/");
-  await page.getByText("Choose expedition").click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Choose expedition" }).click();
+  const dialog = page.getByRole("dialog", { name: "Choose expedition" });
+  await expect(dialog.getByRole("heading")).toHaveText("Choose expedition");
   const vault = page.locator('[data-expedition="vault"]');
   await expect(vault).toContainText("Locked · win Moss Warrens 5 times (0/5)");
   await expect(vault.getByRole("button")).toBeDisabled();
+  // Escape closes it without changing the choice.
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".expedition-gate h2")).toHaveText("The Catacombs");
+  await page.getByRole("button", { name: "Choose expedition" }).click();
   await page.locator('[data-expedition="warrens"] button').click();
+  // Picking an open route closes the window by itself.
+  await expect(dialog).toHaveCount(0);
   await expect(page.locator(".expedition-gate h2")).toHaveText("Moss Warrens");
   await page.getByRole("button", { name: "Enter the dungeon" }).click();
   await expect(page.locator(".command-deck")).toBeVisible();

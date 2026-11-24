@@ -741,6 +741,7 @@ test("the field guide exposes all eight training ranks for every companion", asy
   await page.getByRole("button", { name: "FAQ", exact: true }).click();
   await page.getByRole("tab", { name: /Companions/ }).click();
   for (const name of ["Miso", "Luna", "Mei", "Pip", "Ember"]) {
+    await page.getByRole("tab", { name, exact: true }).click();
     const track = page.getByRole("list", {
       name: `${name} training ranks`,
       exact: true,
@@ -749,9 +750,11 @@ test("the field guide exposes all eight training ranks for every companion", asy
     await expect(track.getByRole("listitem").nth(2)).toContainText("Rank 3");
     await expect(track.getByRole("listitem").nth(7)).toContainText("Rank 8");
   }
+  await page.getByRole("tab", { name: "Mei", exact: true }).click();
   await expect(
     page.getByRole("list", { name: "Mei training ranks", exact: true }),
   ).toContainText("60%");
+  await page.getByRole("tab", { name: "Luna", exact: true }).click();
   await expect(
     page.getByRole("list", { name: "Luna training ranks", exact: true }),
   ).toContainText("Ice");
@@ -986,28 +989,43 @@ test("the field guide has two sections and shows skills as cards", async ({
   const companionsTab = page.getByRole("tab", { name: /Companions/ });
   await expect(faqTab).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".faq-entries details").first()).toBeVisible();
+  // Only the most important questions are kept.
+  await expect(page.locator(".faq-entries details")).toHaveCount(14);
   await expect(page.locator(".guide-companions")).toHaveCount(0);
   await companionsTab.click();
   await expect(companionsTab).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".faq-entries")).toHaveCount(0);
+  // One companion at a time, Miso first.
+  const catTab = (cat: string) =>
+    page.getByRole("tab", { name: cat, exact: true });
+  await expect(catTab("Miso")).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".skill-cards")).toHaveCount(1);
   const skills = (cat: string) =>
     page.getByRole("list", { name: `${cat} skills`, exact: true });
   await expect(skills("Miso").getByRole("listitem")).toHaveCount(3);
-  await expect(skills("Mei").getByRole("listitem")).toHaveCount(4);
-  await expect(skills("Ember").getByRole("listitem")).toHaveCount(3);
   await expect(skills("Miso")).toContainText("Valiant slash");
+  const basics = [await skills("Miso").locator("li span").first().innerText()];
+  for (const [cat, count] of [
+    ["Mei", 4],
+    ["Ember", 3],
+    ["Pip", 3],
+    ["Luna", 3],
+  ] as const) {
+    await catTab(cat).click();
+    await expect(catTab(cat)).toHaveAttribute("aria-selected", "true");
+    await expect(skills(cat).getByRole("listitem")).toHaveCount(count);
+    basics.push(await skills(cat).locator("li span").first().innerText());
+  }
+  await catTab("Mei").click();
   await expect(skills("Mei")).toContainText("Thorn swipe");
-  await expect(skills("Ember")).toContainText("Cinder jab");
-  await expect(skills("Ember")).toContainText("Cooldown: 1 turn");
-  await expect(skills("Pip")).toContainText("Claw strike");
   await expect(skills("Mei").getByRole("listitem").nth(3)).toContainText(
     "Revive a fallen ally",
   );
-  const basics = await page
-    .locator(".skill-cards")
-    .evaluateAll((lists) =>
-      lists.map((list) => list.querySelector("li span")!.textContent),
-    );
+  await catTab("Ember").click();
+  await expect(skills("Ember")).toContainText("Cinder jab");
+  await expect(skills("Ember")).toContainText("Cooldown: 1 turn");
+  await catTab("Pip").click();
+  await expect(skills("Pip")).toContainText("Claw strike");
   // Every companion's basic attack has its own name.
   expect(new Set(basics).size).toBe(5);
   await faqTab.click();
@@ -1096,6 +1114,13 @@ test("the field guide is fully available in Spanish", async ({ page }) => {
     "¿Cómo funcionan los turnos y los PA?",
   );
   await page.getByRole("tab", { name: /Compañeros/ }).click();
+  await expect(
+    page.getByRole("list", {
+      name: "Rangos de entrenamiento de Miso",
+      exact: true,
+    }),
+  ).toContainText("Patas robustas");
+  await page.getByRole("tab", { name: "Ember", exact: true }).click();
   const skills = page.getByRole("list", {
     name: "Habilidades de Ember",
     exact: true,
@@ -1103,12 +1128,6 @@ test("the field guide is fully available in Spanish", async ({ page }) => {
   await expect(skills).toContainText("Jab de brasa");
   await expect(skills).toContainText("Garra de fuego");
   await expect(skills).toContainText("Enfriamiento: 1 turno");
-  await expect(
-    page.getByRole("list", {
-      name: "Rangos de entrenamiento de Miso",
-      exact: true,
-    }),
-  ).toContainText("Patas robustas");
 });
 
 test("lobby says which rank is the next one", async ({ page }) => {

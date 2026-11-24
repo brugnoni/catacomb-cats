@@ -1661,6 +1661,42 @@ hr {
   background: var(--gold);
   border-color: #b98f3f;
 }
+.guide-cats {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+  flex-wrap: wrap;
+}
+.guide-cats .guide-tab {
+  flex: 1 1 150px;
+  justify-content: flex-start;
+}
+.guide-cats .sprite {
+  width: 48px;
+  height: 48px;
+}
+.guide-cat .cat-sheet {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.guide-sprite.sprite {
+  width: 180px;
+  height: 180px;
+  filter: drop-shadow(3px 5px 0 #0b1018aa);
+}
+.rank-track.guide-ranks {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 760px) {
+  .guide-cat .cat-sheet {
+    grid-template-columns: 1fr;
+  }
+  .rank-track.guide-ranks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .skills-heading {
   margin: 16px 0 8px;
   font: inherit;
@@ -1998,31 +2034,53 @@ hr {
 .expedition-picker {
   margin: 10px 0;
 }
-.expedition-picker summary {
-  cursor: pointer;
+.expedition-toggle {
   color: #e8bb63;
 }
-.expedition-picker ul {
+.expedition-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
   display: grid;
-  gap: 6px;
-  margin: 8px 0 0;
+  place-items: center;
+  background: #05080ecc;
+}
+.expedition-modal section {
+  width: min(460px, 92vw);
+  padding: 18px 20px 20px;
+  background: #151c26;
+  border: 3px solid #55505a;
+  box-shadow: 0 5px #080c13;
+}
+.expedition-modal h2 {
+  margin: 0 0 12px;
+  color: #e8bb63;
+  text-align: center;
+}
+.expedition-modal ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
-.expedition-picker li button {
+.expedition-modal li button {
   display: grid;
   gap: 2px;
   width: 100%;
   text-align: left;
-  font-size: 16px;
+  font-size: 18px;
 }
-.expedition-picker li button[aria-pressed="true"] {
+.expedition-modal li[data-locked="true"] button {
+  opacity: 0.55;
+}
+.expedition-modal li button[aria-pressed="true"] {
   border-color: #e8bb63;
 }
-.expedition-picker .power-warning {
+.expedition-modal .power-warning {
   color: #e07a6a;
 }
-.expedition-picker .locked-note {
+.expedition-modal .locked-note {
   color: #a99d86;
 }
 
