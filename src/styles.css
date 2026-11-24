@@ -2025,3 +2025,71 @@ hr {
 .expedition-picker .locked-note {
   color: #a99d86;
 }
+
+/* Enemy phase: the acting enemy, the round banner and the next-target tag */
+.combatant.acting {
+  z-index: 20;
+  transform: scale(1.08);
+  box-shadow:
+    inset 0 0 0 2px #ff6a5c,
+    0 0 18px #ff3b30cc;
+  transition: transform 0.2s ease-out;
+}
+.round-banner {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.round-banner span {
+  font-size: 64px;
+  letter-spacing: 6px;
+  color: #ffd84a;
+  text-shadow:
+    0 0 18px #ffd84a99,
+    0 3px 0 #000;
+  animation: round-rise 1.3s ease-out forwards;
+}
+@keyframes round-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(140px) scale(0.3);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(1.8);
+  }
+}
+.next-target {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  white-space: nowrap;
+  padding: 2px 8px;
+  font-size: 14px;
+  color: #ffd2ca;
+  background: #2a0d0dd9;
+  border: 1px solid #ff6a5c;
+  pointer-events: none;
+}
+.next-target.friendly {
+  color: #d5f5cd;
+  background: #0f2a0dd9;
+  border-color: #8fd67f;
+}
+@media (prefers-reduced-motion: reduce) {
+  .round-banner span {
+    animation-duration: 0.01s;
+  }
+}

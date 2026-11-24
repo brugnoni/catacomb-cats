@@ -4,6 +4,11 @@ const saveKey = "catacomb-cats.progress.v1";
 
 // A fixed seed keeps the random enemy marks reproducible in every test.
 test.beforeEach(async ({ page }) => {
+  // Battle pauses are covered by the "enemy phase" tests; the rest skip them.
+  await page.addInitScript(() => {
+    (window as unknown as { __CATACOMB_FAST__: boolean }).__CATACOMB_FAST__ =
+      true;
+  });
   // English by default so the game starts without the language screen.
   await page.addInitScript(() => {
     localStorage.setItem("catacomb-cats.lang", "en");
@@ -61,6 +66,14 @@ async function previewDone(page: Page) {
   await expect(
     page.locator('.battlefield[data-previewing="false"]'),
   ).toBeVisible({ timeout: 10000 });
+}
+
+/** Runs the battle pauses at their real length (the default is the fast test timing). */
+async function realTiming(page: Page) {
+  await page.addInitScript(() => {
+    (window as unknown as { __CATACOMB_FAST__: boolean }).__CATACOMB_FAST__ =
+      false;
+  });
 }
 
 async function pickTarget(page: Page, id: string) {
@@ -841,6 +854,7 @@ test("a hit flashes the target's border, name, HP bar and HP numbers red", async
 test("each turn shows enemy threats one at a time, then stops", async ({
   page,
 }) => {
+  await realTiming(page);
   await page.goto("/");
   await enterDungeon(page);
   const watch = () =>
@@ -1213,6 +1227,7 @@ test("Needle strike ignores armor and shields in the preview and the result", as
 test("hovering is locked during the threat preview of each turn", async ({
   page,
 }) => {
+  await realTiming(page);
   await page.goto("/");
   await enterDungeon(page);
   await expect(page.locator(".battlefield")).toHaveAttribute(
@@ -1244,32 +1259,77 @@ async function chooseParty(page: Page, add: string[], remove: string[]) {
     await card(name).getByRole("button", { name: "Add to party" }).click();
 }
 
-test("the opening enemy hit waits behind a banner before it shows", async ({
+test("a room opens with the round banner, then each enemy attacks alone, then threads show", async ({
   page,
 }) => {
+  await realTiming(page);
   await page.goto("/");
   // Mei, Ember and Miso act after the Crypt rat, so it strikes first.
   await chooseParty(page, ["Mei", "Ember"], ["Luna", "Pip"]);
   await page.getByRole("button", { name: "Enter the dungeon" }).click();
-  await expect(
-    page.getByRole("status").filter({ hasText: "The enemies strike first!" }),
-  ).toBeVisible();
+  await expect(page.locator(".round-banner")).toHaveText("ROUND 1");
+  await expect(page.getByTestId("end-turn")).toBeDisabled();
+  // Nothing has landed yet while the banner is up.
   for (const health of await page.locator(".allies .health-value").all()) {
     const values = (await health.innerText()).match(/(\d+) \/ (\d+) HP/)!;
     expect(values[1]).toBe(values[2]);
   }
-  await expect(page.getByTestId("end-turn")).toBeDisabled();
-  await expect(page.locator(".intro-banner")).toHaveCount(0, { timeout: 5000 });
-  const hurt = await page.locator(".allies .health-value").evaluateAll((els) =>
-    els.some((el) => {
-      const m = el.textContent!.match(/(\d+) \/ (\d+) HP/)!;
-      return Number(m[1]) < Number(m[2]);
-    }),
-  );
-  expect(hurt).toBe(true);
+  await expect(page.locator(".round-banner")).toHaveCount(0, { timeout: 3000 });
+  await expect(page.locator(".combatant.acting")).toHaveCount(1);
   await expect(
-    page.locator(".allies .hit, .allies .hit-0, .allies .hit-1").first(),
+    page.getByRole("status").filter({ hasText: "The enemies strike first!" }),
   ).toBeVisible();
+  // No threads and no labels until the enemy phase has ended.
+  await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
+  await expect(page.locator(".next-target")).toHaveCount(0);
+  await expect(page.locator(".combatant.acting")).toHaveCount(0);
+  await expect(page.locator(".intro-banner")).toHaveCount(0, { timeout: 5000 });
+  // The threads come after, one enemy at a time, each with its label.
+  await expect(page.locator(".next-target")).toHaveCount(1);
+  await expect(page.locator(".next-target")).toContainText(/^Next/);
+  await expect(page.locator(".intent-line")).toHaveCount(1);
+  await previewDone(page);
+  await page.getByRole("button", { name: "Target Moss slime" }).hover();
+  await expect(page.getByTestId("intent-note")).toContainText(
+    "Moss slime next turn: Inspire an ally → Crypt rat",
+  );
+  await expect(page.locator(".next-target.friendly")).toContainText(
+    "Next: supports Crypt rat",
+  );
+  await expect(page.locator(".intent-line.friendly")).toHaveCount(1);
+  await expect(page.locator(".intent-line.hostile")).toHaveCount(0);
+  await expect(page.locator(".combatant.marked")).toHaveCount(0);
+  await previewDone(page);
+  await page.getByRole("button", { name: "Target Miso" }).hover();
+  await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
+  await expect(page.locator(".combatant.marked")).toHaveCount(0);
+});
+
+test("a new round is announced by a banner before the enemies act", async ({
+  page,
+}) => {
+  await realTiming(page);
+  await page.goto("/");
+  await enterDungeon(page);
+  await previewDone(page);
+  let seen = false;
+  for (let i = 0; i < 6 && !seen; i++) {
+    await page.getByTestId("end-turn").click();
+    seen = await page
+      .locator(".round-banner")
+      .filter({ hasText: "ROUND 2" })
+      .waitFor({ timeout: 2500 })
+      .then(() => true)
+      .catch(() => false);
+    if (!seen) await previewDone(page);
+  }
+  expect(seen).toBe(true);
+  // While the banner is up the controls are locked and no thread is drawn.
+  await expect(page.getByTestId("end-turn")).toBeDisabled();
+  await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
+  await expect(page.locator(".round-banner")).toHaveCount(0, { timeout: 3000 });
+  await previewDone(page);
+  await expect(page.getByTestId("end-turn")).toBeEnabled();
 });
 
 test("the turn button passes to the next cat and ends the turn on the last one", async ({
@@ -1450,6 +1510,7 @@ test("hovering Healing purr outlines the chosen ally, or Mei when nobody is chos
 test("the cat whose turn it is announces it and actions pause briefly", async ({
   page,
 }) => {
+  await realTiming(page);
   await page.goto("/");
   await enterDungeon(page);
   await expect(page.locator(".turn-banner")).toHaveText("Your turn!");

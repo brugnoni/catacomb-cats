@@ -3,6 +3,11 @@ import { expect, test, type Page } from "@playwright/test";
 const saveKey = "catacomb-cats.progress.v1";
 
 test.beforeEach(async ({ page }) => {
+  // Battle pauses are covered by the "enemy phase" tests; the rest skip them.
+  await page.addInitScript(() => {
+    (window as unknown as { __CATACOMB_FAST__: boolean }).__CATACOMB_FAST__ =
+      true;
+  });
   await page.addInitScript(() => {
     localStorage.setItem("catacomb-cats.lang", "en");
     // The tutorial question has its own tests (tests/tutorial.spec.ts).

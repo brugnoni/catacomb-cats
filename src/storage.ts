@@ -8,8 +8,12 @@ declare global {
     __CATACOMB_SEED__?: number;
     /** Browser tests: "off" disables critical hits, a number fixes the chance. */
     __CATACOMB_CRIT__?: "off" | number;
+    /** Browser tests: removes the pauses of the battle animations. */
+    __CATACOMB_FAST__?: boolean;
   }
 }
+/** A battle pause in milliseconds; zero when browser tests ask for speed. */
+export const pace = (ms: number) => (window.__CATACOMB_FAST__ ? 0 : ms);
 export const runSeed = () =>
   window.__CATACOMB_SEED__ ?? crypto.getRandomValues(new Uint32Array(1))[0]!;
 export const runCrit = () => window.__CATACOMB_CRIT__ ?? "on";

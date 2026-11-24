@@ -31,3 +31,19 @@ _Avoid_: Level cap, limit
 **Recommended Power**:
 The Power an Expedition expects the player to have before entering it; shown as a warning, never enforced.
 _Avoid_: Required power, minimum level
+
+**Round**:
+One full pass through the turn order of a Room; announced on screen by a banner before the enemies act.
+_Avoid_: Cycle, wave
+
+**Enemy phase**:
+The stretch where enemies take their turns one after another, each attack shown on its own before play moves on.
+_Avoid_: Intro attack, enemy burst
+
+**Threat thread**:
+The line drawn under the battlefield from an enemy to the cat it marked (or the enemy it will help), shown only once the Enemy phase has ended.
+_Avoid_: Arrow, intent line, objective line
+
+**Next target**:
+The label beside an enemy that names who its Threat thread points to, i.e. who it will act on in its following turn rather than the hit just seen.
+_Avoid_: Threat objective, mark label

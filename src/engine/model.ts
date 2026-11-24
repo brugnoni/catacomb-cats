@@ -89,7 +89,7 @@ export interface Unit {
 }
 
 /** What just happened in the last action; the interface replays these. */
-export type CombatEvent =
+export type CombatEvent = (
   | {
       type: "avoid";
       targetId: string;
@@ -97,6 +97,8 @@ export type CombatEvent =
       crit?: undefined;
     }
   | { type: "ready"; targetId: string; name: string; crit?: undefined }
+  /** An enemy turn with no hit or heal (a curse, a blessing...), so it still gets its own step. */
+  | { type: "act"; targetId: string; crit?: undefined }
   | {
       type: "hit";
       targetId: string;
@@ -104,7 +106,12 @@ export type CombatEvent =
       absorbed: number;
       crit?: boolean;
     }
-  | { type: "heal"; targetId: string; amount: number; crit?: boolean };
+  | { type: "heal"; targetId: string; amount: number; crit?: boolean }
+) & {
+  /** The enemy whose turn caused this event, with the round it acted in. */
+  actorId?: string;
+  round?: number;
+};
 
 export interface Run {
   id: string;

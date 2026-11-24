@@ -2,15 +2,22 @@ import { useEffect, useEffectEvent, useState, type CSSProperties } from "react";
 import { type IntentEntry } from "./IntentArrows";
 import { useT } from "./i18n";
 import { enemyIntent, type Run, type Unit } from "./game";
+import { pace } from "./storage";
+import type { useEnemyPhase } from "./useEnemyPhase";
 
 /**
  * Everything the battle screen derives from a run: whose turn it is, the threat
  * preview and hover, the skill-target outline, flashes and pops over units.
  * It owns the preview, hover and aim state; the selected target comes in.
  */
-export function useBattleView(run: Run, target: string, intro: boolean) {
+export function useBattleView(
+  run: Run,
+  target: string,
+  phase: ReturnType<typeof useEnemyPhase>,
+) {
+  const { phasing, eventView } = phase;
   const { t } = useT();
-  // At the start of every turn each enemy's threat shows alone, one after another.
+  // Once the enemy turns have played, each enemy's threat shows alone, one after another.
   const [preview, setPreview] = useState({ key: "", step: 0 });
   // Hovering (or keyboard-focusing) a unit shows who threatens or helps whom.
   const [hovered, setHovered] = useState("");
@@ -38,15 +45,14 @@ export function useBattleView(run: Run, target: string, intro: boolean) {
           })
           .map((enemy) => enemy!.id)
       : [];
-  const previewSlot = Math.min(
-    800,
-    Math.floor(3000 / Math.max(1, threatening.length)),
+  const previewSlot = pace(
+    Math.min(800, Math.floor(3000 / Math.max(1, threatening.length))),
   );
   const previewStep = preview.key === turnKey ? preview.step : 0;
   const previewId = turnKey ? threatening[previewStep] : undefined;
-  // While the opening hits or the threat preview play, hovering shows nothing.
+  // While the enemy turns or the threat preview play, hovering shows nothing.
   const previewing =
-    intro || (turnKey !== "" && previewStep < threatening.length);
+    phasing || (turnKey !== "" && previewStep < threatening.length);
   const hoverId = previewing ? "" : hovered;
   const hoveredEnemy = run?.enemies.find(
     (unit) => unit.id === hoverId && unit.hp > 0,
@@ -63,9 +69,9 @@ export function useBattleView(run: Run, target: string, intro: boolean) {
     return () => timers.forEach(clearTimeout);
   });
   useEffect(() => {
-    if (!turnKey) return;
+    if (!turnKey || phasing) return;
     return startPreview();
-  }, [turnKey]);
+  }, [turnKey, phasing]);
   const arrowEntries: IntentEntry[] = [];
   if (run?.status === "combat")
     for (const enemy of run.enemies) {
@@ -78,7 +84,7 @@ export function useBattleView(run: Run, target: string, intro: boolean) {
         (enemy.id === hoverId ||
           intent.targetId === hoverId ||
           intent.allyId === hoverId);
-      if ((enemy.id === previewId && !intro) || related)
+      if ((enemy.id === previewId && !phasing) || related)
         arrowEntries.push({ enemyId: enemy.id, intent });
     }
   const markedIds = new Set(
@@ -89,43 +95,55 @@ export function useBattleView(run: Run, target: string, intro: boolean) {
   // Units hit or healed by the last action, in order, so each flash starts in turn.
   const flashes = new Map<
     string,
-    { kind: "hit" | "heal"; index: number; crit: boolean }
+    { kind: "hit" | "heal"; index: number; salt: number; crit: boolean }
   >();
   const pops = new Map<
     string,
-    { text: string; kind: string; index: number }[]
+    { text: string; kind: string; index: number; order: number }[]
   >();
-  const addPop = (id: string, text: string, kind: string, index: number) =>
-    pops.set(id, [...(pops.get(id) ?? []), { text, kind, index }]);
-  if (!intro)
-    run?.events.forEach((event, index) => {
-      if (event.type === "hit" || event.type === "heal") {
+  const addPop = (
+    id: string,
+    text: string,
+    kind: string,
+    index: number,
+    order: number,
+  ) => pops.set(id, [...(pops.get(id) ?? []), { text, kind, index, order }]);
+  run?.events.forEach((event, index) => {
+    const view = eventView(index);
+    if (view.hidden) return;
+    const order = view.offset;
+    if (event.type === "hit" || event.type === "heal") {
+      if (view.flash)
         flashes.set(event.targetId, {
           kind: event.type,
-          index,
+          index: order,
+          salt: view.salt,
           crit: Boolean(event.crit),
         });
-        if (event.crit) addPop(event.targetId, t("CRITICAL!"), "crit", index);
-      } else if (event.type === "avoid")
-        addPop(
-          event.targetId,
-          event.kind === "miss" ? t("MISS!") : t("EVADED!"),
-          "avoid",
-          index,
-        );
-      else
-        addPop(
-          event.targetId,
-          t("{name} ready!", { name: t(event.name) }),
-          "ready",
-          index,
-        );
-    });
+      if (event.crit)
+        addPop(event.targetId, t("CRITICAL!"), "crit", index, order);
+    } else if (event.type === "avoid")
+      addPop(
+        event.targetId,
+        event.kind === "miss" ? t("MISS!") : t("EVADED!"),
+        "avoid",
+        index,
+        order,
+      );
+    else if (event.type === "ready")
+      addPop(
+        event.targetId,
+        t("{name} ready!", { name: t(event.name) }),
+        "ready",
+        index,
+        order,
+      );
+  });
   const flashProps = (id: string) => {
     const flash = flashes.get(id);
     return flash
       ? {
-          "data-flash": `${flash.kind}-${run!.eventId}`,
+          "data-flash": `${flash.kind}-${run!.eventId}-${flash.salt}`,
           style: { "--flash-delay": `${flash.index * 0.35}s` } as CSSProperties,
         }
       : {};
@@ -133,7 +151,7 @@ export function useBattleView(run: Run, target: string, intro: boolean) {
   const flashClass = (id: string) => {
     const flash = flashes.get(id);
     return flash
-      ? `${flash.kind} ${flash.kind}-${run!.eventId % 2} ${flash.crit ? "crit" : ""}`
+      ? `${flash.kind} ${flash.kind}-${(run!.eventId + flash.salt) % 2} ${flash.crit ? "crit" : ""}`
       : "";
   };
   const critPop = (id: string) =>
@@ -141,7 +159,7 @@ export function useBattleView(run: Run, target: string, intro: boolean) {
       <span
         className={`pop pop-${pop.kind} ${pop.kind === "crit" ? "crit-pop" : ""}`}
         key={`${run!.eventId}-${pop.index}`}
-        style={{ "--flash-delay": `${pop.index * 0.35}s` } as CSSProperties}
+        style={{ "--flash-delay": `${pop.order * 0.35}s` } as CSSProperties}
       >
         {pop.text}
       </span>
@@ -152,12 +170,12 @@ export function useBattleView(run: Run, target: string, intro: boolean) {
     onFocus: () => !previewing && setHovered(id),
     onBlur: () => setHovered(""),
   });
-  // HP shown while the opening hits are still hidden.
+  // HP shown while some hits of the enemy turns have not landed yet.
   const shownHp = (unit: Unit) => {
-    if (!intro || !run) return unit.hp;
+    if (!phasing || !run) return unit.hp;
     const back = run.events.reduce(
-      (sum, event) =>
-        event.targetId !== unit.id
+      (sum, event, index) =>
+        event.targetId !== unit.id || !eventView(index).hidden
           ? sum
           : event.type === "hit"
             ? sum + event.damage

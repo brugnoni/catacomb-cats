@@ -137,6 +137,7 @@ export function resolveEnemies(run: Run) {
           : `${actor.name} automatically passes: no shared AP remain.`,
       );
     if (run.enemies.some((u) => u.id === actor.id)) {
+      const firstEvent = run.events.length;
       const plan = planEnemyAction(run, actor, run.round);
       if (plan.kind === "heal") {
         const wounded = run.enemies.find((u) => u.id === plan.allyId)!;
@@ -202,6 +203,12 @@ export function resolveEnemies(run: Run) {
           run.party.find((u) => u.hp > 0 && u.id === actor.mark) ??
           pickLiving(run, run.party)!;
         hurt(run, actor, target, actor.abilities[0]!);
+      }
+      if (run.events.length === firstEvent)
+        run.events.push({ type: "act", targetId: actor.id });
+      for (const event of run.events.slice(firstEvent)) {
+        event.actorId = actor.id;
+        event.round = run.round;
       }
       // Every enemy turn ends by marking a new random cat for the next one.
       if (actor.hp > 0) markTarget(run, actor);

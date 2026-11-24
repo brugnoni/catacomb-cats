@@ -1041,8 +1041,20 @@ describe("enemy marks and combat events", () => {
     ]);
     r = endTurn(r);
     expect(r.eventId).toBe(before + 2);
-    expect(r.events.every((e) => e.type === "hit")).toBe(true);
+    expect(r.events.some((e) => e.type === "hit")).toBe(true);
     expect(r.events.length).toBeGreaterThan(0);
+  });
+  it("tags enemy-turn events with the acting enemy and the round", () => {
+    let r = start();
+    r = act(r, "strike", "e0");
+    expect(r.events.every((e) => e.actorId === undefined)).toBe(true);
+    r = endTurn(r);
+    const enemyIds = r.enemies.map((e) => e.id);
+    expect(r.events.length).toBeGreaterThan(0);
+    for (const e of r.events) {
+      expect(enemyIds).toContain(e.actorId);
+      expect(e.round).toBeGreaterThanOrEqual(1);
+    }
   });
 });
 

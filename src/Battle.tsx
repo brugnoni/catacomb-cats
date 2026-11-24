@@ -1,18 +1,18 @@
 import { AbilityButton } from "./AbilityButton";
-import { BattleResult, FieldNotes } from "./BattleParts";
+import { BattleResult, FieldNotes, NextTarget } from "./BattleParts";
 import { useBattleView } from "./useBattleView";
 import { useEffect, useRef, useState } from "react";
 import { Sprite } from "./Sprite";
 import { UnitEffects } from "./UnitEffects";
 import { IntentArrows } from "./IntentArrows";
+import { useEnemyPhase } from "./useEnemyPhase";
+import { pace } from "./storage";
 
 import { useT } from "./i18n";
 import { ROOM_NAMES as roomNames, ROOM_PATH, difficultyLabel } from "./uiText";
 
 import { endTurn, isDamaging, type Ability, type Run } from "./game";
 
-/** How long the opening enemy hits wait before they are shown. */
-const INTRO_MS = 1600;
 /** How long the controls stay locked after an action, so its effects can be read. */
 const ACTION_MS = 700;
 
@@ -37,17 +37,10 @@ export function Battle({
   const { t } = useT();
   const [target, setTarget] = useState("");
   const battlefieldRef = useRef<HTMLDivElement>(null);
-  // The enemies that strike first are shown after a short pause, so the hit is understood.
-  const [intro, setIntro] = useState(() =>
-    run.events.some((event) => event.type === "hit"),
-  );
-  useEffect(() => {
-    if (!intro) return;
-    const timer = setTimeout(() => setIntro(false), INTRO_MS);
-    return () => clearTimeout(timer);
-    // The pause only runs once, when the battle appears.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // The round the screen showed before the last action, so a new round gets its banner.
+  const [fromRound, setFromRound] = useState(0);
+  const phase = useEnemyPhase(run, fromRound);
+  const { phasing, bannerRound, actingId, opening } = phase;
   const {
     currentId,
     current,
@@ -67,17 +60,18 @@ export function Battle({
     nextCat,
     targetUnit,
     setAim,
-  } = useBattleView(run, target, intro);
+  } = useBattleView(run, target, phase);
   // A short pause after each action so its animations can be followed.
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!busy) return;
-    const timer = setTimeout(() => setBusy(false), ACTION_MS);
+    const timer = setTimeout(() => setBusy(false), pace(ACTION_MS));
     return () => clearTimeout(timer);
   }, [busy, run]);
   const applyCombatAction = (next: Run, ability?: Ability) => {
     if (next === run) return;
     setBusy(true);
+    setFromRound(run.round);
     const attacking = ability && isDamaging(ability);
     const sameTurn =
       next.status === "combat" &&
@@ -138,9 +132,14 @@ export function Battle({
             ref={battlefieldRef}
             data-previewing={previewing ? "true" : "false"}
           >
-            {intro && (
+            {opening && phasing && !bannerRound && (
               <div className="intro-banner" role="status">
                 {t("The enemies strike first!")}
+              </div>
+            )}
+            {bannerRound > 0 && (
+              <div className="round-banner" role="status" key={bannerRound}>
+                <span>{t("ROUND {n}", { n: bannerRound })}</span>
               </div>
             )}
             <div className="battle-team allies">
@@ -148,14 +147,14 @@ export function Battle({
                 <article
                   key={unit.id}
                   data-unit={unit.id}
-                  className={`combatant ${unit.id === currentId ? "active" : ""} ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${aimedIds.has(unit.id) ? "aimed" : ""} ${flashClass(unit.id)}`}
+                  className={`combatant ${unit.id === currentId ? "active" : ""} ${shownHp(unit) <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${aimedIds.has(unit.id) ? "aimed" : ""} ${flashClass(unit.id)}`}
                   {...flashProps(unit.id)}
                   {...hoverProps(unit.id)}
                 >
                   {critPop(unit.id)}
                   {unit.id === currentId &&
                     run.status === "combat" &&
-                    !intro && (
+                    !phasing && (
                       <span
                         className="turn-banner"
                         key={`${run.round}:${run.turn}`}
@@ -198,11 +197,16 @@ export function Battle({
                 <article
                   key={unit.id}
                   data-unit={unit.id}
-                  className={`combatant ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${aimedIds.has(unit.id) ? "aimed" : ""} ${flashClass(unit.id)}`}
+                  className={`combatant ${unit.id === actingId ? "acting" : ""} ${shownHp(unit) <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${aimedIds.has(unit.id) ? "aimed" : ""} ${flashClass(unit.id)}`}
                   {...flashProps(unit.id)}
                   {...hoverProps(unit.id)}
                 >
                   {critPop(unit.id)}
+                  <NextTarget
+                    run={run}
+                    entries={arrowEntries}
+                    enemyId={unit.id}
+                  />
                   <UnitEffects
                     unit={unit}
                     units={units}
@@ -223,12 +227,12 @@ export function Battle({
                   <div className="health">
                     <span
                       style={{
-                        width: `${(unit.hp / unit.maxHp) * 100}%`,
+                        width: `${(shownHp(unit) / unit.maxHp) * 100}%`,
                       }}
                     />
                   </div>
                   <span className="health-value">
-                    {unit.hp} / {unit.maxHp} {t("HP")}
+                    {shownHp(unit)} / {unit.maxHp} {t("HP")}
                   </span>
                 </article>
               ))}
@@ -313,7 +317,7 @@ export function Battle({
                     current={current}
                     ability={ability}
                     target={target}
-                    locked={intro || busy}
+                    locked={phasing || busy}
                     onAim={setAim}
                     onAct={applyCombatAction}
                   />
@@ -321,7 +325,7 @@ export function Battle({
                 <button
                   className="quiet end-turn"
                   data-testid="end-turn"
-                  disabled={intro || busy}
+                  disabled={phasing || busy}
                   onClick={() => applyCombatAction(endTurn(run))}
                 >
                   {nextCat
@@ -331,12 +335,14 @@ export function Battle({
               </div>
             </section>
           )}
-          <BattleResult
-            run={run}
-            practice={practice}
-            onContinue={onContinue}
-            onLeave={onLeave}
-          />
+          {!phasing && (
+            <BattleResult
+              run={run}
+              practice={practice}
+              onContinue={onContinue}
+              onLeave={onLeave}
+            />
+          )}
         </main>
         <FieldNotes run={run} onLeave={onLeave} />
       </div>
