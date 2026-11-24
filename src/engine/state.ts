@@ -12,21 +12,27 @@ export function units(run: Run): Unit[] {
   return [...run.party, ...run.enemies];
 }
 
-/** Seeded generator (mulberry32): the same seed always gives the same marks. */
-export function random(run: Run): number {
-  run.rng = (run.rng + 0x6d2b79f5) >>> 0;
-  let t = run.rng;
+/** Seeded mulberry32 step: advances `seed` and returns a number in [0, 1). */
+function mulberry32(seed: number): [next: number, value: number] {
+  const next = (seed + 0x6d2b79f5) >>> 0;
+  let t = next;
   t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  return [next, ((t ^ (t >>> 14)) >>> 0) / 4294967296];
 }
 
+/** Seeded generator: the same seed always gives the same marks. */
+export function random(run: Run): number {
+  const [next, value] = mulberry32(run.rng);
+  run.rng = next;
+  return value;
+}
+
+/** A separate stream for crits, misses and evasion, so they never disturb the marks. */
 export function critRandom(run: Run): number {
-  run.critRng = (run.critRng + 0x6d2b79f5) >>> 0;
-  let t = run.critRng;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  const [next, value] = mulberry32(run.critRng);
+  run.critRng = next;
+  return value;
 }
 
 export function rollCrit(run: Run, actor: Unit): boolean {

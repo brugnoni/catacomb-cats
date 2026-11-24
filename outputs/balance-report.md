@@ -41,7 +41,7 @@ Optimal bot: 100% everywhere with about 96% HP left, so the game had no pressure
 - Enemy base stats raised, rooms 1-2 more than the boss (Crypt rat 31/8, Moss slime 38/8, Bone sentry 43/9, Cave bat 31/8, Spore imp 36/8, Hollow King 80/10, Royal wisp 32/8, Bone squire 40/9; HP/power).
 - Room recovery: 33% of max HP (at least 8), was a flat 8.
 - Rewards 40/60/80 gold (180 per win, was 90); XP unchanged. Training pays back about twice as fast, matching the faster tier curve.
-- Cats: Miso HP 40 (35), Valiant slash 5 (4), Nine lives 8 (6); Pip HP 30 (27); Ember HP 35 (32).
+- Cats: Miso HP 40 (35), Valiant slash 5 (4), Nine lives 8 (6); Pursian HP 30 (27); Tuntun HP 35 (32).
 
 ## After
 
@@ -56,30 +56,30 @@ Average about 88%; optimal bot 100% at stages 0-12 (measured before the final ca
 
 ## Known gaps (not tuned further)
 
-- Teams without a healer and without Luna (for example Miso + Pip + Ember) still win only about 25-70% of first descents.
+- Teams without a healer and without Luna (for example Miso + Pursian + Tuntun) still win only about 25-70% of first descents.
 - The optimal bot is above its 92-97% target (100%): the game is fully winnable with perfect play, but there is little margin at the top. Raising enemy HP and power by about 10% at high tiers is the first lever if the endgame feels easy.
 - The Hearth is capped by `playerAfter` at half the training rank, so endgame stages are modelled with Hearth 4.
 - Critical hits were off in every measurement (10% base in the real game adds variance but no average change).
 
 ## Round 2: sustain without a healer (lifesteal, 3-turn Guard, Miso's shield)
 
-Changes: Ember's Flame paw and Sweeping embers heal the caster for 30% of the HP damage they deal; Pip's Dagger line 15% (per target, rounded up, only damage that reaches HP, critical hits do not raise it). Nine lives lasts 3 turns (was 2). Stand behind me also gives Miso a 5 point shield for 3 turns. Enemy HP per tier 13% (was 12%).
+Changes: Tuntun's Flame paw and Sweeping embers heal the caster for 30% of the HP damage they deal; Pursian's Dagger line 15% (per target, rounded up, only damage that reaches HP, critical hits do not raise it). Nine lives lasts 3 turns (was 2). Stand behind me also gives Miso a 5 point shield for 3 turns. Enemy HP per tier 13% (was 12%).
 
 Medium bot, 16 seeds, 10 teams, stages 0 / 3 / 6 / 10:
 
-| Setup                      | Overall win rate                   | Weakest teams (average)                             |
-| -------------------------- | ---------------------------------- | --------------------------------------------------- |
-| Before round 2             | about 88%                          | Miso + Pip + Ember 37-69%, Pip + Clover + Ember 68% |
-| Round 2 at 12% HP per tier | 85 / 95 / 96 / 99% (too easy)      | all teams 85% or more                               |
-| 17%                        | 85 / 88 / 86 / 59% (too hard late) | Miso + Pip + Ember 50%                              |
-| 14.5%                      | 85 / 81 / 87 / 63%                 | Miso + Pip + Ember 53%                              |
-| **13% (kept)**             | **85 / 89 / 96 / 86%**             | Miso + Pip + Ember 77%, Miso + Pip + Clover 80%     |
+| Setup                      | Overall win rate                   | Weakest teams (average)                                       |
+| -------------------------- | ---------------------------------- | ------------------------------------------------------------- |
+| Before round 2             | about 88%                          | Miso + Pursian + Tuntun 37-69%, Pursian + Clover + Tuntun 68% |
+| Round 2 at 12% HP per tier | 85 / 95 / 96 / 99% (too easy)      | all teams 85% or more                                         |
+| 17%                        | 85 / 88 / 86 / 59% (too hard late) | Miso + Pursian + Tuntun 50%                                   |
+| 14.5%                      | 85 / 81 / 87 / 63%                 | Miso + Pursian + Tuntun 53%                                   |
+| **13% (kept)**             | **85 / 89 / 96 / 86%**             | Miso + Pursian + Tuntun 77%, Miso + Pursian + Clover 80%      |
 
-Per-team averages now range 77-99% (Luna teams 85-99%, Miso + Clover + Ember 99%). Lifesteal lifted the healer-less teams without making them better than the healer teams. Remaining gap: at tier 11+ Miso + Pip + Clover and Miso + Pip + Ember fall to about 38%. Not tuned further.
+Per-team averages now range 77-99% (Luna teams 85-99%, Miso + Clover + Tuntun 99%). Lifesteal lifted the healer-less teams without making them better than the healer teams. Remaining gap: at tier 11+ Miso + Pursian + Clover and Miso + Pursian + Tuntun fall to about 38%. Not tuned further.
 
 ## Expeditions and Rank caps
 
-Each Expedition is tuned for a party at its own Rank cap (`playerAtCap` in `src/sim.ts`): training and Hearth at the cap, mastery at its cap, all trinkets, the three reference teams (Miso + Luna + Clover, Luna + Pip + Clover, Miso + Pip + Ember), 16 seeds, medium bot. Cap Power is 20, 31 and 42.
+Each Expedition is tuned for a party at its own Rank cap (`playerAtCap` in `src/sim.ts`): training and Hearth at the cap, mastery at its cap, all trinkets, the three reference teams (Miso + Luna + Clover, Luna + Pursian + Clover, Miso + Pursian + Tuntun), 16 seeds, medium bot. Cap Power is 20, 31 and 42.
 
 | Party at the cap of | Plays         | Ascension | Win rate | Per team    |
 | ------------------- | ------------- | --------- | -------- | ----------- |
@@ -91,15 +91,15 @@ Each Expedition is tuned for a party at its own Rank cap (`playerAtCap` in `src/
 
 Enemy stats of the two new Expeditions were tuned by scaling their base teams until the capped rows landed between 50% and 70% (tested in `src/balance.test.ts`). The Ascension formula was not touched.
 
-**Known gap:** the target "under 30% with the previous cap" is not met. Ascension follows Power, so a party at the previous cap meets proportionally weaker enemies; going up a cap also crosses the tier 10 reinforcement and costs as much as it gives. The Rank cap, not enemy strength, is what stops farming The Catacombs to the maximum. The team without a healer (Miso + Pip + Ember) loses almost every Moss Warrens boss fight and Bone Vault run.
+**Known gap:** the target "under 30% with the previous cap" is not met. Ascension follows Power, so a party at the previous cap meets proportionally weaker enemies; going up a cap also crosses the tier 10 reinforcement and costs as much as it gives. The Rank cap, not enemy strength, is what stops farming The Catacombs to the maximum. The team without a healer (Miso + Pursian + Tuntun) loses almost every Moss Warrens boss fight and Bone Vault run.
 
 ## Round 3: audit of 24 November 2026
 
 Full findings in `docs/AUDIT.md`. Measured with luck on (crits, misses, evasion), 12 seeds, 10 teams, and a width-3 planner as the competent player (`optimalPlan(run, 3)`).
 
-**What changed** (data only): Nine lives 1 AP; Dagger line 1 AP, power 5, lifesteal 30%; Pip HP 40, Mei 36, Luna 30, Ember 42 (initiative 12); Flame paw power 24 with a 1-turn cooldown; Sweeping embers power 8; Healing purr and Circle of renewal lift curses; every enemy +15% HP and +1 power, Bone Vault +10% HP more.
+**What changed** (data only): Nine lives 1 AP; Dagger line 1 AP, power 5, lifesteal 30%; Pursian HP 40, Mei 36, Luna 30, Tuntun 42 (initiative 12); Flame paw power 24 with a 1-turn cooldown; Sweeping embers power 8; Healing purr and Circle of renewal lift curses; every enemy +15% HP and +1 power, Bone Vault +10% HP more.
 
-**Why:** with luck off, the same bot lost 0-13% with Pip teams without Luna (sd 39 points between teams). That was mostly the luck setting and the greedy bot. With luck on the spread is already small, so the goals became relevance (turns without action per cat) and difficulty.
+**Why:** with luck off, the same bot lost 0-13% with Pursian teams without Luna (sd 39 points between teams). That was mostly the luck setting and the greedy bot. With luck on the spread is already small, so the goals became relevance (turns without action per cat) and difficulty.
 
 | Setting (competent bot, luck on) | Win  | Spread between teams |
 | -------------------------------- | ---- | -------------------- |
@@ -108,9 +108,9 @@ Full findings in `docs/AUDIT.md`. Measured with luck on (crits, misses, evasion)
 | Moss Warrens at cap              | 100% | 0                    |
 | Bone Vault at cap                | 100% | 0                    |
 
-Turns without action (percent of turns, same bot): Miso 36-56, Luna 5-9, Pip 4-10, Mei 49-84, Ember 27-42. Mei is still high: heals are rarely needed.
+Turns without action (percent of turns, same bot): Miso 36-56, Luna 5-9, Pursian 4-10, Mei 49-84, Tuntun 27-42. Mei is still high: heals are rarely needed.
 
-**Dropped idea:** carrying unspent AP into the next round (bank of 3). With a width-24 planner, fights took 13% longer (26.6 to 30.1 rounds at the Warrens cap) and the idle turns of Ember rose from 26% to 69%.
+**Dropped idea:** carrying unspent AP into the next round (bank of 3). With a width-24 planner, fights took 13% longer (26.6 to 30.1 rounds at the Warrens cap) and the idle turns of Tuntun rose from 26% to 69%.
 
 **Rounds per room** (win-only means, crits on, 3 teams x 12 seeds, Catacombs enemies): fresh party Ascension 0 competent bot 3.3 / 5.2 / 6.9 (21 / 34 / 45% of rounds); capped party Ascension 10 5.2 / 7.4 / 9.7 (23 / 33 / 43%); Ascension 15 (formula beyond the current max tier 14) 6.4 / 9.3 / 12.5, 22% wins.
 

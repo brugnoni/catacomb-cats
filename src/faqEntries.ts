@@ -26,13 +26,13 @@ export function buildEntries(t: Translate): [string, string][] {
     [
       t("What do the signature skills do?"),
       t(
-        "At training rank 3, each cat unlocks a signature skill. Miso's taunt costs 2 AP, once per turn: enemy damaging attacks target Miso while he is alive, until the start of his next turn, and he gains a shield; support spells and curses are not redirected. Luna's AP skill costs 1 AP, once per room: it grants 2 current AP and raises the team's round AP maximum by 2 until that room ends. Mei's unlock offers two actions costing 3 AP: heal all living allies, or revive one fallen ally at 60% of maximum HP (rounded up); click a fallen cat before reviving. Pip unlocks a 2 AP attack that ignores armor, shields and Ice Ward. Ember unlocks a 3 AP attack against every living enemy. The Companions section lists every skill with its limits and cooldowns.",
+        "At training rank 3, each cat unlocks a signature skill. Miso's taunt costs 2 AP, once per turn: enemy damaging attacks target Miso while he is alive, until the start of his next turn, and he gains a shield; support spells and curses are not redirected. Luna's AP skill costs 1 AP, once per room: it grants 2 current AP and raises the team's round AP maximum by 2 until that room ends. Mei's unlock offers two actions costing 3 AP: heal all living allies, or revive one fallen ally at 60% of maximum HP (rounded up); click a fallen cat before reviving. Pursian unlocks a 2 AP attack that ignores armor, shields and Ice Ward. Tuntun unlocks a 3 AP attack against every living enemy. The Companions section lists every skill with its limits and cooldowns.",
       ),
     ],
     [
       t("How do cooldowns work?"),
       t(
-        "Some skills rest after use. A two-turn cooldown means: use it on turn N, it is unavailable on N+1 and N+2, and ready on N+3. Mei's revival and Ember's Flame paw have two turns; Sweeping embers has one. Each attack has its own cooldown, so another ready skill can still be used. Cooldowns count only that cat's own turn starts, never other characters' End turn clicks, and reset when entering a new room. Invalid casts do not start cooldowns or spend AP.",
+        "Some skills rest after use. A two-turn cooldown means: use it on turn N, it is unavailable on N+1 and N+2, and ready on N+3. Mei's revival and Tuntun's Flame paw have two turns; Sweeping embers has one. Each attack has its own cooldown, so another ready skill can still be used. Cooldowns count only that cat's own turn starts, never other characters' End turn clicks, and reset when entering a new room. Invalid casts do not start cooldowns or spend AP.",
       ),
     ],
     [
@@ -56,7 +56,7 @@ export function buildEntries(t: Translate): [string, string][] {
     [
       t("How do critical hits, misses and evasion work?"),
       t(
-        "Every hit and every heal, from cats and from enemies, has a {base}% chance to be critical and deal 50% more damage or healing (rounded up). The chance is fixed: attack, healing and mastery bonuses do not change it. The Hearth blessing adds +5% critical chance for your cats at rank 6 and another +5% at rank 8. Every hit also has a {miss}% chance to miss, and fast units can evade: 1% for each point of initiative above 12, at most {max}% (for example Pip with 20 initiative evades 8% of hits). A miss or an evasion deals no damage and its skill still costs AP; healing, shields and blessings never miss. Area attacks and Dagger line roll separately for each target. CRITICAL!, MISS! and EVADED! show over the target and are written in Field Notes.",
+        "Every hit and every heal, from cats and from enemies, has a {base}% chance to be critical and deal 50% more damage or healing (rounded up). The chance is fixed: attack, healing and mastery bonuses do not change it. The Hearth blessing adds +5% critical chance for your cats at rank 6 and another +5% at rank 8. Every hit also has a {miss}% chance to miss, and fast units can evade: 1% for each point of initiative above 12, at most {max}% (for example Pursian with 20 initiative evades 8% of hits). A miss or an evasion deals no damage and its skill still costs AP; healing, shields and blessings never miss. Area attacks and Dagger line roll separately for each target. CRITICAL!, MISS! and EVADED! show over the target and are written in Field Notes.",
         { base: BASE_CRIT_CHANCE, miss: MISS_CHANCE, max: evadeChance(99) },
       ),
     ],

@@ -466,9 +466,9 @@ test("Inspired improves healing and cannot be applied twice at full duration", a
   page,
 }) => {
   await page.goto("/");
-  const pip = page
-    .locator(".cat-card")
-    .filter({ has: page.getByRole("heading", { name: "Pip", exact: true }) });
+  const pip = page.locator(".cat-card").filter({
+    has: page.getByRole("heading", { name: "Pursian", exact: true }),
+  });
   await pip.getByRole("button", { name: "Remove from party" }).click();
   const clover = page.locator(".cat-card").filter({
     has: page.getByRole("heading", { name: "Mei", exact: true }),
@@ -512,7 +512,7 @@ test("exhausting shared AP resolves enemy turns and skips cats until the next ro
   );
   await strike.click();
   await strike.click();
-  // Two AP remain but Pip has nothing usable left, so the turn passes by itself.
+  // Two AP remain but Pursian has nothing usable left, so the turn passes by itself.
   await expect(page.locator(".command-deck h2")).toHaveText("Luna");
   await pickTarget(page, "e1");
   const moonBolt = page.getByRole("button", { name: /^Moon bolt/ });
@@ -520,7 +520,7 @@ test("exhausting shared AP resolves enemy turns and skips cats until the next ro
   await moonBolt.click();
   await expect(page.locator(".round-counter")).toContainText("ROUND 2");
   await expect(page.locator(".round-counter")).toContainText("6 / 6 AP");
-  await expect(page.locator(".command-deck h2")).toHaveText("Pip");
+  await expect(page.locator(".command-deck h2")).toHaveText("Pursian");
   await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
     0,
   );
@@ -547,7 +547,7 @@ test("effect icons expose themed descriptions on hover and keyboard focus and Gu
   await expect(page.getByRole("tooltip")).toContainText("3");
   await expect(page.getByRole("tooltip")).toContainText("Lasts 3 turns");
   await page.getByTestId("end-turn").click();
-  await expect(page.locator(".command-deck h2")).toHaveText("Pip");
+  await expect(page.locator(".command-deck h2")).toHaveText("Pursian");
   await guard.focus();
   await expect(page.getByRole("tooltip")).toBeVisible();
   await expect(page.getByRole("tooltip")).toContainText("Lasts 3 turns");
@@ -602,7 +602,9 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
     page
       .locator(".cat-card")
       .filter({ has: page.getByRole("heading", { name, exact: true }) });
-  await card("Pip").getByRole("button", { name: "Remove from party" }).click();
+  await card("Pursian")
+    .getByRole("button", { name: "Remove from party" })
+    .click();
   await card("Mei").getByRole("button", { name: "Add to party" }).click();
   await enterDungeon(page);
   const luna = page
@@ -663,7 +665,7 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
   );
 });
 
-test("Ember Flame paw has a one-turn cooldown while Cinder jab has none", async ({
+test("Tuntun Flame paw has a one-turn cooldown while Cinder jab has none", async ({
   page,
 }) => {
   await seedLegacySave(page, { catLevels: { ember: 3 } });
@@ -672,10 +674,12 @@ test("Ember Flame paw has a one-turn cooldown while Cinder jab has none", async 
     page
       .locator(".cat-card")
       .filter({ has: page.getByRole("heading", { name, exact: true }) });
-  await card("Pip").getByRole("button", { name: "Remove from party" }).click();
-  await card("Ember").getByRole("button", { name: "Add to party" }).click();
+  await card("Pursian")
+    .getByRole("button", { name: "Remove from party" })
+    .click();
+  await card("Tuntun").getByRole("button", { name: "Add to party" }).click();
   await enterDungeon(page);
-  await advanceToCat(page, "Ember");
+  await advanceToCat(page, "Tuntun");
   await pickTarget(page, "e1");
   const flame = page.getByRole("button", { name: /^Flame paw/ });
   await flame.click();
@@ -686,7 +690,7 @@ test("Ember Flame paw has a one-turn cooldown while Cinder jab has none", async 
   await expect(claw).toBeEnabled();
   await expect(claw.locator(".ability-cooldown")).toHaveCount(0);
   await page.getByTestId("end-turn").click();
-  await advanceToCat(page, "Ember");
+  await advanceToCat(page, "Tuntun");
   await pickTarget(page, "e1");
   await expect(flame).toBeDisabled();
   await expect(flame.locator(".ability-cooldown")).toContainText(
@@ -697,7 +701,7 @@ test("Ember Flame paw has a one-turn cooldown while Cinder jab has none", async 
   await expect(claw).toBeEnabled();
   await expect(claw.locator(".ability-cooldown")).toHaveCount(0);
   await page.getByTestId("end-turn").click();
-  await advanceToCat(page, "Ember");
+  await advanceToCat(page, "Tuntun");
   await pickTarget(page, "e1");
   await expect(flame).toBeEnabled();
   await expect(flame.locator(".ability-cooldown")).toContainText(
@@ -740,7 +744,7 @@ test("the field guide exposes all eight training ranks for every companion", asy
   await page.goto("/");
   await page.getByRole("button", { name: "FAQ", exact: true }).click();
   await page.getByRole("tab", { name: /Companions/ }).click();
-  for (const name of ["Miso", "Luna", "Mei", "Pip", "Ember"]) {
+  for (const name of ["Miso", "Luna", "Mei", "Pursian", "Tuntun"]) {
     await page.getByRole("tab", { name, exact: true }).click();
     const track = page.getByRole("list", {
       name: `${name} training ranks`,
@@ -1007,8 +1011,8 @@ test("the field guide has two sections and shows skills as cards", async ({
   const basics = [await skills("Miso").locator("li span").first().innerText()];
   for (const [cat, count] of [
     ["Mei", 4],
-    ["Ember", 3],
-    ["Pip", 3],
+    ["Tuntun", 3],
+    ["Pursian", 3],
     ["Luna", 3],
   ] as const) {
     await catTab(cat).click();
@@ -1021,11 +1025,11 @@ test("the field guide has two sections and shows skills as cards", async ({
   await expect(skills("Mei").getByRole("listitem").nth(3)).toContainText(
     "Revive a fallen ally",
   );
-  await catTab("Ember").click();
-  await expect(skills("Ember")).toContainText("Cinder jab");
-  await expect(skills("Ember")).toContainText("Cooldown: 1 turn");
-  await catTab("Pip").click();
-  await expect(skills("Pip")).toContainText("Claw strike");
+  await catTab("Tuntun").click();
+  await expect(skills("Tuntun")).toContainText("Cinder jab");
+  await expect(skills("Tuntun")).toContainText("Cooldown: 1 turn");
+  await catTab("Pursian").click();
+  await expect(skills("Pursian")).toContainText("Claw strike");
   // Every companion's basic attack has its own name.
   expect(new Set(basics).size).toBe(5);
   await faqTab.click();
@@ -1084,14 +1088,14 @@ test("the Language menu switches between English and Spanish at any time", async
   );
   await page.getByRole("button", { name: /^Zarpazo/ }).click();
   await expect(page.getByLabel("Registro de combate")).toContainText(
-    "Pip usa Zarpazo.",
+    "Pursian usa Zarpazo.",
   );
   await expect(page.getByLabel("Registro de combate")).toContainText(
     "golpea a Rata de cripta",
   );
   await page.getByLabel("Idioma").selectOption("en");
   await expect(page.getByLabel("Combat log")).toContainText(
-    "Pip uses Claw strike.",
+    "Pursian uses Claw strike.",
   );
   await expect(page.getByLabel("Combat log")).toContainText("hits Crypt rat");
   await page.reload();
@@ -1120,9 +1124,9 @@ test("the field guide is fully available in Spanish", async ({ page }) => {
       exact: true,
     }),
   ).toContainText("Patas robustas");
-  await page.getByRole("tab", { name: "Ember", exact: true }).click();
+  await page.getByRole("tab", { name: "Tuntun", exact: true }).click();
   const skills = page.getByRole("list", {
-    name: "Habilidades de Ember",
+    name: "Habilidades de Tuntun",
     exact: true,
   });
   await expect(skills).toContainText("Jab de brasa");
@@ -1223,7 +1227,7 @@ test("a critical hit is announced over its target", async ({ page }) => {
   );
   await expect(page.locator('[data-unit="e0"]')).toHaveClass(/crit/);
   await expect(page.getByLabel("Combat log")).toContainText(
-    "Pip scores a critical hit on Crypt rat!",
+    "Pursian scores a critical hit on Crypt rat!",
   );
   await expect(page.locator('[data-unit="e0"] .health-value')).toHaveText(
     "30 / 36 HP",
@@ -1283,8 +1287,8 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
 }) => {
   await realTiming(page);
   await page.goto("/");
-  // Mei, Ember and Miso act after the Crypt rat, so it strikes first.
-  await chooseParty(page, ["Mei", "Ember"], ["Luna", "Pip"]);
+  // Mei, Tuntun and Miso act after the Crypt rat, so it strikes first.
+  await chooseParty(page, ["Mei", "Tuntun"], ["Luna", "Pursian"]);
   await page.getByRole("button", { name: "Enter the dungeon" }).click();
   await expect(page.locator(".round-banner")).toHaveText("ROUND 1");
   await expect(page.getByTestId("end-turn")).toBeDisabled();
@@ -1389,7 +1393,7 @@ test("ability points are explained as shared by the whole party", async ({
 
 test("the chosen party is remembered after a reload", async ({ page }) => {
   await page.goto("/");
-  await chooseParty(page, ["Mei", "Ember"], ["Luna", "Pip"]);
+  await chooseParty(page, ["Mei", "Tuntun"], ["Luna", "Pursian"]);
   await page.reload();
   const toggle = (name: string) =>
     page
@@ -1397,10 +1401,10 @@ test("the chosen party is remembered after a reload", async ({ page }) => {
       .filter({ has: page.getByRole("heading", { name, exact: true }) })
       .getByRole("button", { name: /party/ });
   await expect(toggle("Mei")).toHaveText("Remove from party");
-  await expect(toggle("Ember")).toHaveText("Remove from party");
+  await expect(toggle("Tuntun")).toHaveText("Remove from party");
   await expect(toggle("Miso")).toHaveText("Remove from party");
   await expect(toggle("Luna")).toHaveText("Add to party");
-  await expect(toggle("Pip")).toHaveText("Add to party");
+  await expect(toggle("Pursian")).toHaveText("Add to party");
 });
 
 test("a broken saved party falls back to the default", async ({ page }) => {
@@ -1412,7 +1416,9 @@ test("a broken saved party falls back to the default", async ({ page }) => {
   await expect(
     page
       .locator(".cat-card")
-      .filter({ has: page.getByRole("heading", { name: "Pip", exact: true }) })
+      .filter({
+        has: page.getByRole("heading", { name: "Pursian", exact: true }),
+      })
       .getByRole("button", { name: /party/ }),
   ).toHaveText("Remove from party");
 });
@@ -1467,9 +1473,9 @@ test("Mei's group heal outlines all living allies and Sweeping embers all enemie
 }) => {
   await seedLegacySave(page, { catLevels: { clover: 3, ember: 3 } });
   await page.goto("/");
-  await chooseParty(page, ["Mei", "Ember"], ["Luna", "Pip"]);
+  await chooseParty(page, ["Mei", "Tuntun"], ["Luna", "Pursian"]);
   await enterDungeon(page);
-  await advanceToCat(page, "Ember");
+  await advanceToCat(page, "Tuntun");
   await page.getByRole("button", { name: /^Sweeping embers/ }).hover();
   await expect(page.locator(".enemies .combatant.aimed")).toHaveCount(2);
   await advanceToCat(page, "Mei");
@@ -1549,7 +1555,7 @@ test("hovering Healing purr outlines the chosen ally, or Mei when nobody is chos
 }) => {
   await seedLegacySave(page, { catLevels: { clover: 3, ember: 3 } });
   await page.goto("/");
-  await chooseParty(page, ["Mei", "Ember"], ["Luna", "Pip"]);
+  await chooseParty(page, ["Mei", "Tuntun"], ["Luna", "Pursian"]);
   await enterDungeon(page);
   await advanceToCat(page, "Mei");
   const heal = page.getByRole("button", { name: /^Healing purr/ });

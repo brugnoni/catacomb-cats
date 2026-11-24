@@ -5,8 +5,12 @@ A browser roguelite where a party of cats fights through fixed expeditions and s
 ## Language
 
 **Companion**:
-A playable cat of the camp; three of them make the party of a Run.
+A playable cat of the camp; three of them make the party of a Run. The five are Miso, Luna, Pursian, Mei and Tuntun.
 _Avoid_: Cat (in visible text), hero, character
+
+**Trinket**:
+A single piece of gear a Companion can wear, found as a reward in the Rooms of an Expedition; it adds one small bonus and each one can be worn by only one Companion at a time.
+_Avoid_: Item, equipment
 
 **Field Guide**:
 The rules screen opened from FAQ, with a short list of frequently asked questions and one sheet per Companion showing its skills and training ranks.
@@ -21,8 +25,8 @@ One attempt at an Expedition, from entering the first room until the party wins 
 _Avoid_: Game, session, descent
 
 **Room**:
-A single combat inside an Expedition; the last one holds the boss.
-_Avoid_: Fight, battle, encounter
+A single combat inside an Expedition; the last one holds the boss. The screen that shows a Room is called the Battle screen.
+_Avoid_: Fight, encounter
 
 **Power**:
 The total of permanent upgrades the player has bought: ranks of the three best cats, the Hearth rank and the mastery level.

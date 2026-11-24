@@ -6,7 +6,6 @@ import {
   abilityReach,
   abilityUses,
   abilityUnavailableReason,
-  abilityTargets,
   abilityTargetUnavailableReason,
   damagePreview,
   buildCat,
@@ -346,7 +345,7 @@ describe("signature mechanics", () => {
   it("Moonwell pays1 gives2 AP plus persistent roomcapacity and cannot repeat or scale", () => {
     let r = trained("luna");
     const a = r.party[0]!.abilities[2]!;
-    expect(abilityTargets(r, a, "luna")).toBe(true);
+    expect(abilityTargetUnavailableReason(r, a, "luna")).toBeUndefined();
     r = act(r, "surge", "luna");
     expect(r.ap).toBe(7);
     expect(r.maxAp).toBe(8);
@@ -696,7 +695,7 @@ describe("owner-start clocks, automatic exhaustion and expedition recovery", () 
     const tankBefore = r.party[0]!.hp;
     r = act(r, "strike", "e0");
     expect(r.party[0]!.hp).toBeLessThan(tankBefore);
-    // The new round starts with Pip; Miso's taunt remains until his own start.
+    // The new round starts with Pursian; Miso's taunt remains until his own start.
     expect(currentUnit(r)?.id).toBe("pip");
     expect(r.tauntId).toBe("miso");
     r = endTurn(r);
@@ -809,7 +808,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r = nextRoom(clear(r));
     expect(r.party.find((c) => c.id === "clover")!.cooldowns).toEqual({});
   });
-  it("Ember Cinder jab never has a cooldown and Flame paw waits one own turn", () => {
+  it("Tuntun Cinder jab never has a cooldown and Flame paw waits one own turn", () => {
     let r = trained("ember");
     r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
     const claw = r.party[0]!.abilities[0]!;
@@ -827,7 +826,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     expect(cooldownRemaining(r.party[0]!, slam)).toBe(2);
     expect(abilityUnavailableReason(r, claw)).toBeUndefined();
   });
-  it("Ember Flame paw is blocked for one own turn and returns on the second", () => {
+  it("Tuntun Flame paw is blocked for one own turn and returns on the second", () => {
     let r = trained("ember");
     r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
     const slam = r.party[0]!.abilities.find((a) => a.id === "slam")!;
@@ -840,7 +839,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     expect(abilityUnavailableReason(r, slam)).toBeUndefined();
     expect(act(r, "slam", "e0")).not.toBe(r);
   });
-  it("Ember Sweeping embers keeps its own one-turn cooldown", () => {
+  it("Tuntun Sweeping embers keeps its own one-turn cooldown", () => {
     let r = trained("ember");
     r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
     const cleave = r.party[0]!.abilities.find((a) => a.id === "cleave")!;
@@ -879,7 +878,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
       buildCat(p, "luna").abilities.find((a) => a.id === "surge")!.power,
     ).toBe(2);
   });
-  it("Miso and Ember start every room with their trained shield", () => {
+  it("Miso and Tuntun start every room with their trained shield", () => {
     const p = { ...initialProgress(), catLevels: { miso: 5, ember: 8 } };
     let r = createRun(p, ["pip", "miso", "ember"]);
     expect(r.party.find((c) => c.id === "miso")!.guard).toBe(4);
@@ -925,7 +924,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r = endTurn(r);
     expect(r.party.find((c) => c.id === "clover")!.hp).toBe(0);
   });
-  it("Pip's opening bonus applies to one damaging cast and resets per room", () => {
+  it("Pursian's opening bonus applies to one damaging cast and resets per room", () => {
     let r = createRun({ ...initialProgress(), catLevels: { pip: 5 } }, [
       "pip",
       "miso",
@@ -991,7 +990,7 @@ describe("enemy marks and combat events", () => {
     r.party.find((c) => c.id === "clover")!.hp = 0;
     r.enemies[0]!.mark = "clover";
     r = endTurn(r);
-    expect(r.log.join(" ")).toMatch(/Crypt rat hits (Pip|Miso)/);
+    expect(r.log.join(" ")).toMatch(/Crypt rat hits (Pursian|Miso)/);
   });
   it("reports the intent with the marked cat and no arrow for a dead mark", () => {
     const r = start();
@@ -1012,7 +1011,7 @@ describe("enemy marks and combat events", () => {
     r.tauntId = "miso";
     const rat = r.enemies[0]!;
     rat.mark = "clover";
-    // Order: Pip (current), Crypt rat, Miso, Mei, Moss slime. The rat acts before Miso.
+    // Order: Pursian (current), Crypt rat, Miso, Mei, Moss slime. The rat acts before Miso.
     expect(enemyIntent(r, rat)).toMatchObject({
       targetId: "miso",
       redirected: true,
@@ -1139,7 +1138,7 @@ describe("Hearth blessing in combat", () => {
 });
 
 describe("automatic pass when no skill is usable", () => {
-  it("passes Ember's turn after three Cinder jabs leave 1 AP and nothing else fits", () => {
+  it("passes Tuntun's turn after three Cinder jabs leave 1 AP and nothing else fits", () => {
     let r = trained("ember");
     r.enemies.forEach((e) => (e.hp = e.maxHp = 200));
     r.ap = 4;
@@ -1151,7 +1150,7 @@ describe("automatic pass when no skill is usable", () => {
     // The third use hits the per-turn limit; 1 AP remain but Flame paw and
     // Sweeping embers cost 3, so the turn ends on its own.
     expect(currentUnit(r)!.id).not.toBe("ember");
-    expect(r.log.join(" ")).toContain("Ember has no usable skills left");
+    expect(r.log.join(" ")).toContain("Tuntun has no usable skills left");
   });
   it("keeps the turn while any skill is still usable", () => {
     let r = trained("ember");
@@ -1159,7 +1158,7 @@ describe("automatic pass when no skill is usable", () => {
     r = act(r, "strike", "e0");
     r = act(r, "strike", "e0");
     r = act(r, "strike", "e0");
-    // 3 AP remain: Flame paw is usable, so Ember keeps acting.
+    // 3 AP remain: Flame paw is usable, so Tuntun keeps acting.
     expect(currentUnit(r)!.id).toBe("ember");
     expect(r.ap).toBe(3);
   });
@@ -1298,7 +1297,7 @@ describe("Dagger line", () => {
     expect(abilityUnavailableReason(r, line)).toBeDefined();
     expect(cooldownRemaining(r.party[0]!, line)).toBe(2);
     r = endTurn(r);
-    // Pip's next turn: still cooling down.
+    // Pursian's next turn: still cooling down.
     let guardTurns = 0;
     while (currentUnit(r)!.id !== "pip" && guardTurns++ < 12) r = endTurn(r);
     expect(abilityUnavailableReason(r, line)).toContain("Cooldown");
@@ -1425,7 +1424,7 @@ describe("critical hits", () => {
     expect(r.events[0]).toMatchObject({ type: "hit", crit: true, damage: 6 });
     expect(r.enemies[0]!.hp).toBe(36 - 6);
     expect(r.log.join(" ")).toContain(
-      "Pip scores a critical hit on Crypt rat!",
+      "Pursian scores a critical hit on Crypt rat!",
     );
     let armored = createRun(initialProgress(), party, 1, { crit: 100 });
     armored.enemies[0]!.armor = 2;
@@ -1496,7 +1495,7 @@ describe("lifesteal and Miso's shield", () => {
       e.hp = e.maxHp = 500;
       e.armor = e.guard = 0;
     });
-  it("Flame paw heals Ember for 30 percent of the damage dealt, rounded up", () => {
+  it("Flame paw heals Tuntun for 30 percent of the damage dealt, rounded up", () => {
     let r = trained("ember");
     foes(r);
     r.party[0]!.hp = 10;
@@ -1507,7 +1506,7 @@ describe("lifesteal and Miso's shield", () => {
       r.events.some((e) => e.type === "heal" && e.targetId === "ember"),
     ).toBe(true);
     expect(r.log.join(" ")).toContain(
-      `Ember drains ${Math.ceil(power * 0.3)} HP from Crypt rat.`,
+      `Tuntun drains ${Math.ceil(power * 0.3)} HP from Crypt rat.`,
     );
   });
   it("only drains from damage that reaches HP and never over max HP", () => {
@@ -1574,7 +1573,7 @@ describe("curse lowers received shields", () => {
     pip.curseTurns = 2;
     r = act(r, "guard", "pip");
     expect(r.party.find((c) => c.id === "pip")!.guard).toBe(6);
-    expect(r.log.join(" ")).toContain("Pip gains a 6 shield");
+    expect(r.log.join(" ")).toContain("Pursian gains a 6 shield");
   });
   it("never goes below zero", () => {
     let r = turn(start(), "miso");
@@ -1620,7 +1619,7 @@ describe("misses and evasion", () => {
         expect(after.enemies[0]!.hp).toBe(500);
         expect(after.ap).toBe(r.ap - 1);
         expect(after.log.join(" ")).toMatch(
-          /misses Crypt rat!|Crypt rat evades Pip's attack!/,
+          /misses Crypt rat!|Crypt rat evades Pursian's attack!/,
         );
       }
     }

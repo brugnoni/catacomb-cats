@@ -68,7 +68,7 @@ Casual con picos de reto, medido con el bot medio por Expedición **al tope de s
 2. Decidir la duración de la progresión y el uso del oro/XP sobrante (hallazgo 1, 6).
 3. Subir presión de salas 1–2 y recalibrar jefe (hallazgo 3, 4), midiendo con el simulador.
 4. Extender el simulador: victorias por Expedición, 5 equipos más, y modo con crits/fallos (hallazgo 7).
-5. Equilibrar Miso/Ember/Pip frente a Luna + sanador (hallazgo 5).
+5. Equilibrar Miso/Tuntun/Pursian frente a Luna + sanador (hallazgo 5).
 6. Datos de enemigos (habilidades y patrones como datos, no por nombre) antes de crear enemigos nuevos (hallazgo 8).
 7. Rediseñar objetos o añadir decisiones por run (hallazgo 9).
 
@@ -77,8 +77,8 @@ Casual con picos de reto, medido con el bot medio por Expedición **al tope de s
 Las tablas anteriores usan críticos y fallos apagados y un bot voraz. Repetidas con críticos y fallos activados (como en el juego real) y un planificador de anchura 3 (12 semillas, 10 equipos):
 
 - Todas las configuraciones dan 97–100% de victorias: Catacombs de inicio, Catacombs al tope, Warrens al tope (97%) y Vault al tope (100%). La dispersión entre equipos es ≤7 puntos.
-- Con azar apagado, ese mismo bot gana 78% en Warrens con una dispersión de 39 puntos: los equipos con Pip y sin Luna caían a 0–13%. Gran parte del desequilibrio entre equipos (hallazgo 5) era efecto del azar apagado y del bot voraz, no del diseño real.
-- Lo que sí persiste: turnos sin acción por gato (Miso ~52%, Mei ~47%, Ember ~52% con el bot competente; Luna 11%, Pip 3%), y una dificultad absoluta muy baja para un jugador atento (hallazgo 3 se confirma).
+- Con azar apagado, ese mismo bot gana 78% en Warrens con una dispersión de 39 puntos: los equipos con Pursian y sin Luna caían a 0–13%. Gran parte del desequilibrio entre equipos (hallazgo 5) era efecto del azar apagado y del bot voraz, no del diseño real.
+- Lo que sí persiste: turnos sin acción por gato (Miso ~52%, Mei ~47%, Tuntun ~52% con el bot competente; Luna 11%, Pursian 3%), y una dificultad absoluta muy baja para un jugador atento (hallazgo 3 se confirma).
 - El modelo de AP con ahorro se descartó (sin beneficio; combates 13% más largos).
 - Los winrates con azar apagado son casi todo o nada (equipo gana o pierde por umbral), así que no sirven para comparar equipos con precisión; para comparar equipos usar azar activado y 12+ semillas.
 

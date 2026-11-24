@@ -28,7 +28,6 @@ export {
   abilityUnavailableReason,
   abilityPower,
   abilityTargetUnavailableReason,
-  abilityTargets,
   abilityReach,
 } from "./engine/abilities";
 export { damagePreview } from "./engine/damage";

@@ -37,8 +37,8 @@ import {
 import {
   abilityUses,
   abilityUnavailableReason,
+  abilityTargetUnavailableReason,
   abilityPower,
-  abilityTargets,
   abilityReach,
 } from "./abilities";
 import { hurt } from "./damage";
@@ -190,7 +190,7 @@ export function act(state: Run, abilityId: string, targetId: string): Run {
     !actor ||
     !ability ||
     abilityUnavailableReason(state, ability) ||
-    !abilityTargets(state, ability, targetId)
+    abilityTargetUnavailableReason(state, ability, targetId)
   )
     return state;
   return transition(state, (run) => {

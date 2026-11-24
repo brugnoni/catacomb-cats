@@ -84,11 +84,8 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
     setEntering(true);
     await preloadArt();
     setEntering(false);
-    beginRun(make());
+    setRun(make());
     after?.();
-  };
-  const beginRun = (next: Run) => {
-    setRun(next);
   };
   const {
     offer,
@@ -231,7 +228,7 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
               onLeave={leave}
               onContinue={() => {
                 if (practice) endTutorial("done");
-                else beginRun(nextRoom(run));
+                else setRun(nextRoom(run));
               }}
             />
           </div>

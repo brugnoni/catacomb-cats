@@ -112,14 +112,6 @@ export function abilityTargetUnavailableReason(
   return undefined;
 }
 
-export function abilityTargets(
-  run: Run,
-  ability: Ability,
-  targetId: string,
-): boolean {
-  return abilityTargetUnavailableReason(run, ability, targetId) === undefined;
-}
-
 /**
  * The units a skill reaches if `chosenId` is picked: the one place that knows
  * how lines, groups and single targets spread. With no valid pick it covers the

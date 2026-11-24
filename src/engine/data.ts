@@ -54,7 +54,7 @@ export const CATS: Cat[] = [
   },
   {
     id: "pip",
-    name: "Pip",
+    name: "Pursian",
     role: "Scout",
     color: "#88ceb3",
     hp: 40,
@@ -95,7 +95,7 @@ export const CATS: Cat[] = [
   },
   {
     id: "ember",
-    name: "Ember",
+    name: "Tuntun",
     role: "Brawler",
     color: "#e98e91",
     hp: 42,

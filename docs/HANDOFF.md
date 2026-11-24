@@ -16,7 +16,7 @@ Estado documentado: 23 de noviembre de 2026. Este archivo permite retomar el des
 
 Un equipo de gatos explora una mazmorra por turnos, obtiene tesoros y vuelve a su refugio para mejorar. El tono combina un refugio acogedor con catacumbas oscuras. La primera expedición se llama **The Hollow Below** y su lobby **The Burrow**.
 
-Hay cinco gatos y se eligen tres: Miso (Vanguard), Luna (Mystic), Pip (Scout), Mei (Healer) y Ember (Brawler). **Mei conserva el ID interno `clover`** para no romper entrenamiento, equipo ni guardados anteriores. No renombrar ese ID solo para hacer coincidir el nombre visible.
+Hay cinco gatos y se eligen tres: Miso (Vanguard), Luna (Mystic), Pursian (Scout), Mei (Healer) y Tuntun (Brawler). **Los IDs internos no siguen al nombre visible**: Mei es `clover`, Pursian es `pip` y Tuntun es `ember`; se conservan para no romper entrenamiento, equipo ni guardados anteriores. No renombrar esos IDs solo para hacer coincidir el nombre visible.
 
 El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La primera sala tiene dos enemigos, la segunda tres y la última al Hollow King con dos acompañantes. Ascension puede añadir refuerzos. Eso describe The Catacombs; hay dos Expediciones más y un selector (ver "Expediciones").
 
@@ -35,12 +35,12 @@ El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La
 - **Marcas enemigas:** al iniciar la sala y al terminar cada turno suyo, cada enemigo marca un gato vivo al azar (`Unit.mark`, generador con semilla `Run.rng`; `createRun(progress, party, seed)` usa semilla 1 por defecto para pruebas deterministas y `App.tsx` usa una aleatoria). Su siguiente ataque va a esa marca; Taunt la sustituye y, si la marca cayó, se vuelve a sortear. Las maldiciones siguen yendo al gato con menos HP. `enemyIntent()` expone la acción siguiente (también apoyo a aliados) y la UI dibuja hilos bajo las tarjetas (rojo al gato marcado, verde al aliado que recibirá apoyo): al inicio de cada turno se muestran de uno en uno, en el orden de actuación (máx. ~3 s en total), y después solo al pasar el mouse (o foco de teclado) por una unidad: un enemigo muestra su propio plan, un gato muestra quién lo atacará y un enemigo apoyado muestra quién lo ayudará. Los E2E fijan la semilla con `window.__CATACOMB_SEED__`.
 - **Eventos de combate:** cada transición (`act`, `endTurn`, `nextRoom`) reinicia `Run.events` con un evento `hit` por golpe y sube `Run.eventId`. La UI los usa para el destello rojo de 1 s (borde, nombre, barra y HP); alterna las clases `hit-0`/`hit-1` para reiniciar la animación.
 - **Bordes de estado:** un escudo (`guard > 0`) pone borde plateado persistente hasta que se rompe o expira; una curación (`CombatEvent` tipo `heal`, incluye Revive y la cura del Royal wisp) hace destellar el borde verde 1 s en cada unidad curada. Expedition Strength se muestra en la franja de dificultad bajo el nombre de la sala.
-- **Dagger line (Pip, 1 AP):** potencia 5; golpea al objetivo con 100%, al enemigo vivo siguiente (a su derecha en el campo, orden de `Run.enemies`) con 50% y al siguiente con 35% (`LINE_FALLOFF`, redondeo normal). La armadura y los escudos reducen cada golpe. Un uso por turno y cooldown de 1 turno. Nunca golpea a los enemigos que están delante del objetivo.
+- **Dagger line (Pursian, 1 AP):** potencia 5; golpea al objetivo con 100%, al enemigo vivo siguiente (a su derecha en el campo, orden de `Run.enemies`) con 50% y al siguiente con 35% (`LINE_FALLOFF`, redondeo normal). La armadura y los escudos reducen cada golpe. Un uso por turno y cooldown de 1 turno. Nunca golpea a los enemigos que están delante del objetivo.
 - **Ataques perforantes (Needle strike):** ignoran por completo armadura, Guard y Ice Ward; no gastan cargas de Ice Ward ni escudo. Vista previa y resolución usan `damagePreview()`.
 - **Taunt y marcas:** al lanzar Taunt, todos los enemigos vivos marcan al gato que provoca (`mark`); mientras dure, cada marca nueva también es ese gato. Al terminar Taunt (inicio del turno del gato) se vuelven a sortear las marcas. Las maldiciones y el apoyo no siguen a Taunt: la maldición va al gato con menos HP y su hilo es **violeta**; el ataque es rojo y el apoyo verde.
 - **Críticos:** cada golpe y cada curación (gatos y enemigos) tiene `BASE_CRIT_CHANCE` = 10% de ser crítico (`CRIT_MULTIPLIER` = 1.5, redondeo hacia arriba, antes de armadura). La probabilidad es fija: solo la bendición del Hogar suma (+5% en rango 6 y +5% en rango 8, solo gatos). Cada objetivo de un ataque en área o de Dagger line tira por separado. Tiene su propio generador (`Run.critRng`) para no alterar las marcas. `createRun(..., { crit })`: `"off"` (por defecto en el motor y en las pruebas), `"on"` (juego real) o un número fijo; los E2E usan `window.__CATACOMB_CRIT__`.
 - **Rango siguiente:** el lobby escribe "Next rank N · título: …" para que quede claro que ese es el próximo rango, no el actual.
-- **Robo de vida (`Ability.lifesteal`):** Flame paw y Sweeping embers (Ember) curan al lanzador el 30% del daño que llega a la vida; Dagger line (Pip) también el 30%. Por objetivo, redondeo hacia arriba, nunca sobre armadura/escudo ni sobre el máximo; los críticos no suben el porcentaje. Emite evento `heal` (destello verde) y la línea "X drains N HP from Y".
+- **Robo de vida (`Ability.lifesteal`):** Flame paw y Sweeping embers (Tuntun) curan al lanzador el 30% del daño que llega a la vida; Dagger line (Pursian) también el 30%. Por objetivo, redondeo hacia arriba, nunca sobre armadura/escudo ni sobre el máximo; los críticos no suben el porcentaje. Emite evento `heal` (destello verde) y la línea "X drains N HP from Y".
 - **Guard dura 3 turnos** (`GUARD_TURNS` en `src/progression.ts`) y **Stand behind me** da además un escudo de 5 a Miso.
 - **Fallos y esquivas:** con `crit: "on"` (juego real) cada golpe tiene `MISS_CHANCE` = 5% de fallar y, además, el objetivo esquiva `evadeChance(iniciativa)` = 1% por punto de iniciativa sobre 12 (máx. 12%). Usan el generador `critRng` (no alteran las marcas); curar, escudar y bendecir nunca fallan. Evento `avoid` (`miss`/`evade`) y avisos "MISS!/EVADED!" sobre el objetivo. Los E2E y el simulador usan `crit: "off"`/numérico, por lo que no hay azar. **El balance medido por el simulador no incluye fallos/esquivas.**
 - **Curse afecta a todo:** daño, curación y escudos que hace el gato maldecido **y** la curación y los escudos que recibe salen reducidos por su maldición (mínimo 0).
@@ -55,17 +55,17 @@ El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La
 
 ## Habilidades desbloqueadas en rango 3
 
-| Gato  | Desbloqueo y restricciones                                                                                                                                                                                                                                |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Miso  | Stand behind me: Taunt, 2 AP, una vez por turno.                                                                                                                                                                                                          |
-| Luna  | Moonwell: 1 AP de coste, +2 AP actuales y +2 al máximo por ronda durante esa sala; una vez por sala. Ganancia inmediata neta de +1 AP. Se reinicia al cambiar de sala.                                                                                    |
-| Mei   | Circle of renewal: cura a todos los aliados vivos, 3 AP y una vez por turno; **sin cooldown de varios turnos**. El mismo desbloqueo agrega Return to the hearth para revivir a un aliado caído al 60% de su HP máximo, redondeado hacia arriba, por 3 AP. |
-| Pip   | Needle strike: 2 AP, **ignora armadura, escudos (Guard) y Ice Ward**; una vez por turno.                                                                                                                                                                  |
-| Ember | Sweeping embers: 3 AP, daño a todos los enemigos vivos; una vez por turno y con cooldown propio.                                                                                                                                                          |
+| Gato    | Desbloqueo y restricciones                                                                                                                                                                                                                                |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Miso    | Stand behind me: Taunt, 2 AP, una vez por turno.                                                                                                                                                                                                          |
+| Luna    | Moonwell: 1 AP de coste, +2 AP actuales y +2 al máximo por ronda durante esa sala; una vez por sala. Ganancia inmediata neta de +1 AP. Se reinicia al cambiar de sala.                                                                                    |
+| Mei     | Circle of renewal: cura a todos los aliados vivos, 3 AP y una vez por turno; **sin cooldown de varios turnos**. El mismo desbloqueo agrega Return to the hearth para revivir a un aliado caído al 60% de su HP máximo, redondeado hacia arriba, por 3 AP. |
+| Pursian | Needle strike: 2 AP, **ignora armadura, escudos (Guard) y Ice Ward**; una vez por turno.                                                                                                                                                                  |
+| Tuntun  | Sweeping embers: 3 AP, daño a todos los enemigos vivos; una vez por turno y con cooldown propio.                                                                                                                                                          |
 
 La última aclaración expresa del usuario es que **solo Revive de Mei tiene cooldown de dos turnos**. No comparte cooldown con la cura de grupo ni con Healing purr. Usar Revive en el turno N lo bloquea en N+1 y N+2; vuelve en N+3. Se puede elegir un gato muerto desde su sprite o el selector. El revivido actúa desde la siguiente ronda, no gana un turno inmediato.
 
-**Ember:** Cinder jab **no tiene cooldown**. Flame paw (potencia 24, 3 AP) tiene cooldown de 1 turno: usado en N, bloqueado en N+1, disponible en N+2. Sweeping embers conserva su cooldown de 1 turno. Cada ataque tiene su propio cooldown, y otro ataque listo sigue siendo utilizable. Flame paw debe rendir más daño por AP que repetir Cinder jab (prueba en `game.test.ts`). Los cooldowns cuentan inicios de turno del propio gato y se reinician entre salas.
+**Tuntun:** Cinder jab **no tiene cooldown**. Flame paw (potencia 24, 3 AP) tiene cooldown de 1 turno: usado en N, bloqueado en N+1, disponible en N+2. Sweeping embers conserva su cooldown de 1 turno. Cada ataque tiene su propio cooldown, y otro ataque listo sigue siendo utilizable. Flame paw debe rendir más daño por AP que repetir Cinder jab (prueba en `game.test.ts`). Los cooldowns cuentan inicios de turno del propio gato y se reinician entre salas.
 
 ## Idiomas (inglés y español)
 
@@ -77,13 +77,13 @@ La última aclaración expresa del usuario es que **solo Revive de Mei tiene coo
 
 ## Nombres de habilidades (un tema por gato)
 
-| Gato  | Tema            | Habilidades                                                        |
-| ----- | --------------- | ------------------------------------------------------------------ |
-| Miso  | Caballero       | Valiant slash, Nine lives, Stand behind me                         |
-| Luna  | Luna            | Moon bolt, Moon blessing, Moonwell                                 |
-| Pip   | Pícaro          | Claw strike, Dagger line, Needle strike                            |
-| Mei   | Hierbas y hogar | Thorn swipe, Healing purr, Circle of renewal, Return to the hearth |
-| Ember | Fuego           | Cinder jab, Flame paw, Sweeping embers                             |
+| Gato    | Tema            | Habilidades                                                        |
+| ------- | --------------- | ------------------------------------------------------------------ |
+| Miso    | Caballero       | Valiant slash, Nine lives, Stand behind me                         |
+| Luna    | Luna            | Moon bolt, Moon blessing, Moonwell                                 |
+| Pursian | Pícaro          | Claw strike, Dagger line, Needle strike                            |
+| Mei     | Hierbas y hogar | Thorn swipe, Healing purr, Circle of renewal, Return to the hearth |
+| Tuntun  | Fuego           | Cinder jab, Flame paw, Sweeping embers                             |
 
 Los ids internos (`strike`, `guard`, `slam`...) no cambian; solo los nombres visibles.
 
@@ -93,11 +93,11 @@ Los ids internos (`strike`, `guard`, `slam`...) no cambian; solo los nombres vis
 
 - Ocho rangos individuales por gato. Precios: 20, 30, 50, 70, 90, 110, 130 y 150 de oro. El desbloqueo de rango 3 cuesta 100 en total.
 - Cada rango tiene un beneficio concreto; el rango 3 conserva la habilidad especial, el 5 introduce una pasiva y el 8 la mejora.
-- Miso prioriza HP y Guard; Luna, ataques y bendiciones; Mei, curación; Pip, iniciativa y ataques; Ember, HP y ataques.
-- Miso empieza cada sala con Guard 4 en rango 5, que pasa a 6 en rango 8. Ember empieza con Guard 3, después 5.
+- Miso prioriza HP y Guard; Luna, ataques y bendiciones; Mei, curación; Pursian, iniciativa y ataques; Tuntun, HP y ataques.
+- Miso empieza cada sala con Guard 4 en rango 5, que pasa a 6 en rango 8. Tuntun empieza con Guard 3, después 5.
 - Luna obtiene Ice Ward: reducción de 2 para los próximos tres ataques entrantes válidos; cuatro cargas en rango 8. No es un temporizador de turnos.
 - Mei obtiene Soothing Spirit: recupera 2 HP cuando un ataque le quita HP y sobrevive, hasta tres veces por sala; cinco en rango 8. No revive ni produce bucles con daño reflejado.
-- Pip obtiene +2 de potencia en su primera habilidad dañina de cada sala; +3 en rango 8. Se consume una vez por lanzamiento, no una vez por objetivo.
+- Pursian obtiene +2 de potencia en su primera habilidad dañina de cada sala; +3 en rango 8. Se consume una vez por lanzamiento, no una vez por objetivo.
 - La FAQ muestra los ocho rangos completos y su coste. El lobby muestra solo la próxima mejora, con texto breve y legible.
 - Cada 150 XP bancados da un nivel de maestría compartida: +2 HP para todos. Cada tres niveles añade +1 a potencia numérica de ataques, curación, Guard y bendiciones. Maestría máxima 10.
 - Maestría no modifica AP, taunt, el 60% fijo de Revive ni los valores fijos de pasivas. `masteryBonuses().attack` es un alias de `power`; no sumar ambos.
@@ -174,7 +174,7 @@ Vocabulario en `GLOSSARY.md`; decisión del tope de rango en `docs/adr/0001-rank
 
 Resultado de la auditoría (`docs/AUDIT.md`) y de las mediciones de `outputs/balance-report.md`:
 
-- **Estadísticas base de los gatos:** HP Miso 40, Luna 30, Pip 40, Mei 36, Ember 42; iniciativa de Ember 12. **Nine lives** cuesta 1 AP. **Dagger line** 1 AP, potencia 5, robo de vida 30%. **Flame paw** potencia 24 y cooldown de 1 turno; **Sweeping embers** potencia 8.
+- **Estadísticas base de los gatos:** HP Miso 40, Luna 30, Pursian 40, Mei 36, Tuntun 42; iniciativa de Tuntun 12. **Nine lives** cuesta 1 AP. **Dagger line** 1 AP, potencia 5, robo de vida 30%. **Flame paw** potencia 24 y cooldown de 1 turno; **Sweeping embers** potencia 8.
 - **Mei** quita maldiciones: Healing purr y Circle of renewal limpian la maldición de quien curan, y se pueden lanzar sobre un aliado maldecido con la vida completa.
 - **Enemigos** de las tres Expediciones: +15% de HP y +1 de potencia base; Bone Vault un 10% más de HP.
 - **Modelo de AP:** se probó ahorrar AP entre rondas (hasta +3) y se descartó: no mejora las decisiones y alarga los combates un 13%. Los 6 AP compartidos se mantienen.

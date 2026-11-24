@@ -91,9 +91,9 @@ const SAME = new Set([
   "XP",
   "Miso",
   "Luna",
-  "Pip",
+  "Pursian",
   "Mei",
-  "Ember",
+  "Tuntun",
   "CATACOMB CATS",
   "{n}",
   "{1}",
@@ -298,8 +298,8 @@ describe("engine messages", () => {
         "Crypt rat hits Mei: 5 damage (5 attack power, 0 armor, 0 Guard blocked, 0 Ice Ward blocked; 24/29 HP).",
       ),
     ).toContain("Rata de cripta");
-    expect(translateEngine(es, "Pip uses Claw strike.")).toBe(
-      "Pip usa Zarpazo.",
+    expect(translateEngine(es, "Pursian uses Claw strike.")).toBe(
+      "Pursian usa Zarpazo.",
     );
     expect(translateEngine(es, "Cooldown: ready in 2 turns")).toBe(
       "Enfriamiento: listo en 2 turnos",
