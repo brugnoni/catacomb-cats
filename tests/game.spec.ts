@@ -1406,3 +1406,31 @@ test("a short loading screen shows before the battle starts", async ({
   );
   expect(loaded).toBe(true);
 });
+
+test("a missed or evaded attack is announced over its target", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __CATACOMB_CRIT__?: number };
+    delete w.__CATACOMB_CRIT__;
+    (window as unknown as { __CATACOMB_SEED__: number }).__CATACOMB_SEED__ = 3;
+  });
+  await page.goto("/");
+  await enterDungeon(page);
+  await pickTarget(page, "e0");
+  await page.getByRole("button", { name: /^Claw strike/ }).click();
+  await expect(page.locator('[data-unit="e0"] .pop-avoid')).toHaveText(
+    /MISS!|EVADED!/,
+  );
+});
+
+test("hovering Dagger line outlines only the chosen enemy", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  await pickTarget(page, "e0");
+  await page.getByRole("button", { name: /^Dagger line/ }).hover();
+  await expect(page.locator(".allies .combatant.aimed")).toHaveCount(0);
+  await expect(page.locator('.enemies [data-unit="e0"].aimed')).toHaveCount(1);
+});

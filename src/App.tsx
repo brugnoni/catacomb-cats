@@ -66,6 +66,7 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   // True while the battle art loads before a run begins.
   const [entering, setEntering] = useState(false);
   const startRun = async (make: () => Run, after?: () => void) => {
+    if (entering) return;
     setEntering(true);
     await preloadArt();
     setEntering(false);

@@ -56,7 +56,7 @@ export function createRun(
   const hearth = hearthBonuses(progress.generalLevel);
   const crit = options.crit ?? "off";
   const run: Run = {
-    id: crypto.randomUUID(),
+    id: `${seed}-${Date.now().toString(36)}`,
     rng: seed >>> 0,
     critRng: (seed ^ 0x9e3779b9) >>> 0,
     luck: crit === "on",

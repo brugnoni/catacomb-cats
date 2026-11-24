@@ -20,7 +20,7 @@ npm exec --yes --package=pnpm@11.25.0 -- pnpm <script>
 
 ## Repository rules that are easy to miss
 
-- Local only, one public remote (`origin`, github.com/brugnoni/catacomb-cats). **Never push without the user's approval in chat**; never force-push. Pushing to `main` auto-deploys to GitHub Pages (`.github/workflows/pages.yml`). Never commit secrets or private data.
+- Local only, one public remote (`origin`, github.com/brugnoni/catacomb-cats). **Never push without the user's approval in chat**; never force-push. Pushing to `main` auto-deploys to GitHub Pages (`.github/workflows/ci.yml (after all checks pass)`). Never commit secrets or private data.
 - Commit messages: a brief subject line, then a short, concise description. **No `Co-Authored-By` or other attribution lines.**
 - Never write to `localStorage` of `http://localhost:5173` in the shared browser pane (it is the user's real save). Use another origin such as `127.0.0.1` or Playwright for seeded saves.
 - Keep rules independent of React. Fix bugs with a regression test first; gameplay changes need meaningful tests.

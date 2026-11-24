@@ -36,13 +36,6 @@ export interface TrainingRank {
   /** Absolute passive values unlocked at this rank, replacing earlier values. */
   passives?: Partial<TrainingPassives>;
 }
-export const SIGNATURE_NAMES: Record<string, string> = {
-  miso: "Stand behind me",
-  luna: "Moonwell",
-  clover: "Circle of renewal",
-  pip: "Needle strike",
-  ember: "Sweeping embers",
-};
 export const TRAINING_TRACKS: Record<string, TrainingRank[]> = {
   miso: [
     {
