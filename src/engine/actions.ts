@@ -31,7 +31,6 @@ import {
   clearEffects,
   prepareRoom,
   beginTurn,
-  check,
   advance,
   guard,
   fury,
@@ -45,6 +44,7 @@ import {
 } from "./abilities";
 import { hurt } from "./damage";
 import { canAct, resolveEnemies } from "./enemyAI";
+import { settleRoom } from "./room";
 
 export function createRun(
   progress: Progress,
@@ -100,11 +100,26 @@ export function createRun(
     secondWind: hearth.secondWind,
     hearthAp: hearth.openingAp,
   };
+  enterRoom(run);
+  return run;
+}
+
+/** Starts the room already set up in `run`: fresh cats, turn order, marks, then the enemies that act first. */
+function enterRoom(run: Run) {
   for (const cat of run.party) prepareRoom(cat);
   setOrder(run);
   markAll(run);
   beginTurn(run);
   resolveEnemies(run);
+}
+
+/** Runs one public action on a copy of `state`: events restart and the log stays bounded. */
+function transition(state: Run, apply: (run: Run) => void): Run {
+  const run = clone(state);
+  run.events = [];
+  run.eventId++;
+  apply(run);
+  run.log = run.log.slice(-60);
   return run;
 }
 
@@ -193,63 +208,51 @@ export function act(state: Run, abilityId: string, targetId: string): Run {
     !abilityTargets(state, ability, targetId)
   )
     return state;
-  const run = clone(state);
-  run.events = [];
-  run.eventId++;
-  const a = currentUnit(run)!;
-  const t = units(run).find((u) => u.id === targetId)!;
-  run.ap -= ability.cost;
-  run.uses[ability.id] = abilityUses(run, ability.id) + 1;
-  const key = `${a.id}:${ability.id}`;
-  run.roomUses[key] = (run.roomUses[key] ?? 0) + 1;
-  if (ability.cooldownTurns)
-    a.cooldowns[ability.cooldownGroup ?? ability.id] =
-      ability.cooldownTurns + 1;
-  applyAbility(run, a, ability, t);
-  if (isDamaging(ability)) a.openingAttack = 0;
-  // The turn ends by itself when no AP remain or nothing usable is left.
-  if (!check(run) && (run.ap === 0 || !canAct(run, currentUnit(run)!))) {
-    if (run.ap > 0)
-      run.log.push(`${a.name} has no usable skills left and passes.`);
-    advance(run);
-    resolveEnemies(run);
-  }
-  run.log = run.log.slice(-60);
-  return run;
+  return transition(state, (run) => {
+    const a = currentUnit(run)!;
+    const t = units(run).find((u) => u.id === targetId)!;
+    run.ap -= ability.cost;
+    run.uses[ability.id] = abilityUses(run, ability.id) + 1;
+    const key = `${a.id}:${ability.id}`;
+    run.roomUses[key] = (run.roomUses[key] ?? 0) + 1;
+    if (ability.cooldownTurns)
+      a.cooldowns[ability.cooldownGroup ?? ability.id] =
+        ability.cooldownTurns + 1;
+    applyAbility(run, a, ability, t);
+    if (isDamaging(ability)) a.openingAttack = 0;
+    // The turn ends by itself when no AP remain or nothing usable is left.
+    if (!settleRoom(run) && (run.ap === 0 || !canAct(run, currentUnit(run)!))) {
+      if (run.ap > 0)
+        run.log.push(`${a.name} has no usable skills left and passes.`);
+      advance(run);
+      resolveEnemies(run);
+    }
+  });
 }
 
 export function endTurn(state: Run): Run {
   if (state.status !== "combat") return state;
-  const run = clone(state);
-  run.events = [];
-  run.eventId++;
-  advance(run);
-  resolveEnemies(run);
-  run.log = run.log.slice(-60);
-  return run;
+  return transition(state, (run) => {
+    advance(run);
+    resolveEnemies(run);
+  });
 }
 
 export function nextRoom(state: Run): Run {
   if (state.status !== "reward") return state;
-  const run = clone(state);
-  run.events = [];
-  run.eventId++;
-  run.room++;
-  run.enemies = roomEnemies(run.room, run.difficulty, run.expedition);
-  run.round = 1;
-  run.maxAp = 6;
-  run.ap = 6 + run.hearthAp;
-  run.status = "combat";
-  run.uses = {};
-  run.roomUses = {};
-  delete run.tauntId;
-  for (const c of run.party) prepareRoom(c);
-  run.log.push(
-    `Entering room ${run.room + 1}. Expedition Strength remains +${run.bonus} damage.`,
-  );
-  setOrder(run);
-  markAll(run);
-  beginTurn(run);
-  resolveEnemies(run);
-  return run;
+  return transition(state, (run) => {
+    run.room++;
+    run.enemies = roomEnemies(run.room, run.difficulty, run.expedition);
+    run.round = 1;
+    run.maxAp = 6;
+    run.ap = 6 + run.hearthAp;
+    run.status = "combat";
+    run.uses = {};
+    run.roomUses = {};
+    delete run.tauntId;
+    run.log.push(
+      `Entering room ${run.room + 1}. Expedition Strength remains +${run.bonus} damage.`,
+    );
+    enterRoom(run);
+  });
 }

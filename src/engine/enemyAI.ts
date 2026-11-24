@@ -12,7 +12,6 @@ import {
   pickLiving,
   markTarget,
   currentUnit,
-  check,
   advance,
   guard,
   fury,
@@ -22,6 +21,7 @@ import {
   abilityTargetUnavailableReason,
 } from "./abilities";
 import { hurt } from "./damage";
+import { settleRoom } from "./room";
 
 export const weakestCat = (run: Run) =>
   run.party
@@ -118,7 +118,7 @@ export function canAct(run: Run, actor: Unit): boolean {
 
 export function resolveEnemies(run: Run) {
   if (run.party.every((u) => u.hp <= 0)) {
-    check(run);
+    settleRoom(run);
     return;
   }
   let safety = 0;
@@ -212,7 +212,7 @@ export function resolveEnemies(run: Run) {
       }
       // Every enemy turn ends by marking a new random cat for the next one.
       if (actor.hp > 0) markTarget(run, actor);
-      if (check(run)) return;
+      if (settleRoom(run)) return;
     }
     advance(run);
   }
