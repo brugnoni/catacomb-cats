@@ -58,6 +58,8 @@ export interface Progress {
   /** Victories per Expedition id; unlocks and rank caps read this. */
   expeditionWins: Record<string, number>;
   spentGold: number;
+  /** Chosen Skin per Companion id: 1 or 2; a missing id wears the original. */
+  skins: Record<string, number>;
 }
 
 export interface Unit {

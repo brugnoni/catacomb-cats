@@ -17,6 +17,7 @@ export {
   REVIVE_ABILITY,
   ITEMS,
   ITEM_BONUS,
+  SKINS,
   initialProgress,
 } from "./engine/data";
 export { buildCat } from "./engine/units";
@@ -38,5 +39,6 @@ export {
   upgradeCost,
   buyUpgrade,
   equip,
+  setSkin,
   parseProgress,
 } from "./engine/save";

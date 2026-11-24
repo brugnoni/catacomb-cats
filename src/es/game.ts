@@ -25,6 +25,16 @@ export const GAME: Record<string, string> = {
   "Sweeping embers": "Brasas arrasadoras",
   // Items
   "Iron bell": "Campana de hierro",
+  "Iron Warden": "Guardián de Hierro",
+  "Golden Aegis": "Égida Dorada",
+  Nightshade: "Belladona",
+  "Persian Eclipse": "Eclipse Persa",
+  Tuxedo: "Esmoquin",
+  "Desert Nomad": "Nómada del Desierto",
+  "Frost Healer": "Sanadora de Escarcha",
+  "Field Medic": "Médica de Campaña",
+  "Karate Master": "Maestro de Karate",
+  "Shaolin Monk": "Monje Shaolin",
   "Silk ribbon": "Cinta de seda",
   "Lucky fang": "Colmillo de la suerte",
   // Enemies

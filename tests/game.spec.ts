@@ -1717,3 +1717,19 @@ test("Mei's four skills sit in one row inside the deck without clipping", async 
     expect(r.right).toBeLessThanOrEqual(deck.x + deck.width + 1);
   }
 });
+
+test("a chosen skin changes the sprite sheet and persists", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Skin for Pursian").selectOption("1");
+  const sprite = page
+    .locator(".cat-card", { hasText: "Pursian" })
+    .locator(".sprite");
+  await expect(sprite).toHaveClass(/skin-1/);
+  await page.reload();
+  await expect(page.getByLabel("Skin for Pursian")).toHaveValue("1");
+  await expect(
+    page.locator(".cat-card", { hasText: "Pursian" }).locator(".sprite"),
+  ).toHaveClass(/skin-1/);
+});

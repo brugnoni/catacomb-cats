@@ -185,6 +185,15 @@ export const ITEM_BONUS = {
 } as const;
 export const ITEMS = Object.keys(ITEM_BONUS);
 
+/** Names of the two extra Skins of each Companion; Skin 0 is the original. */
+export const SKINS: Record<string, [string, string]> = {
+  miso: ["Iron Warden", "Golden Aegis"],
+  luna: ["Nightshade", "Persian Eclipse"],
+  pip: ["Tuxedo", "Desert Nomad"],
+  clover: ["Frost Healer", "Field Medic"],
+  ember: ["Karate Master", "Shaolin Monk"],
+};
+
 export function initialProgress(): Progress {
   return {
     version: 1,
@@ -197,6 +206,7 @@ export function initialProgress(): Progress {
     claimedRuns: [],
     expeditionWins: {},
     spentGold: 0,
+    skins: {},
   };
 }
 

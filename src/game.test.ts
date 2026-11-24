@@ -17,6 +17,7 @@ import {
   enemyIntent,
   endTurn,
   equip,
+  setSkin,
   initialProgress,
   ITEMS,
   ITEM_BONUS,
@@ -144,6 +145,21 @@ describe("basic expedition and lobby regression", () => {
     expect(p.xp).toBe(135);
     expect(p.expeditionWins).toEqual({ catacombs: 1 });
     expect(claimRewards(p, r)).toBe(p);
+  });
+  it("a Skin is stored per Companion, survives parsing and old saves wear the original", () => {
+    const p = setSkin(setSkin(initialProgress(), "pip", 1), "ember", 2);
+    expect(parseProgress(JSON.stringify(p)).skins).toEqual({
+      pip: 1,
+      ember: 2,
+    });
+    expect(setSkin(p, "pip", 0).skins).toEqual({ ember: 2 });
+    expect(setSkin(p, "pip", 3)).toBe(p);
+    expect(setSkin(p, "nobody", 1)).toBe(p);
+    const old: Partial<Progress> = { ...initialProgress() };
+    delete old.skins;
+    expect(parseProgress(JSON.stringify(old)).skins).toEqual({});
+    const bad = { ...p, skins: { pip: 9, nobody: 1, ember: 2 } };
+    expect(parseProgress(JSON.stringify(bad)).skins).toEqual({ ember: 2 });
   });
   it("unequips same cat and preserves inventory through persistence", () => {
     const p = equip(initialProgress(), "pip", "Iron bell");

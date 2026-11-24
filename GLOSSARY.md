@@ -63,3 +63,7 @@ _Avoid_: Threat objective, mark label
 **Aim outline**:
 The yellow outline on every unit the skill under the mouse or keyboard focus can reach. It stays hidden during the Enemy phase and the Threat thread preview, then appears after a short delay if the cursor is still resting on the skill.
 _Avoid_: Target selector, highlight
+
+**Skin**:
+A color variant of a Companion, chosen at the camp; each Companion has its original look and two more, and a Skin changes only how the cat looks.
+_Avoid_: Costume, outfit, palette
