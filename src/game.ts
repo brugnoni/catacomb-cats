@@ -16,6 +16,7 @@ export {
   SIGNATURE_ABILITIES,
   REVIVE_ABILITY,
   ITEMS,
+  ITEM_BONUS,
   initialProgress,
 } from "./engine/data";
 export { buildCat } from "./engine/units";

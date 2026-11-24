@@ -10,6 +10,7 @@ import { isDamaging, type Progress, type Unit, type Run } from "./model";
 import {
   CATS,
   ENEMY_TRAITS,
+  ITEM_BONUS,
   SIGNATURE_ABILITIES,
   REVIVE_ABILITY,
 } from "./data";
@@ -49,9 +50,8 @@ export function buildCat(progress: Progress, id: string): Unit {
   const growth = trainingBonuses(id, rank);
   const mastery = masteryBonuses(masteryOf(progress));
   const hearth = hearthBonuses(progress.generalLevel);
-  const gear = progress.equipment[id];
-  const hp =
-    c.hp + growth.hp + mastery.hp + hearth.hp + (gear === "Iron bell" ? 6 : 0);
+  const gear = ITEM_BONUS[progress.equipment[id] as keyof typeof ITEM_BONUS];
+  const hp = c.hp + growth.hp + mastery.hp + hearth.hp + (gear?.hp ?? 0);
   const abilities = [
     ...c.abilities,
     ...(rank >= 3
@@ -67,10 +67,7 @@ export function buildCat(progress: Progress, id: string): Unit {
       bonus = growth.fury + mastery.power + hearth.support;
     else if (isDamaging(a))
       bonus =
-        growth.attack +
-        mastery.power +
-        hearth.attack +
-        (gear === "Lucky fang" ? 1 : 0);
+        growth.attack + mastery.power + hearth.attack + (gear?.attack ?? 0);
     return { ...a, power: a.power + bonus };
   });
   return {
@@ -82,7 +79,7 @@ export function buildCat(progress: Progress, id: string): Unit {
       c.initiative +
       growth.initiative +
       hearth.initiative +
-      (gear === "Silk ribbon" ? 3 : 0),
+      (gear?.initiative ?? 0),
     abilities,
     ...statusFields(),
     passives: trainingPassives(id, rank),

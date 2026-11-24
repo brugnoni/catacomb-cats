@@ -19,6 +19,8 @@ import {
   endTurn,
   equip,
   initialProgress,
+  ITEMS,
+  ITEM_BONUS,
   nextRoom,
   parseProgress,
   SIGNATURE_ABILITIES,
@@ -1792,5 +1794,20 @@ describe("ability reach", () => {
     expect(
       ids(abilityReach(r, { ...base, target: "fallen-ally" }, "miso")),
     ).toEqual(["miso"]);
+  });
+});
+
+describe("trinkets", () => {
+  it("each trinket adds exactly its listed bonus to the cat wearing it", () => {
+    const base = buildCat(initialProgress(), "pip");
+    for (const [item, bonus] of Object.entries(ITEM_BONUS)) {
+      const owned = { ...initialProgress(), inventory: [...ITEMS] };
+      const worn = buildCat(equip(owned, "pip", item), "pip");
+      expect(worn.maxHp - base.maxHp).toBe(bonus.hp);
+      expect(worn.initiative - base.initiative).toBe(bonus.initiative);
+      expect(worn.abilities[0]!.power - base.abilities[0]!.power).toBe(
+        bonus.attack,
+      );
+    }
   });
 });

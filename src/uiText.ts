@@ -1,3 +1,4 @@
+import { ITEM_BONUS } from "./game";
 import {
   HEARTH_TRACK,
   MAX_TRAINING_RANK,
@@ -72,3 +73,11 @@ export const ROOM_NAMES = [
   "The king beneath",
 ];
 export const ROOM_PATH = ["Entrance", "Forgotten hall", "Boss chamber"];
+
+/** The short stat label of a trinket, like "(+6 HP)". */
+export function itemBonusText(item: string, t: Translate): string {
+  const bonus = ITEM_BONUS[item as keyof typeof ITEM_BONUS];
+  if (bonus.hp) return t("(+{n} HP)", { n: bonus.hp });
+  if (bonus.initiative) return t("(+{n} INIT)", { n: bonus.initiative });
+  return t("(+{n} ATK)", { n: bonus.attack });
+}

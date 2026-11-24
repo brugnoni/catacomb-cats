@@ -64,9 +64,9 @@ export const UI: Record<string, string> = {
   TRINKET: "AMULETO",
   "Equipment for {name}": "Equipo de {name}",
   "Empty slot": "Espacio vacío",
-  "(+6 HP)": "(+6 PV)",
-  "(+3 INIT)": "(+3 INIC)",
-  "(+1 ATK)": "(+1 ATQ)",
+  "(+{n} HP)": "(+{n} PV)",
+  "(+{n} INIT)": "(+{n} INIC)",
+  "(+{n} ATK)": "(+{n} ATQ)",
   "{name} trained. {next} Ready for the next expedition.":
     "{name} entrenó. {next} Listo para la próxima expedición.",
   "Train {name} · {cost} gold": "Entrenar a {name} · {cost} de oro",

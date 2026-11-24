@@ -29,6 +29,7 @@ import {
   difficultyDescription,
   difficultyLabel,
   nextHearthText,
+  itemBonusText,
   nextTrainingText,
 } from "./uiText";
 
@@ -244,12 +245,7 @@ export function Lobby({
                           <option value="">{t("Empty slot")}</option>
                           {progress.inventory.map((item) => (
                             <option value={item} key={item}>
-                              {t(item)}{" "}
-                              {item === "Iron bell"
-                                ? t("(+6 HP)")
-                                : item === "Silk ribbon"
-                                  ? t("(+3 INIT)")
-                                  : t("(+1 ATK)")}
+                              {t(item)} {itemBonusText(item, t)}
                             </option>
                           ))}
                         </select>

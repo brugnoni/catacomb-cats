@@ -177,7 +177,13 @@ export const REVIVE_ABILITY: Ability = {
   cooldownTurns: 2,
 };
 
-export const ITEMS = ["Iron bell", "Silk ribbon", "Lucky fang"];
+/** What each trinket adds to the cat wearing it. Order is the room that drops it. */
+export const ITEM_BONUS = {
+  "Iron bell": { hp: 6, initiative: 0, attack: 0 },
+  "Silk ribbon": { hp: 0, initiative: 3, attack: 0 },
+  "Lucky fang": { hp: 0, initiative: 0, attack: 1 },
+} as const;
+export const ITEMS = Object.keys(ITEM_BONUS);
 
 export function initialProgress(): Progress {
   return {
