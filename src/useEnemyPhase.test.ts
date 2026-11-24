@@ -5,11 +5,18 @@ import { buildSteps } from "./useEnemyPhase";
 const start = () => createRun(initialProgress(), ["clover", "ember", "miso"]);
 
 describe("buildSteps", () => {
-  it("opens a room with the round banner, then each enemy that strikes first", () => {
+  it("opens a room with the round banner, then the strike-first notice, then each enemy", () => {
     const steps = buildSteps(start(), 0);
     expect(steps[0]).toEqual({ kind: "banner", round: 1 });
-    expect(steps.slice(1).every((s) => s.kind === "attack")).toBe(true);
-    expect(steps.length).toBeGreaterThan(1);
+    expect(steps[1]).toEqual({ kind: "intro" });
+    expect(steps.slice(2).length).toBeGreaterThan(0);
+    expect(steps.slice(2).every((s) => s.kind === "attack")).toBe(true);
+  });
+  it("shows the strike-first notice only when an enemy really strikes first", () => {
+    const run = start();
+    run.events = [];
+    expect(buildSteps(run, 0).some((s) => s.kind === "intro")).toBe(false);
+    expect(buildSteps(start(), 1).some((s) => s.kind === "intro")).toBe(false);
   });
   it("has no steps when nothing happened and the round is the same", () => {
     expect(buildSteps(start(), 1).filter((s) => s.kind === "banner")).toEqual(

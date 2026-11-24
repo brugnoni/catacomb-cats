@@ -2,9 +2,10 @@ import { useEffect, useEffectEvent, useState } from "react";
 import type { Run } from "./game";
 import { pace } from "./storage";
 
-/** A round banner, or one enemy's turn (events `from` up to `to`). */
+/** A round banner, the "enemies strike first" notice, or one enemy's turn (events `from` up to `to`). */
 type Step =
   | { kind: "banner"; round: number }
+  | { kind: "intro" }
   | {
       kind: "attack";
       actorId: string;
@@ -14,7 +15,11 @@ type Step =
     };
 
 const FIRST_MS = 150;
+/** A room's first banner waits longer, so the screen has settled before it appears. */
+const OPENING_MS = 600;
 const BANNER_MS = 1300;
+/** Long enough to read "The enemies strike first!" before the first hit. */
+const INTRO_MS = 1800;
 const LAND_MS = 600;
 const ATTACK_MS = 1600;
 
@@ -46,6 +51,9 @@ export function buildSteps(run: Run, fromRound: number): Step[] {
   });
   if (run.status === "combat" && run.round !== round)
     steps.push({ kind: "banner", round: run.round });
+  // A room that opens with enemy hits says so once, right before the first one.
+  const first = steps.findIndex((s) => s.kind === "attack");
+  if (fromRound === 0 && first >= 0) steps.splice(first, 0, { kind: "intro" });
   return steps;
 }
 
@@ -59,12 +67,17 @@ export function useEnemyPhase(run: Run, fromRound: number) {
   const [played, setPlayed] = useState({ id: run.eventId, tick: 0 });
   const tick = played.id === run.eventId ? played.tick : 0;
   const start = useEffectEvent(() => {
-    let at = FIRST_MS;
+    let at = fromRound === 0 ? OPENING_MS : FIRST_MS;
     const times: number[] = [];
     for (const step of steps) {
-      const span = step.kind === "banner" ? BANNER_MS : ATTACK_MS;
-      times.push(at, at + (step.kind === "banner" ? BANNER_MS : LAND_MS));
-      at += span;
+      const hold =
+        step.kind === "banner"
+          ? BANNER_MS
+          : step.kind === "intro"
+            ? INTRO_MS
+            : ATTACK_MS;
+      times.push(at, at + (step.kind === "attack" ? LAND_MS : hold));
+      at += hold;
     }
     times.push(at);
     const timers = times.map((ms, index) =>
@@ -113,8 +126,8 @@ export function useEnemyPhase(run: Run, fromRound: number) {
     phasing,
     bannerRound: shown?.kind === "banner" ? shown.round : 0,
     actingId: shown?.kind === "attack" ? shown.actorId : "",
-    /** The first enemy turn of a battle that opens with enemy hits. */
-    opening: fromRound === 0 && steps.some((s) => s.kind === "attack"),
+    /** True while the "enemies strike first" notice is up. */
+    introShown: shown?.kind === "intro",
     eventView,
   };
 }

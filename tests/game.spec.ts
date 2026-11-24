@@ -1297,16 +1297,19 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
     const values = (await health.innerText()).match(/(\d+) \/ (\d+) HP/)!;
     expect(values[1]).toBe(values[2]);
   }
+  // The notice waits for the round banner and stays alone before the first hit.
+  await expect(page.locator(".intro-banner")).toHaveCount(0);
   await expect(page.locator(".round-banner")).toHaveCount(0, { timeout: 3000 });
-  await expect(page.locator(".combatant.acting")).toHaveCount(1);
   await expect(
     page.getByRole("status").filter({ hasText: "The enemies strike first!" }),
   ).toBeVisible();
+  await expect(page.locator(".combatant.acting")).toHaveCount(0);
+  await expect(page.locator(".intro-banner")).toHaveCount(0, { timeout: 3000 });
+  await expect(page.locator(".combatant.acting")).toHaveCount(1);
   // No threads and no labels until the enemy phase has ended.
   await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
   await expect(page.locator(".next-target")).toHaveCount(0);
   await expect(page.locator(".combatant.acting")).toHaveCount(0);
-  await expect(page.locator(".intro-banner")).toHaveCount(0, { timeout: 5000 });
   // The threads come after, one enemy at a time, each with its label.
   await expect(page.locator(".next-target")).toHaveCount(1);
   await expect(page.locator(".next-target")).toContainText(/^Next/);
@@ -1338,6 +1341,18 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await page.getByRole("button", { name: "Target Miso" }).hover();
   await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
   await expect(page.locator(".combatant.marked")).toHaveCount(0);
+});
+
+test("the round banner stays visible when the system asks for reduced motion", async ({
+  page,
+}) => {
+  await realTiming(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await enterDungeon(page);
+  const banner = page.locator(".round-banner span");
+  await expect(banner).toHaveText("ROUND 1");
+  await expect(banner).toHaveCSS("opacity", "1");
 });
 
 test("a new round is announced by a banner before the enemies act", async ({

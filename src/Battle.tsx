@@ -41,7 +41,7 @@ export function Battle({
   // The round the screen showed before the last action, so a new round gets its banner.
   const [fromRound, setFromRound] = useState(0);
   const phase = useEnemyPhase(run, fromRound);
-  const { phasing, bannerRound, actingId, opening } = phase;
+  const { phasing, bannerRound, actingId, introShown } = phase;
   const view = turnView(run, target);
   const { currentId, current, units, canSelectFallen, nextCat, targetUnit } =
     view;
@@ -127,7 +127,7 @@ export function Battle({
             ref={battlefieldRef}
             data-previewing={previewing ? "true" : "false"}
           >
-            {opening && phasing && !bannerRound && (
+            {introShown && (
               <div className="intro-banner" role="status">
                 {t("The enemies strike first!")}
               </div>

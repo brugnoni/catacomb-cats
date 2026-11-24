@@ -2134,7 +2134,8 @@ hr {
   border-color: #8fd67f;
 }
 @media (prefers-reduced-motion: reduce) {
+  /* Without motion the banner just stays up for its whole time instead of vanishing at once. */
   .round-banner span {
-    animation-duration: 0.01s;
+    animation: none;
   }
 }
