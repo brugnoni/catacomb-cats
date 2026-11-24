@@ -28,6 +28,7 @@ export {
   abilityPower,
   abilityTargetUnavailableReason,
   abilityTargets,
+  abilityReach,
 } from "./engine/abilities";
 export { damagePreview } from "./engine/damage";
 export { INTENT_LABELS, enemyIntent } from "./engine/enemyAI";

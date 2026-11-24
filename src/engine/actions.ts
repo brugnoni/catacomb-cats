@@ -41,6 +41,7 @@ import {
   abilityUnavailableReason,
   abilityPower,
   abilityTargets,
+  abilityReach,
 } from "./abilities";
 import { hurt } from "./damage";
 import { canAct, resolveEnemies } from "./enemyAI";
@@ -128,11 +129,7 @@ export function applyAbility(
       `${actor.name} revives ${target.name} at 60% HP (${target.hp}/${target.maxHp}). They act next round.`,
     );
   } else if (ability.effect === "heal" || ability.effect === "heal-all") {
-    const targets =
-      ability.effect === "heal-all"
-        ? run.party.filter((u) => u.hp > 0)
-        : [target];
-    for (const t of targets) {
+    for (const t of abilityReach(run, ability, target.id)) {
       const crit = rollCrit(run, actor);
       // A curse lowers what a cat receives: healing as well as shields.
       const amount = Math.max(
@@ -174,15 +171,13 @@ export function applyAbility(
       `${actor.name} expands the reservoir: +2 current and maximum shared AP for this room (${run.ap}/${run.maxAp} AP after the 1 AP cost).`,
     );
   } else if (ability.effect === "cleave") {
-    for (const t of run.enemies.filter((u) => u.hp > 0)) {
+    for (const t of abilityReach(run, ability, target.id)) {
       if (actor.hp <= 0) break;
       hurt(run, actor, t, ability);
     }
   } else if (ability.effect === "line") {
     // The target takes the full hit; the enemies behind it (to its right) take less.
-    const alive = run.enemies.filter((u) => u.hp > 0);
-    const start = alive.findIndex((u) => u.id === target.id);
-    alive.slice(start, start + LINE_FALLOFF.length).forEach((t, index) => {
+    abilityReach(run, ability, target.id).forEach((t, index) => {
       if (actor.hp > 0) hurt(run, actor, t, ability, LINE_FALLOFF[index]);
     });
   } else hurt(run, actor, target, ability);

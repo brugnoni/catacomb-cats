@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useState, type CSSProperties } from "react";
 import { type IntentEntry } from "./IntentArrows";
 import { useT } from "./i18n";
-import { enemyIntent, type Run, type Unit } from "./game";
+import { abilityReach, enemyIntent, type Run, type Unit } from "./game";
 import { pace } from "./storage";
 import type { useEnemyPhase } from "./useEnemyPhase";
 
@@ -223,33 +223,10 @@ export function useBattleView(
   const aimAbility = current?.abilities.find(
     (ability) => ability.id === (previewing || !aim.live ? "" : aim.id),
   );
-  if (run?.status === "combat" && current && aimAbility) {
-    const livingFoes = run.enemies.filter((unit) => unit.hp > 0);
-    const livingCats = run.party.filter((unit) => unit.hp > 0);
-    const chosen = target;
-    const pickOne = (group: Unit[]) =>
-      group.some((unit) => unit.id === chosen)
-        ? group.filter((unit) => unit.id === chosen)
-        : group;
-    let ids: Unit[];
-    if (aimAbility.effect === "line") {
-      const from = livingFoes.findIndex((unit) => unit.id === chosen);
-      ids = from >= 0 ? livingFoes.slice(from, from + 3) : livingFoes;
-    } else if (aimAbility.target === "enemy") ids = pickOne(livingFoes);
-    else if (aimAbility.target === "all-enemies") ids = livingFoes;
-    else if (aimAbility.target === "all-allies") ids = livingCats;
-    else if (aimAbility.target === "ally")
-      // The chosen cat, or the caster when nobody is chosen.
-      ids = livingCats.filter(
-        (unit) =>
-          unit.id ===
-          (livingCats.some((u) => u.id === chosen) ? chosen : current.id),
-      );
-    else if (aimAbility.target === "fallen-ally")
-      ids = run.party.filter((unit) => unit.hp <= 0);
-    else ids = [current];
-    ids.forEach((unit) => aimedIds.add(unit.id));
-  }
+  if (run?.status === "combat" && current && aimAbility)
+    abilityReach(run, aimAbility, target).forEach((unit) =>
+      aimedIds.add(unit.id),
+    );
   // Who acts after the current cat in this round: the button passes the turn to them.
   const nextCat =
     run?.status === "combat"

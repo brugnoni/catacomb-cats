@@ -1,5 +1,11 @@
 import { GUARD_TURNS } from "../progression";
-import { isDamaging, type Ability, type Unit, type Run } from "./model";
+import {
+  isDamaging,
+  LINE_FALLOFF,
+  type Ability,
+  type Unit,
+  type Run,
+} from "./model";
 import { currentUnit } from "./state";
 
 export function abilityLimit(ability: Ability): number {
@@ -112,4 +118,45 @@ export function abilityTargets(
   targetId: string,
 ): boolean {
   return abilityTargetUnavailableReason(run, ability, targetId) === undefined;
+}
+
+/**
+ * The units a skill reaches if `chosenId` is picked: the one place that knows
+ * how lines, groups and single targets spread. With no valid pick it covers the
+ * whole group (the caster for ally skills), which is what the Aim outline shows.
+ */
+export function abilityReach(
+  run: Run,
+  ability: Ability,
+  chosenId: string,
+): Unit[] {
+  const actor = currentUnit(run);
+  const foes = run.enemies.filter((u) => u.hp > 0);
+  const cats = run.party.filter((u) => u.hp > 0);
+  const pick = (group: Unit[]) =>
+    group.some((u) => u.id === chosenId)
+      ? group.filter((u) => u.id === chosenId)
+      : group;
+  if (ability.effect === "line") {
+    const from = foes.findIndex((u) => u.id === chosenId);
+    return from >= 0 ? foes.slice(from, from + LINE_FALLOFF.length) : foes;
+  }
+  switch (ability.target) {
+    case "enemy":
+      return pick(foes);
+    case "all-enemies":
+      return foes;
+    case "all-allies":
+      return cats;
+    case "ally":
+      return cats.some((u) => u.id === chosenId)
+        ? pick(cats)
+        : actor
+          ? [actor]
+          : [];
+    case "fallen-ally":
+      return run.party.filter((u) => u.hp <= 0);
+    default:
+      return actor ? [actor] : [];
+  }
 }

@@ -3,6 +3,7 @@ import {
   act,
   abilityLimit,
   abilityPower,
+  abilityReach,
   abilityUses,
   abilityUnavailableReason,
   abilityTargets,
@@ -1730,5 +1731,66 @@ describe("Mei lifts curses", () => {
     expect(r.party.every((c) => c.curse === 0 && c.curseTurns === 0)).toBe(
       true,
     );
+  });
+});
+
+describe("ability reach", () => {
+  const ids = (units: { id: string }[]) => units.map((u) => u.id);
+  const setup = () => {
+    const r = turn(start(), "pip");
+    const extra = structuredClone(r.enemies[0]!);
+    extra.id = "e2";
+    r.enemies.push(extra);
+    return { r, pip: r.party.find((u) => u.id === "pip")! };
+  };
+  const skill = (id: string, r: Run) =>
+    currentUnit(r)!.abilities.find((a) => a.id === id)!;
+  it("a line starts at the chosen foe and stops after LINE_FALLOFF targets", () => {
+    const { r } = setup();
+    const line = skill("line", r);
+    expect(ids(abilityReach(r, line, "e1"))).toEqual(["e1", "e2"]);
+    expect(ids(abilityReach(r, line, "e0"))).toEqual(["e0", "e1", "e2"]);
+  });
+  it("skips fallen foes and covers every living foe when none is chosen", () => {
+    const { r } = setup();
+    r.enemies[1]!.hp = 0;
+    expect(ids(abilityReach(r, skill("line", r), ""))).toEqual(["e0", "e2"]);
+    expect(
+      ids(
+        abilityReach(
+          r,
+          { ...skill("line", r), effect: "cleave", target: "all-enemies" },
+          "pip",
+        ),
+      ),
+    ).toEqual(["e0", "e2"]);
+  });
+  it("a single-foe skill reaches only the chosen foe, or all of them without a choice", () => {
+    const { r } = setup();
+    const strike = skill("strike", r);
+    expect(ids(abilityReach(r, strike, "e2"))).toEqual(["e2"]);
+    expect(ids(abilityReach(r, strike, ""))).toEqual(["e0", "e1", "e2"]);
+  });
+  it("an ally skill reaches the chosen living cat, or the caster without a choice", () => {
+    const { r } = setup();
+    const ally = { ...skill("strike", r), target: "ally" as const };
+    expect(ids(abilityReach(r, ally, "miso"))).toEqual(["miso"]);
+    expect(ids(abilityReach(r, ally, ""))).toEqual(["pip"]);
+    r.party.find((u) => u.id === "miso")!.hp = 0;
+    expect(ids(abilityReach(r, ally, "miso"))).toEqual(["pip"]);
+  });
+  it("group, self and fallen-ally skills", () => {
+    const { r } = setup();
+    const base = skill("strike", r);
+    r.party.find((u) => u.id === "miso")!.hp = 0;
+    expect(
+      ids(abilityReach(r, { ...base, target: "all-allies" }, "pip")),
+    ).toEqual(["pip", "clover"]);
+    expect(ids(abilityReach(r, { ...base, target: "self" }, "pip"))).toEqual([
+      "pip",
+    ]);
+    expect(
+      ids(abilityReach(r, { ...base, target: "fallen-ally" }, "miso")),
+    ).toEqual(["miso"]);
   });
 });
