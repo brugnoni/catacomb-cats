@@ -5,6 +5,8 @@ import {
   buildCat,
   buyUpgrade,
   equip,
+  setSkin,
+  SKINS,
   upgradeCost,
   type Cat,
   type Progress,
@@ -107,6 +109,23 @@ export function CatCard({
               {progress.inventory.map((item) => (
                 <option value={item} key={item}>
                   {t(item)} {itemBonusText(item, t)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="equipment-label">
+            <span>{t("SKIN")}</span>
+            <select
+              aria-label={t("Skin for {name}", { name: cat.name })}
+              value={progress.skins[cat.id] ?? 0}
+              onChange={(event) =>
+                onStore(setSkin(progress, cat.id, Number(event.target.value)))
+              }
+            >
+              <option value={0}>{t("Original look")}</option>
+              {SKINS[cat.id]!.map((name, i) => (
+                <option value={i + 1} key={name}>
+                  {t(name)}
                 </option>
               ))}
             </select>

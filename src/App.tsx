@@ -4,6 +4,7 @@ import { Faq } from "./Faq";
 
 import { LanguageScreen } from "./LanguageScreen";
 import { Lobby } from "./Lobby";
+import { SkinsContext } from "./Sprite";
 import { Battle } from "./Battle";
 import { useTutorial } from "./useTutorial";
 import {
@@ -139,7 +140,7 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
     setRun(null);
   };
   return (
-    <>
+    <SkinsContext.Provider value={progress.skins}>
       <div className={`app ${run ? "battle-mode" : "lobby-mode"}`}>
         <header className="topbar">
           <div className="brand">
@@ -262,6 +263,6 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
           onSkip={() => endTutorial("skipped")}
         />
       )}
-    </>
+    </SkinsContext.Provider>
   );
 }

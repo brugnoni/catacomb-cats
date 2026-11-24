@@ -1,7 +1,7 @@
 import { trainingCost } from "../progression";
 import { EXPEDITIONS, rankCap } from "../expeditions";
 import { type Progress, type Run } from "./model";
-import { CATS, ITEMS, initialProgress } from "./data";
+import { CATS, ITEMS, SKINS, initialProgress } from "./data";
 
 export function claimRewards(progress: Progress, run: Run): Progress {
   if (run.status !== "victory" || progress.claimedRuns.includes(run.id))
@@ -58,6 +58,19 @@ export function equip(
     if (equipment[id] === itemId) delete equipment[id];
   equipment[catId] = itemId;
   return { ...progress, equipment };
+}
+
+/** Wears Skin 1 or 2, or the original with 0; an unknown Companion or Skin changes nothing. */
+export function setSkin(
+  progress: Progress,
+  catId: string,
+  skin: number,
+): Progress {
+  if (!(catId in SKINS) || ![0, 1, 2].includes(skin)) return progress;
+  const skins = { ...progress.skins };
+  if (skin === 0) delete skins[catId];
+  else skins[catId] = skin;
+  return { ...progress, skins };
 }
 
 export function parseProgress(raw: string | null): Progress {
@@ -134,6 +147,14 @@ export function parseProgress(raw: string | null): Progress {
         ).filter(([id]) => EXPEDITIONS.some((e) => e.id === id)),
       ),
       spentGold: x.spentGold ?? Math.min(1000000, legacySpend),
+      // Older saves have no Skins; bad entries are dropped instead of resetting the save.
+      skins: Object.fromEntries(
+        Object.entries(
+          x.skins && typeof x.skins === "object" && !Array.isArray(x.skins)
+            ? x.skins
+            : {},
+        ).filter(([id, n]) => id in SKINS && (n === 1 || n === 2)),
+      ),
     };
   } catch {
     return initialProgress();

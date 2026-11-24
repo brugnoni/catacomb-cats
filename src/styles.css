@@ -288,6 +288,12 @@ p {
   image-rendering: pixelated;
   vertical-align: middle;
 }
+.sprite.skin-1 {
+  background-image: url("/art/characters-skin1.png");
+}
+.sprite.skin-2 {
+  background-image: url("/art/characters-skin2.png");
+}
 .selected-badge {
   position: absolute;
   top: 5px;
