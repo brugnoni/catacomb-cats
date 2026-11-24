@@ -1,9 +1,10 @@
 import { AbilityButton } from "./AbilityButton";
 import { BattleResult, FieldNotes } from "./BattleParts";
-import { useBattleView } from "./useBattleView";
+import { Combatant } from "./Combatant";
+import { turnView } from "./battleView";
+import { useCombatFeedback } from "./useCombatFeedback";
+import { useThreatPreview } from "./useThreatPreview";
 import { useEffect, useRef, useState } from "react";
-import { Sprite } from "./Sprite";
-import { UnitEffects } from "./UnitEffects";
 import { IntentArrows } from "./IntentArrows";
 import { useEnemyPhase } from "./useEnemyPhase";
 import { pace } from "./storage";
@@ -41,26 +42,20 @@ export function Battle({
   const [fromRound, setFromRound] = useState(0);
   const phase = useEnemyPhase(run, fromRound);
   const { phasing, bannerRound, actingId, opening } = phase;
+  const view = turnView(run, target);
+  const { currentId, current, units, canSelectFallen, nextCat, targetUnit } =
+    view;
   const {
-    currentId,
-    current,
-    units,
     previewing,
     noteEnemy,
     noteIntent,
     arrowEntries,
     markedIds,
-    flashProps,
-    flashClass,
-    critPop,
-    hoverProps,
-    shownHp,
-    canSelectFallen,
     aimedIds,
-    nextCat,
-    targetUnit,
+    hoverProps,
     setAim,
-  } = useBattleView(run, target, phase);
+  } = useThreatPreview(run, target, view, phasing);
+  const feedback = useCombatFeedback(run, phase);
   // A short pause after each action so its animations can be followed.
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -144,14 +139,21 @@ export function Battle({
             )}
             <div className="battle-team allies">
               {run.party.map((unit) => (
-                <article
+                <Combatant
                   key={unit.id}
-                  data-unit={unit.id}
-                  className={`combatant ${unit.id === currentId ? "active" : ""} ${shownHp(unit) <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${aimedIds.has(unit.id) ? "aimed" : ""} ${flashClass(unit.id)}`}
-                  {...flashProps(unit.id)}
-                  {...hoverProps(unit.id)}
+                  unit={unit}
+                  units={units}
+                  taunting={run.tauntId === unit.id}
+                  sprite={unit.id}
+                  turn={unit.id === currentId ? "active" : ""}
+                  targeted={unit.id === target}
+                  marked={markedIds.has(unit.id)}
+                  aimed={aimedIds.has(unit.id)}
+                  feedback={feedback}
+                  hover={hoverProps}
+                  disabled={unit.hp <= 0 && !canSelectFallen}
+                  onTarget={() => setTarget(unit.id)}
                 >
-                  {critPop(unit.id)}
                   {unit.id === currentId &&
                     run.status === "combat" &&
                     !phasing && (
@@ -162,74 +164,26 @@ export function Battle({
                         {t("Your turn!")}
                       </span>
                     )}
-                  <UnitEffects
-                    unit={unit}
-                    units={units}
-                    taunting={run.tauntId === unit.id}
-                  />
-                  <button
-                    className="unit-target"
-                    aria-label={t("Target {name}", {
-                      name: t(unit.name),
-                    })}
-                    aria-pressed={target === unit.id}
-                    onClick={() => setTarget(unit.id)}
-                    disabled={unit.hp <= 0 && !canSelectFallen}
-                  >
-                    <Sprite id={unit.id} />
-                  </button>
-                  <h3>{t(unit.name)}</h3>
-                  <div className="health">
-                    <span
-                      style={{
-                        width: `${(shownHp(unit) / unit.maxHp) * 100}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="health-value">
-                    {shownHp(unit)} / {unit.maxHp} {t("HP")}
-                  </span>
-                </article>
+                </Combatant>
               ))}
             </div>
             <div className="battle-team enemies">
               {run.enemies.map((unit) => (
-                <article
+                <Combatant
                   key={unit.id}
-                  data-unit={unit.id}
-                  className={`combatant ${unit.id === actingId ? "acting" : ""} ${shownHp(unit) <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""} ${markedIds.has(unit.id) ? "marked" : ""} ${unit.guard > 0 && unit.hp > 0 ? "guarded" : ""} ${aimedIds.has(unit.id) ? "aimed" : ""} ${flashClass(unit.id)}`}
-                  {...flashProps(unit.id)}
-                  {...hoverProps(unit.id)}
-                >
-                  {critPop(unit.id)}
-                  <UnitEffects
-                    unit={unit}
-                    units={units}
-                    taunting={run.tauntId === unit.id}
-                  />
-                  <button
-                    className="unit-target"
-                    aria-label={t("Target {name}", {
-                      name: t(unit.name),
-                    })}
-                    aria-pressed={target === unit.id}
-                    onClick={() => setTarget(unit.id)}
-                    disabled={unit.hp <= 0}
-                  >
-                    <Sprite id={unit.name} />
-                  </button>
-                  <h3>{t(unit.name)}</h3>
-                  <div className="health">
-                    <span
-                      style={{
-                        width: `${(shownHp(unit) / unit.maxHp) * 100}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="health-value">
-                    {shownHp(unit)} / {unit.maxHp} {t("HP")}
-                  </span>
-                </article>
+                  unit={unit}
+                  units={units}
+                  taunting={run.tauntId === unit.id}
+                  sprite={unit.name}
+                  turn={unit.id === actingId ? "acting" : ""}
+                  targeted={unit.id === target}
+                  marked={markedIds.has(unit.id)}
+                  aimed={aimedIds.has(unit.id)}
+                  feedback={feedback}
+                  hover={hoverProps}
+                  disabled={unit.hp <= 0}
+                  onTarget={() => setTarget(unit.id)}
+                />
               ))}
             </div>
             <IntentArrows

@@ -131,19 +131,19 @@ HP enemigo × `(1 + 0.13 × tier)`; potencia +`ceil(tier / 2)`; iniciativa +`flo
 
 ## Arquitectura y herramientas
 
-| Área                                              | Ubicación                                                                                                                                              |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Motor puro e inmutable, validadores y tipos       | `src/engine/*` (fachada pública en `src/game.ts`)                                                                                                      |
-| Datos de rangos, pasivas, maestría y Ascension    | `src/progression.ts`                                                                                                                                   |
-| Lobby, combate, tutorial y guardado del navegador | `src/App.tsx` (coordinador), `Lobby.tsx`, `Battle.tsx` (+ `useBattleView.tsx`, `AbilityButton.tsx`, `BattleParts.tsx`), `useTutorial.ts`, `storage.ts` |
-| FAQ en inglés con todas las reglas                | `src/Faq.tsx`                                                                                                                                          |
-| Sprites, estados y estilos                        | `src/Sprite.tsx`, `src/UnitEffects.tsx`, `src/styles.css`                                                                                              |
-| Pruebas de reglas y simulaciones                  | `src/*.test.ts`                                                                                                                                        |
-| Pruebas Chromium de la aplicación compilada       | `tests/game.spec.ts`                                                                                                                                   |
-| Arte final y procedencia/prompts                  | `public/art/`                                                                                                                                          |
-| Capturas y mediciones                             | `outputs/`                                                                                                                                             |
-| Skills del proyecto                               | `.agents/skills/catacomb-feature/`, `.agents/skills/catacomb-review/`                                                                                  |
-| Hook y CI preparado                               | `.githooks/`, `.github/`                                                                                                                               |
+| Área                                              | Ubicación                                                                                                                                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Motor puro e inmutable, validadores y tipos       | `src/engine/*` (fachada pública en `src/game.ts`)                                                                                                                                                                   |
+| Datos de rangos, pasivas, maestría y Ascension    | `src/progression.ts`                                                                                                                                                                                                |
+| Lobby, combate, tutorial y guardado del navegador | `src/App.tsx` (coordinador), `Lobby.tsx`, `Battle.tsx` (+ `Combatant.tsx`, `useThreatPreview.ts`, `useCombatFeedback.tsx`, `battleView.ts`, `AbilityButton.tsx`, `BattleParts.tsx`), `useTutorial.ts`, `storage.ts` |
+| FAQ en inglés con todas las reglas                | `src/Faq.tsx`                                                                                                                                                                                                       |
+| Sprites, estados y estilos                        | `src/Sprite.tsx`, `src/UnitEffects.tsx`, `src/styles.css`                                                                                                                                                           |
+| Pruebas de reglas y simulaciones                  | `src/*.test.ts`                                                                                                                                                                                                     |
+| Pruebas Chromium de la aplicación compilada       | `tests/game.spec.ts`                                                                                                                                                                                                |
+| Arte final y procedencia/prompts                  | `public/art/`                                                                                                                                                                                                       |
+| Capturas y mediciones                             | `outputs/`                                                                                                                                                                                                          |
+| Skills del proyecto                               | `.agents/skills/catacomb-feature/`, `.agents/skills/catacomb-review/`                                                                                                                                               |
+| Hook y CI preparado                               | `.githooks/`, `.github/`                                                                                                                                                                                            |
 
 Stack: React, TypeScript estricto y Vite. Node 24 LTS es el objetivo; `package.json` fija pnpm 11.25.0 y `pnpm-lock.yaml` fija dependencias. No crear un segundo lockfile con npm.
 
