@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Personal browser roguelite (React 19 + TypeScript + Vite, Node 24). `AGENTS.md` holds the binding project rules and `docs/HANDOFF.md` (Spanish) the accepted decisions and current behavior; read both before changing gameplay. Where a note disagrees with the code, `src/game.ts` and `src/progression.ts` win.
 
+Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
+
 ## Commands
 
 `pnpm` is often not on PATH; use the pinned version through npm (this is also what the pre-commit hook does):
