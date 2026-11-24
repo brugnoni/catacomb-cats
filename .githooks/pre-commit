@@ -1,3 +1,11 @@
 #!/bin/sh
 set -eu
-npm exec --yes --package=pnpm@11.25.0 -- pnpm check
+pnpm="npm exec --yes --package=pnpm@11.25.0 -- pnpm"
+
+# Documentation-only commits cannot break the game: check formatting and stop.
+# Anything else (code, tests, config, a hook) runs the full check.
+if git diff --cached --name-only | grep -q -v -E '\.md$|^docs/|^outputs/'; then
+  $pnpm check
+else
+  $pnpm format:check
+fi
