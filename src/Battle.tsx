@@ -4,7 +4,7 @@ import { Combatant } from "./Combatant";
 import { turnView } from "./battleView";
 import { useCombatFeedback } from "./useCombatFeedback";
 import { useThreatPreview } from "./useThreatPreview";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { IntentArrows } from "./IntentArrows";
 import { useEnemyPhase } from "./useEnemyPhase";
 import { pace } from "./storage";
@@ -127,6 +127,11 @@ export function Battle({
             className="battlefield"
             ref={battlefieldRef}
             data-previewing={previewing ? "true" : "false"}
+            style={
+              {
+                "--thread-rows": Math.max(4, run.enemies.length),
+              } as CSSProperties
+            }
           >
             {run.status === "combat" && !phasing && (
               <button
@@ -243,56 +248,63 @@ export function Battle({
                 )}
               </div>
               <div className="actions">
-                <div
-                  className="round-counter"
-                  aria-label={t("Shared AP")}
-                  title={t(
-                    "Ability points are shared by the whole party, not owned by one cat.",
-                  )}
-                >
-                  <span className="ap-label">{t("SHARED AP")}</span>
-                  <span>{t("ROUND {n}", { n: run.round })}</span>
-                  <strong>
-                    {run.ap}
-                    <small>
-                      {" "}
-                      / {Math.max(run.ap, run.maxAp)} {t("AP")}
-                    </small>
-                  </strong>
-                  <span className="ap-note">
-                    {t("Shared by all your cats")}
-                  </span>
-                  <span className="ap-pips" aria-hidden="true">
-                    {Array.from(
-                      { length: Math.max(run.ap, run.maxAp) },
-                      (_, index) => (
-                        <i key={index} className={index < run.ap ? "on" : ""} />
-                      ),
+                <div className="turn-side">
+                  <div
+                    className="round-counter"
+                    aria-label={t("Shared AP")}
+                    title={t(
+                      "Ability points are shared by the whole party, not owned by one cat.",
                     )}
-                  </span>
+                  >
+                    <span className="ap-label">{t("SHARED AP")}</span>
+                    <span>{t("ROUND {n}", { n: run.round })}</span>
+                    <strong>
+                      {run.ap}
+                      <small>
+                        {" "}
+                        / {Math.max(run.ap, run.maxAp)} {t("AP")}
+                      </small>
+                    </strong>
+                    <span className="ap-note">
+                      {t("Shared by all your cats")}
+                    </span>
+                    <span className="ap-pips" aria-hidden="true">
+                      {Array.from(
+                        { length: Math.max(run.ap, run.maxAp) },
+                        (_, index) => (
+                          <i
+                            key={index}
+                            className={index < run.ap ? "on" : ""}
+                          />
+                        ),
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    className="quiet end-turn"
+                    data-testid="end-turn"
+                    disabled={phasing || busy}
+                    onClick={() => applyCombatAction(endTurn(run))}
+                  >
+                    {nextCat
+                      ? t("Pass to {name}", { name: nextCat.name })
+                      : t("End turn")}
+                  </button>
                 </div>
-                {current?.abilities.map((ability) => (
-                  <AbilityButton
-                    key={ability.id}
-                    run={run}
-                    current={current}
-                    ability={ability}
-                    target={target}
-                    locked={phasing || busy}
-                    onAim={setAim}
-                    onAct={applyCombatAction}
-                  />
-                ))}
-                <button
-                  className="quiet end-turn"
-                  data-testid="end-turn"
-                  disabled={phasing || busy}
-                  onClick={() => applyCombatAction(endTurn(run))}
-                >
-                  {nextCat
-                    ? t("Pass to {name}", { name: nextCat.name })
-                    : t("End turn")}
-                </button>
+                <div className="ability-grid">
+                  {current?.abilities.map((ability) => (
+                    <AbilityButton
+                      key={ability.id}
+                      run={run}
+                      current={current}
+                      ability={ability}
+                      target={target}
+                      locked={phasing || busy}
+                      onAim={setAim}
+                      onAct={applyCombatAction}
+                    />
+                  ))}
+                </div>
               </div>
             </section>
           )}

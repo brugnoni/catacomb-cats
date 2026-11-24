@@ -1290,18 +1290,20 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await page.mouse.move(0, 0);
   await expect(page.locator(".intent-line")).toHaveCount(0);
   await page.getByTestId("threats-button").hover();
-  // The label sits just under the thread, centred where the thread starts.
+  // Each label hangs just under its own thread and ends where that thread starts.
   const tag = (await page.locator(".next-target").first().boundingBox())!;
-  const line = (await page.locator(".intent-line").first().boundingBox())!;
-  expect(tag.y).toBeGreaterThanOrEqual(line.y + line.height - 1);
+  const lines = await page
+    .locator(".intent-line")
+    .evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect()).map((r) => r.bottom),
+    );
+  expect(lines.some((b) => tag.y >= b - 1 && tag.y - b < 8)).toBe(true);
   const centres = await page
     .locator(".enemies .combatant")
     .evaluateAll((cards) =>
       cards.map((c) => c.getBoundingClientRect()).map((r) => r.x + r.width / 2),
     );
-  expect(centres.some((x) => Math.abs(x - (tag.x + tag.width / 2)) < 2)).toBe(
-    true,
-  );
+  expect(centres.some((x) => Math.abs(x - (tag.x + tag.width)) < 2)).toBe(true);
   await page.mouse.move(0, 0);
   await page.getByRole("button", { name: "Target Moss slime" }).hover();
   await expect(page.getByTestId("intent-note")).toContainText(
@@ -1319,14 +1321,28 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await expect(page.locator(".combatant.marked")).toHaveCount(0);
 });
 
-test("the round banner is anchored to the battlefield, not the window", async ({
+test("the round banner sits in the top slot of the battlefield, clear of the cards", async ({
   page,
 }) => {
   await realTiming(page);
   await page.goto("/");
   await enterDungeon(page);
-  await expect(page.locator(".round-banner")).toHaveCSS("position", "absolute");
-  await expect(page.locator(".battlefield")).toContainText("ROUND 1");
+  const banner = page.locator(".round-banner span");
+  await expect(banner).toHaveText("ROUND 1");
+  const field = (await page.locator(".battlefield").boundingBox())!;
+  const box = (await banner.boundingBox())!;
+  expect(
+    Math.abs(box.x + box.width / 2 - (field.x + field.width / 2)),
+  ).toBeLessThan(2);
+  expect(box.y - field.y).toBeLessThan(30);
+  for (const card of await page.locator(".combatant").all()) {
+    const c = (await card.boundingBox())!;
+    expect(
+      box.y + box.height <= c.y ||
+        box.x + box.width <= c.x ||
+        c.x + c.width <= box.x,
+    ).toBe(true);
+  }
 });
 
 test("the round banner stays visible when the system asks for reduced motion", async ({
@@ -1580,4 +1596,124 @@ test("the cat whose turn it is announces it and actions pause briefly", async ({
   await page.getByRole("button", { name: /^Claw strike/ }).click();
   await expect(page.getByTestId("end-turn")).toBeDisabled();
   await expect(page.getByTestId("end-turn")).toBeEnabled();
+});
+
+/** A save strong enough for Ascension 10+, so Moss Warrens opens with four enemies. */
+async function seedFourEnemies(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "catacomb-cats.progress.v1",
+      JSON.stringify({
+        version: 1,
+        gold: 0,
+        xp: 1500,
+        generalLevel: 8,
+        catLevels: { miso: 8, luna: 8, pip: 8 },
+        equipment: {},
+        inventory: [],
+        claimedRuns: [],
+        expeditionWins: { catacombs: 10, warrens: 10 },
+      }),
+    );
+    localStorage.setItem("catacomb-cats.expedition", "warrens");
+  });
+}
+
+test("with four enemies every Threats label stays inside the field and apart", async ({
+  page,
+}) => {
+  await seedFourEnemies(page);
+  await page.goto("/");
+  await enterDungeon(page);
+  await previewDone(page);
+  await expect(page.locator(".enemies .combatant")).toHaveCount(4);
+  await page.getByTestId("threats-button").hover();
+  const tags = page.locator(".next-target");
+  expect(await tags.count()).toBeGreaterThanOrEqual(3);
+  const field = (await page.locator(".battlefield").boundingBox())!;
+  const boxes = await tags.evaluateAll((els) =>
+    els.map((el) => el.getBoundingClientRect().toJSON()),
+  );
+  for (const b of boxes) {
+    expect(b.left).toBeGreaterThanOrEqual(field.x);
+    expect(b.right).toBeLessThanOrEqual(field.x + field.width);
+    expect(b.bottom).toBeLessThanOrEqual(field.y + field.height);
+  }
+  for (const [i, a] of boxes.entries())
+    for (const b of boxes.slice(i + 1))
+      expect(
+        a.right <= b.left ||
+          b.right <= a.left ||
+          a.bottom <= b.top ||
+          b.bottom <= a.top,
+      ).toBe(true);
+  // The field never changes size when the threads appear.
+  await page.mouse.move(0, 0);
+  const after = (await page.locator(".battlefield").boundingBox())!;
+  expect(after.height).toBe(field.height);
+});
+
+test("the turn button stays under Shared AP and the skills fit the deck", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  const deck = (await page.locator(".actions").boundingBox())!;
+  const positions: number[] = [];
+  for (let i = 0; i < 3; i++) {
+    const counter = (await page.locator(".round-counter").boundingBox())!;
+    const turn = (await page.getByTestId("end-turn").boundingBox())!;
+    expect(turn.y).toBeGreaterThanOrEqual(counter.y + counter.height - 1);
+    expect(Math.abs(turn.x - counter.x)).toBeLessThan(2);
+    positions.push(Math.round(turn.x));
+    const skills = await page
+      .locator('.actions button[data-testid="ability"]')
+      .evaluateAll((els) =>
+        els.map((el) => el.getBoundingClientRect().toJSON()),
+      );
+    for (const b of skills) {
+      expect(b.right).toBeLessThanOrEqual(deck.x + deck.width + 1);
+      expect(b.left).toBeGreaterThanOrEqual(counter.x + counter.width);
+    }
+    for (const [j, a] of skills.entries())
+      for (const b of skills.slice(j + 1))
+        expect(
+          a.right <= b.left + 1 ||
+            b.right <= a.left + 1 ||
+            a.bottom <= b.top + 1 ||
+            b.bottom <= a.top + 1,
+        ).toBe(true);
+    await page.getByTestId("end-turn").click();
+  }
+  expect(new Set(positions).size).toBe(1);
+});
+
+test("Mei's four skills sit in one row inside the deck without clipping", async ({
+  page,
+}) => {
+  await seedLegacySave(page, { catLevels: { clover: 8, miso: 8, ember: 8 } });
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "catacomb-cats.party",
+      JSON.stringify(["clover", "ember", "miso"]),
+    ),
+  );
+  await page.goto("/");
+  await enterDungeon(page);
+  await previewDone(page);
+  await advanceToCat(page, "Mei");
+  const deck = (await page.locator(".actions").boundingBox())!;
+  const skills = page.locator('.actions button[data-testid="ability"]');
+  await expect(skills).toHaveCount(4);
+  const rows = await skills.evaluateAll((els) =>
+    els.map((el) => ({
+      ...el.getBoundingClientRect().toJSON(),
+      clipped: el.scrollHeight > el.clientHeight + 1,
+    })),
+  );
+  expect(new Set(rows.map((r) => Math.round(r.top))).size).toBe(1);
+  for (const r of rows) {
+    expect(r.clipped).toBe(false);
+    expect(r.right).toBeLessThanOrEqual(deck.x + deck.width + 1);
+  }
 });

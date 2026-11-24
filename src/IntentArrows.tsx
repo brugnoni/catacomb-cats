@@ -16,8 +16,9 @@ interface Line {
 type TagSpots = Record<string, { x: number; y: number }>;
 /** Gap between the unit cards and the first thread, and between stacked threads. */
 const BASE_GAP = 14;
-const STACK_GAP = 7;
-/** Space between a thread's floor run and the label hung under its start. */
+/** One row per thread: tall enough for its label, which hangs under the line. */
+const STACK_GAP = 28;
+/** Space between a thread's floor run and the label hung under it. */
 const TAG_GAP = 4;
 /**
  * Draws enemy intents as threads under the battlefield cards: down from the
@@ -77,7 +78,11 @@ export function IntentArrows({
       const next: Line[] = [];
       const nextSpots: TagSpots = {};
       let stack = 0;
-      for (const { enemyId, intent } of entries) {
+      // Leftmost enemy first: its label ends at its own thread and no later thread crosses it.
+      const byPosition = [...entries].sort(
+        (a, b) => (card(a.enemyId)?.x ?? 0) - (card(b.enemyId)?.x ?? 0),
+      );
+      for (const { enemyId, intent } of byPosition) {
         const from = card(enemyId);
         for (const [id, kind] of [
           [intent.targetId, intent.kind === "curse" ? "curse" : "hostile"],
