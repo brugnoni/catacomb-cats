@@ -1,6 +1,7 @@
 import { translateEngine } from "./engineText";
 import { useT } from "./i18n";
-import { ROOM_HEAL, roomReward } from "./progression";
+import { ROOM_HEAL } from "./progression";
+import { roomReward } from "./expeditions";
 import type { Run } from "./game";
 
 /** What follows a fight: the room reward, the victory or the defeat. */
@@ -25,8 +26,8 @@ export function BattleResult({
           <div className="reward-details">
             <p>
               {t("Room reward: +{gold} gold, +{xp} XP and {item}.", {
-                gold: roomReward(run.room).gold,
-                xp: roomReward(run.room).xp,
+                gold: roomReward(run.room, run.expedition).gold,
+                xp: roomReward(run.room, run.expedition).xp,
                 item: t(run.items[run.items.length - 1] ?? ""),
               })}
             </p>

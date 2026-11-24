@@ -15,6 +15,8 @@ import {
   trainingTrack,
 } from "./progression";
 
+/** Every Expedition opened: no Rank cap holds the numbers back. */
+const OPEN = { catacombs: 3, warrens: 5 };
 describe("class progression balance", () => {
   it("unlocks third training rank for exactly 100 gold with increasing later prices", () => {
     expect([0, 1, 2].reduce((sum, rank) => sum + trainingCost(rank), 0)).toBe(
@@ -58,9 +60,9 @@ describe("class progression balance", () => {
   });
   it("slows shared mastery, caps it and extends numeric skill growth to every third level", () => {
     expect(masteryLevel(135)).toBe(0);
-    expect(masteryBonuses(150)).toEqual({ hp: 2, attack: 0, power: 0 });
-    expect(masteryBonuses(450)).toEqual({ hp: 6, attack: 1, power: 1 });
-    expect(masteryBonuses(100000)).toEqual({ hp: 20, attack: 3, power: 3 });
+    expect(masteryBonuses(1)).toEqual({ hp: 2, attack: 0, power: 0 });
+    expect(masteryBonuses(3)).toEqual({ hp: 6, attack: 1, power: 1 });
+    expect(masteryBonuses(10)).toEqual({ hp: 20, attack: 3, power: 3 });
     expect(masteryLevel(-1)).toBe(0);
   });
 });
@@ -135,31 +137,32 @@ describe("explicit training tracks", () => {
 describe("ascension snapshot calculation", () => {
   it("does not punish spending before a first victory and excludes unspent gold", () => {
     const bought = { xp: 1000, generalLevel: 8, catLevels: { miso: 8 } };
-    expect(getDifficulty({ wins: 0, ...bought }).tier).toBe(0);
-    expect(getDifficulty({ wins: 1, xp: 0 }).tier).toBe(0);
+    expect(getDifficulty({ expeditionWins: {}, ...bought }).tier).toBe(0);
+    expect(getDifficulty({ expeditionWins: OPEN, xp: 0 }).tier).toBe(0);
   });
   it("follows the permanent power bought: top three cats, Hearth and mastery", () => {
-    expect(powerPoints({ wins: 1, xp: 0 })).toBe(0);
+    expect(powerPoints({ expeditionWins: OPEN, xp: 0 })).toBe(0);
     expect(
       powerPoints({
-        wins: 1,
+        expeditionWins: OPEN,
         xp: 300,
         generalLevel: 2,
         catLevels: { a: 5, b: 4, c: 3, d: 2, e: 1 },
       }),
     ).toBe(5 + 4 + 3 + 2 + 2);
     const at = (points: number) =>
-      getDifficulty({ wins: 1, xp: 0, catLevels: { a: points } }).tier;
+      getDifficulty({ expeditionWins: OPEN, xp: 0, catLevels: { a: points } })
+        .tier;
     expect(at(2)).toBe(0);
     expect(at(3)).toBe(1);
     expect(at(6)).toBe(2);
     // Gold spent or victories alone never raise the tier.
-    expect(getDifficulty({ wins: 500, xp: 0 }).tier).toBe(0);
+    expect(getDifficulty({ expeditionWins: OPEN, xp: 0 }).tier).toBe(0);
   });
   it("bounds escalation at the maximum tier", () => {
     expect(
       getDifficulty({
-        wins: 1,
+        expeditionWins: OPEN,
         xp: 99999,
         generalLevel: 8,
         catLevels: { a: 8, b: 8, c: 8 },
@@ -167,7 +170,7 @@ describe("ascension snapshot calculation", () => {
     ).toBeCloseTo(2.82, 5);
     expect(
       getDifficulty({
-        wins: 10000,
+        expeditionWins: OPEN,
         xp: 100000,
         generalLevel: 99,
         catLevels: { a: 99, b: 99, c: 99 },

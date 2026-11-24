@@ -1,3 +1,4 @@
+import { ExpeditionPicker } from "./ExpeditionPicker";
 import { Sprite } from "./Sprite";
 import { useT } from "./i18n";
 import {
@@ -10,13 +11,20 @@ import {
   type Progress,
 } from "./game";
 import {
-  MAX_MASTERY_LEVEL,
   MAX_TRAINING_RANK,
   XP_PER_MASTERY,
   getDifficulty,
-  masteryLevel,
+  masteryOf,
   powerPoints,
 } from "./progression";
+import {
+  EXPEDITIONS,
+  expeditionById,
+  masteryCap,
+  nextLockedExpedition,
+  rankCap,
+  totalWins,
+} from "./expeditions";
 import {
   difficultyDescription,
   difficultyLabel,
@@ -28,6 +36,8 @@ import {
 export function Lobby({
   progress,
   party,
+  expedition,
+  onExpedition,
   entering,
   onChoose,
   onStore,
@@ -36,6 +46,9 @@ export function Lobby({
 }: {
   progress: Progress;
   party: string[];
+  /** Id of the Expedition the next Run will enter. */
+  expedition: string;
+  onExpedition: (id: string) => void;
   /** True while the battle art loads, so the entrance is locked. */
   entering: boolean;
   onChoose: (catId: string) => void;
@@ -45,6 +58,16 @@ export function Lobby({
 }) {
   const { t } = useT();
   const difficulty = getDifficulty(progress);
+  const chosen = expeditionById(expedition);
+  const mastery = masteryOf(progress);
+  const masteryDone = mastery >= masteryCap(progress);
+  const trainCap = rankCap(progress);
+  const heldBack = nextLockedExpedition(progress);
+  /** Button text that explains the Rank cap once `rank` has reached it. */
+  const capLabel = (rank: number) =>
+    heldBack && rank >= trainCap
+      ? t("Unlock {name} to train further", { name: t(heldBack.name) })
+      : undefined;
   return (
     <>
       <section
@@ -68,9 +91,16 @@ export function Lobby({
           ))}
         </div>
         <div className="expedition-gate">
-          <span className="eyebrow">{t("EXPEDITION 01")}</span>
-          <h2>{t("The Hollow Below")}</h2>
+          <span className="eyebrow">
+            {t("EXPEDITION 0{n}", { n: EXPEDITIONS.indexOf(chosen) + 1 })}
+          </span>
+          <h2>{t(chosen.name)}</h2>
           <p>{t("3 chambers · 1 crown")}</p>
+          <ExpeditionPicker
+            progress={progress}
+            selected={expedition}
+            onSelect={onExpedition}
+          />
           <p className="difficulty-preview">
             {difficultyLabel(difficulty, t)} · {t("Threat")} {difficulty.tier}
           </p>
@@ -111,11 +141,11 @@ export function Lobby({
           <div className="xp-summary">
             <strong>
               {t("Company mastery · Rank {n}", {
-                n: masteryLevel(progress.xp),
+                n: mastery,
               })}
             </strong>
             <span>
-              {masteryLevel(progress.xp) >= MAX_MASTERY_LEVEL
+              {masteryDone
                 ? t("Mastery cap reached")
                 : t("{xp} / {max} XP to next level", {
                     xp: progress.xp % XP_PER_MASTERY,
@@ -127,9 +157,7 @@ export function Lobby({
               aria-label={t("Experience toward next level")}
               max={150}
               value={
-                masteryLevel(progress.xp) >= MAX_MASTERY_LEVEL
-                  ? XP_PER_MASTERY
-                  : progress.xp % XP_PER_MASTERY
+                masteryDone ? XP_PER_MASTERY : progress.xp % XP_PER_MASTERY
               }
             />
             <p>
@@ -245,14 +273,15 @@ export function Lobby({
                           onStore(buyUpgrade(progress, cat.id));
                         }}
                         disabled={
-                          rank >= MAX_TRAINING_RANK ||
+                          rank >= trainCap ||
                           progress.gold < upgradeCost(progress, cat.id)
                         }
                       >
-                        {t("Train {name} · {cost} gold", {
-                          name: cat.name,
-                          cost: upgradeCost(progress, cat.id),
-                        })}
+                        {capLabel(rank) ??
+                          t("Train {name} · {cost} gold", {
+                            name: cat.name,
+                            cost: upgradeCost(progress, cat.id),
+                          })}
                       </button>
                     </div>
                   </div>
@@ -285,9 +314,9 @@ export function Lobby({
             <p>{difficultyDescription(difficulty, t)}</p>
             <p>
               {t("{wins} victories · Power {points} · Mastery {level}", {
-                wins: progress.wins,
+                wins: totalWins(progress),
                 points: powerPoints(progress),
-                level: masteryLevel(progress.xp),
+                level: mastery,
               })}
             </p>
             <p>
@@ -299,15 +328,16 @@ export function Lobby({
           <button
             onClick={() => onStore(buyUpgrade(progress))}
             disabled={
-              progress.generalLevel >= MAX_TRAINING_RANK ||
+              progress.generalLevel >= trainCap ||
               progress.gold < upgradeCost(progress)
             }
           >
             {progress.generalLevel >= MAX_TRAINING_RANK
               ? t("Blessing complete")
-              : t("Improve blessing · {cost} gold", {
+              : (capLabel(progress.generalLevel) ??
+                t("Improve blessing · {cost} gold", {
                   cost: upgradeCost(progress),
-                })}
+                }))}
           </button>
           <div className="camp-rule">
             {t("Upgrades stay.")}

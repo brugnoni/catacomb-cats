@@ -1,9 +1,11 @@
 import {
   trainingBonuses,
   masteryBonuses,
+  masteryOf,
   hearthBonuses,
   trainingPassives,
 } from "../progression";
+import { EXPEDITIONS, expeditionById } from "../expeditions";
 import { isDamaging, type Progress, type Unit, type Run } from "./model";
 import { CATS, SIGNATURE_ABILITIES, REVIVE_ABILITY } from "./data";
 
@@ -40,7 +42,7 @@ export function buildCat(progress: Progress, id: string): Unit {
   if (!c) throw new Error("Unknown companion.");
   const rank = progress.catLevels[id] ?? 0;
   const growth = trainingBonuses(id, rank);
-  const mastery = masteryBonuses(progress.xp);
+  const mastery = masteryBonuses(masteryOf(progress));
   const hearth = hearthBonuses(progress.generalLevel);
   const gear = progress.equipment[id];
   const hp =
@@ -104,24 +106,16 @@ export function enemy(
   };
 }
 
-export function roomEnemies(room: number, d: Run["difficulty"]): Unit[] {
-  const team =
-    room === 0
-      ? [
-          enemy("e0", "Crypt rat", 31, 14, 8),
-          enemy("e1", "Moss slime", 38, 7, 8),
-        ]
-      : room === 1
-        ? [
-            enemy("e0", "Bone sentry", 43, 13, 9),
-            enemy("e1", "Cave bat", 31, 22, 8),
-            enemy("e2", "Spore imp", 36, 9, 8),
-          ]
-        : [
-            enemy("e0", "The Hollow King", 80, 11, 10),
-            enemy("e1", "Royal wisp", 32, 17, 8),
-            enemy("e2", "Bone squire", 40, 8, 9),
-          ];
+export function roomEnemies(
+  room: number,
+  d: Run["difficulty"],
+  expedition = EXPEDITIONS[0]!.id,
+): Unit[] {
+  const { rooms } = expeditionById(expedition);
+  const team = rooms[Math.min(room, rooms.length - 1)]!.map(
+    ([name, hp, initiative, power], i) =>
+      enemy(`e${i}`, name, hp, initiative, power),
+  );
   for (let i = 0; i < d.extraEnemies; i++)
     team.push(
       enemy(

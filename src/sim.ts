@@ -17,7 +17,8 @@ import {
   type Progress,
   type Run,
 } from "./game";
-import { EXPEDITION_REWARD } from "./progression";
+import { XP_PER_MASTERY } from "./progression";
+import { EXPEDITIONS, EXPEDITION_REWARD } from "./expeditions";
 
 /** Balance simulator: plays whole expeditions with a bot and reports what happened. */
 export type BotName = "medium" | "optimal";
@@ -192,8 +193,9 @@ export function playRun(
   party: string[],
   seed: number,
   bot: BotName,
+  expedition?: string,
 ): RunResult {
-  let run = createRun(progress, party, seed);
+  let run = createRun(progress, party, seed, { expedition });
   const rounds: number[] = [];
   const hpAtClear: number[] = [];
   let fewestAlive = 3;
@@ -239,25 +241,63 @@ export function playerAfter(wins: number, party: string[]): Progress {
     ...initialProgress(),
     gold: 30 + EXPEDITION_REWARD.gold * wins,
     xp: EXPEDITION_REWARD.xp * wins,
-    wins,
+    expeditionWins: { [EXPEDITIONS[0]!.id]: wins },
   };
   if (wins >= 1) p = { ...p, inventory: [...ITEMS] };
   party.forEach((id, i) => {
     const item = ITEMS[i]!;
     if (p.inventory.includes(item)) p = equip(p, id, item);
   });
-  for (let guard = 0; guard < 200; guard++) {
+  return spendAll(p, (q) => {
     const lowest = [...party].sort(
-      (a, b) => (p.catLevels[a] ?? 0) - (p.catLevels[b] ?? 0),
+      (a, b) => (q.catLevels[a] ?? 0) - (q.catLevels[b] ?? 0),
     )[0]!;
-    const trainRank = p.catLevels[lowest] ?? 0;
+    const trainRank = q.catLevels[lowest] ?? 0;
     const wantHearth =
-      trainRank >= 3 && p.generalLevel < Math.floor(trainRank / 2);
-    const next = wantHearth ? buyUpgrade(p) : buyUpgrade(p, lowest);
+      trainRank >= 3 && q.generalLevel < Math.floor(trainRank / 2);
+    return wantHearth ? buyUpgrade(q) : buyUpgrade(q, lowest);
+  });
+}
+
+/** Applies `buy` until it stops changing the save (nothing affordable or allowed). */
+function spendAll(p: Progress, buy: (p: Progress) => Progress): Progress {
+  for (let guard = 0; guard < 200; guard++) {
+    const next = buy(p);
     if (next === p) break;
     p = next;
   }
   return p;
+}
+
+/**
+ * A save whose training sits at the Rank cap of Expedition `capIndex`, with
+ * Expedition `playIndex` (default the same) just unlocked. Used to measure
+ * how hard an Expedition is for a party that has bought everything it allows.
+ */
+export function playerAtCap(
+  capIndex: number,
+  party: string[],
+  playIndex = capIndex,
+): Progress {
+  const unlocking = (index: number) => {
+    const wins: Record<string, number> = {};
+    for (const e of EXPEDITIONS.slice(0, index + 1))
+      if (e.unlock) wins[e.unlock.from] = e.unlock.wins;
+    return wins;
+  };
+  const cap = EXPEDITIONS[capIndex]!;
+  let p: Progress = {
+    ...initialProgress(),
+    gold: 1000000,
+    xp: cap.masteryCap * XP_PER_MASTERY,
+    expeditionWins: unlocking(capIndex),
+    inventory: [...ITEMS],
+  };
+  party.forEach((id, i) => (p = equip(p, id, ITEMS[i]!)));
+  p = spendAll(p, (q) =>
+    [...party, undefined].reduce<Progress>((r, id) => buyUpgrade(r, id), q),
+  );
+  return { ...p, expeditionWins: unlocking(playIndex) };
 }
 
 export interface Summary {

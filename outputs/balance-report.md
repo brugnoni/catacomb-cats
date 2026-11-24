@@ -76,3 +76,19 @@ Medium bot, 16 seeds, 10 teams, stages 0 / 3 / 6 / 10:
 | **13% (kept)**             | **85 / 89 / 96 / 86%**             | Miso + Pip + Ember 77%, Miso + Pip + Clover 80%     |
 
 Per-team averages now range 77-99% (Luna teams 85-99%, Miso + Clover + Ember 99%). Lifesteal lifted the healer-less teams without making them better than the healer teams. Remaining gap: at tier 11+ Miso + Pip + Clover and Miso + Pip + Ember fall to about 38%. Not tuned further.
+
+## Expeditions and Rank caps
+
+Each Expedition is tuned for a party at its own Rank cap (`playerAtCap` in `src/sim.ts`): training and Hearth at the cap, mastery at its cap, all trinkets, the three reference teams (Miso + Luna + Clover, Luna + Pip + Clover, Miso + Pip + Ember), 16 seeds, medium bot. Cap Power is 20, 31 and 42.
+
+| Party at the cap of | Plays         | Ascension | Win rate | Per team    |
+| ------------------- | ------------- | --------- | -------- | ----------- |
+| The Catacombs       | The Catacombs | 6         | 100%     | 100/100/100 |
+| Moss Warrens        | Moss Warrens  | 10        | 58%      | 94/81/0     |
+| Bone Vault          | Bone Vault    | 14        | 60%      | 100/81/0    |
+| The Catacombs       | Moss Warrens  | 6         | 71%      | 100/100/13  |
+| Moss Warrens        | Bone Vault    | 10        | 52%      | 56/100/0    |
+
+Enemy stats of the two new Expeditions were tuned by scaling their base teams until the capped rows landed between 50% and 70% (tested in `src/balance.test.ts`). The Ascension formula was not touched.
+
+**Known gap:** the target "under 30% with the previous cap" is not met. Ascension follows Power, so a party at the previous cap meets proportionally weaker enemies; going up a cap also crosses the tier 10 reinforcement and costs as much as it gives. The Rank cap, not enemy strength, is what stops farming The Catacombs to the maximum. The team without a healer (Miso + Pip + Ember) loses almost every Moss Warrens boss fight and Bone Vault run.

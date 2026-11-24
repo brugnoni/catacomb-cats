@@ -18,7 +18,7 @@ Un equipo de gatos explora una mazmorra por turnos, obtiene tesoros y vuelve a s
 
 Hay cinco gatos y se eligen tres: Miso (Vanguard), Luna (Mystic), Pip (Scout), Mei (Healer) y Ember (Brawler). **Mei conserva el ID interno `clover`** para no romper entrenamiento, equipo ni guardados anteriores. No renombrar ese ID solo para hacer coincidir el nombre visible.
 
-El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La primera sala tiene dos enemigos, la segunda tres y la última al Hollow King con dos acompañantes. Ascension puede añadir refuerzos. Todavía no existe un selector de expediciones ni más contenido que esas tres salas.
+El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La primera sala tiene dos enemigos, la segunda tres y la última al Hollow King con dos acompañantes. Ascension puede añadir refuerzos. Eso describe The Catacombs; hay dos Expediciones más y un selector (ver "Expediciones").
 
 ## Reglas de combate que deben conservarse
 
@@ -159,12 +159,19 @@ Los escenarios y atlas son recursos raster de estilo pixel generados, inspeccion
 
 El balance está documentado en `outputs/balance-report.md`, con simulaciones reproducibles mediante `src/balance.test.ts`. Esas políticas prueban ejemplos concretos, no una tasa universal de victoria ni la dificultad justa de todas las combinaciones. Las resurrecciones y nuevas mejoras hicieron el juego más permisivo; no se retocaron enemigos solo para ocultarlo.
 
-## Siguiente trabajo solicitado, aún no implementado
+## Expediciones (implementado)
 
-1. Explorar más salas y varias expediciones.
-2. Permitir elegir expedición mediante un selector/botón en el lobby.
-3. Mostrar dificultad, parámetros y objetivos de cada expedición antes de entrar.
-4. Diseñar desbloqueos por objetivos/progreso, con equilibrio entre crecimiento y desafío.
-5. Seguir probando balance con partidas humanas y combinaciones distintas; evitar volver a mejoras genéricas sin propósito para cada clase.
+Vocabulario en `GLOSSARY.md`; decisión del tope de rango en `docs/adr/0001-rank-cap-per-expedition.md`.
 
-No empezar esta ampliación durante el cierre/traslado. Retomarla cuando el usuario pida continuar.
+- **Tres Expediciones de tres salas** (`EXPEDITIONS` en `src/expeditions.ts`, que también tiene salas, desbloqueo, topes y recompensas): The Catacombs (la ruta original), Moss Warrens y Bone Vault. Las dos nuevas reutilizan sprites y tipos de enemigo con stats propios. Se elige en el lobby (`ExpeditionPicker.tsx`, recordada en `catacomb-cats.expedition`); `createRun(..., { expedition })` rechaza ids desconocidos o bloqueados.
+- **Desbloqueo:** Moss Warrens tras 3 victorias en The Catacombs; Bone Vault tras 5 en Moss Warrens. `Progress.expeditionWins` cuenta victorias por Expedición y es la única fuente (`totalWins()` las suma; el campo antiguo `wins` solo se lee al migrar: sus victorias pasan a The Catacombs).
+- **Tope de rango:** entrenamiento y Hogar hasta 4/6/8 y maestría hasta 4/7/10 según la Expedición más alta abierta. Los rangos ya comprados por encima se conservan; el oro y la XP sobrantes se guardan. La maestría efectiva (y por tanto el Poder) sí se limita al tope, así que una partida con mucha XP vuelve a su nivel topado hasta abrir la siguiente Expedición.
+- **Recompensas:** x1, x1,5 y x2 por sala; repetir nunca paga menos.
+- **Ascension:** global y sin cambios; sin piso por Expedición. El selector muestra un Poder recomendado (31 y 42 para las nuevas; es el Poder en el tope de la Expedición anterior y de la propia) como aviso, nunca bloqueo.
+- **Balance medido** (`playerAtCap` en `src/sim.ts`, test en `src/balance.test.ts`, bot medio, tres grupos, 16 semillas): en el tope de su Expedición el grupo gana ≈58% en Moss Warrens y ≈60% en Bone Vault. **Límite conocido:** no se cumple "menos de 30% con el tope de la Expedición anterior" (≈71% y ≈52%), porque Ascension sube con el Poder y compensa; el salto de tier 10 añade un enemigo extra. The Catacombs en su tope (tier 6) se gana ~100%: es la Expedición de arranque.
+
+## Siguiente trabajo
+
+1. Probar balance con partidas humanas y combinaciones distintas (el grupo sin sanador pierde casi siempre en Bone Vault).
+2. Revisar si hace falta endurecer el salto entre Expediciones (ver límite conocido arriba) sin tocar la fórmula de Ascension.
+3. Sprites y fondos propios para Moss Warrens y Bone Vault; más salas por Expedición; objetivos opcionales de desbloqueo.

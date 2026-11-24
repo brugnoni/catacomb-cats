@@ -1987,3 +1987,35 @@ hr {
     animation: none;
   }
 }
+.expedition-picker {
+  margin: 10px 0;
+}
+.expedition-picker summary {
+  cursor: pointer;
+  color: #e8bb63;
+}
+.expedition-picker ul {
+  display: grid;
+  gap: 6px;
+  max-height: 260px;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.expedition-picker li button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  font-size: 16px;
+}
+.expedition-picker li button[aria-pressed="true"] {
+  border-color: #e8bb63;
+}
+.expedition-picker .power-warning {
+  color: #e07a6a;
+}
+.expedition-picker .locked-note {
+  color: #a99d86;
+}

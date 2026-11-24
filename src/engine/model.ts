@@ -55,7 +55,8 @@ export interface Progress {
   equipment: Record<string, string>;
   inventory: string[];
   claimedRuns: string[];
-  wins: number;
+  /** Victories per Expedition id; unlocks and rank caps read this. */
+  expeditionWins: Record<string, number>;
   spentGold: number;
 }
 
@@ -120,6 +121,8 @@ export interface Run {
   ap: number;
   maxAp: number;
   room: number;
+  /** Id of the Expedition this Run belongs to. */
+  expedition: string;
   status: "combat" | "reward" | "victory" | "defeat";
   log: string[];
   gold: number;
@@ -147,6 +150,8 @@ export interface Run {
 export interface RunOptions {
   /** "off" (default) disables critical hits; "on" uses the base chance plus Hearth; a number fixes the chance. */
   crit?: "off" | "on" | number;
+  /** Expedition id; defaults to the first one. */
+  expedition?: string;
 }
 
 export interface DamagePreview {

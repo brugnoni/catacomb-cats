@@ -1,4 +1,5 @@
-import { trainingCost, MAX_TRAINING_RANK } from "../progression";
+import { trainingCost } from "../progression";
+import { EXPEDITIONS, rankCap } from "../expeditions";
 import { type Progress, type Run } from "./model";
 import { CATS, ITEMS, initialProgress } from "./data";
 
@@ -11,7 +12,10 @@ export function claimRewards(progress: Progress, run: Run): Progress {
     gold: progress.gold + run.gold,
     xp: progress.xp + run.xp,
     inventory: [...new Set([...progress.inventory, ...run.items])],
-    wins: progress.wins + 1,
+    expeditionWins: {
+      ...progress.expeditionWins,
+      [run.expedition]: (progress.expeditionWins[run.expedition] ?? 0) + 1,
+    },
   };
 }
 
@@ -24,7 +28,7 @@ export function upgradeCost(progress: Progress, catId?: string): number {
 export function buyUpgrade(progress: Progress, catId?: string): Progress {
   if (catId && !CATS.some((c) => c.id === catId)) return progress;
   const rank = catId ? (progress.catLevels[catId] ?? 0) : progress.generalLevel;
-  if (rank >= MAX_TRAINING_RANK) return progress;
+  if (rank >= rankCap(progress)) return progress;
   const cost = upgradeCost(progress, catId);
   if (progress.gold < cost) return progress;
   return {
@@ -60,7 +64,8 @@ export function parseProgress(raw: string | null): Progress {
   try {
     const parsed: unknown = JSON.parse(raw ?? "null");
     if (!parsed || typeof parsed !== "object") return initialProgress();
-    const x = parsed as Progress;
+    // `wins` is the field older saves used before victories were counted per Expedition.
+    const x = parsed as Progress & { wins?: number };
     const num = (n: unknown) =>
       typeof n === "number" &&
       Number.isSafeInteger(n) &&
@@ -93,6 +98,14 @@ export function parseProgress(raw: string | null): Progress {
       new Set(Object.values(x.equipment)).size !==
         Object.values(x.equipment).length ||
       (x.wins !== undefined && !num(x.wins)) ||
+      (x.expeditionWins !== undefined &&
+        (!x.expeditionWins ||
+          typeof x.expeditionWins !== "object" ||
+          Array.isArray(x.expeditionWins) ||
+          // Ids from a newer build are ignored below, not a reason to reset the save.
+          Object.entries(x.expeditionWins).some(
+            ([id, n]) => EXPEDITIONS.some((e) => e.id === id) && !num(n),
+          ))) ||
       (x.spentGold !== undefined && !num(x.spentGold))
     )
       return initialProgress();
@@ -112,7 +125,14 @@ export function parseProgress(raw: string | null): Progress {
       equipment: { ...x.equipment },
       inventory: [...new Set(x.inventory)],
       claimedRuns: [...x.claimedRuns],
-      wins: x.wins ?? x.claimedRuns.length,
+      // Older saves had one route: their victories belong to the first Expedition.
+      expeditionWins: Object.fromEntries(
+        Object.entries(
+          x.expeditionWins ?? {
+            [EXPEDITIONS[0]!.id]: x.wins ?? x.claimedRuns.length,
+          },
+        ).filter(([id]) => EXPEDITIONS.some((e) => e.id === id)),
+      ),
       spentGold: x.spentGold ?? Math.min(1000000, legacySpend),
     };
   } catch {

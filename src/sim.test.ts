@@ -42,7 +42,7 @@ describe("simulator", () => {
   });
   it("builds a plausible save after some wins", () => {
     const p = playerAfter(3, ["miso", "luna", "clover"]);
-    expect(p.wins).toBe(3);
+    expect(p.expeditionWins).toEqual({ catacombs: 3 });
     expect(Object.values(p.catLevels).some((r) => r > 0)).toBe(true);
     expect(p.gold).toBeGreaterThanOrEqual(0);
   });

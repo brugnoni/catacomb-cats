@@ -13,8 +13,24 @@ export const UI: Record<string, string> = {
   "Pack light. Stay together.": "Viaja ligero. Manteneos juntos.",
   "Selected expedition companions":
     "Compañeros seleccionados para la expedición",
-  "EXPEDITION 01": "EXPEDICIÓN 01",
+  "EXPEDITION 0{n}": "EXPEDICIÓN 0{n}",
   "The Hollow Below": "El Hueco Subterráneo",
+  "Choose expedition": "Elegir expedición",
+  "The Catacombs": "Las Catacumbas",
+  "Moss Warrens": "Las Madrigueras de Musgo",
+  "Bone Vault": "La Cripta de Huesos",
+  "Rats, slimes and a hollow king.": "Ratas, limos y un rey hueco.",
+  "Slimes, imps and bats led by a royal wisp.":
+    "Limos, duendes y murciélagos liderados por una voluta real.",
+  "Sentries and squires guarding a bone captain.":
+    "Centinelas y escuderos que custodian a un capitán de huesos.",
+  "3 chambers · {gold} gold · {xp} XP": "3 cámaras · {gold} de oro · {xp} XP",
+  "Locked · win {name} {need} times ({have}/{need})":
+    "Bloqueada · gana {name} {need} veces ({have}/{need})",
+  "Recommended Power {n}, you have {have}":
+    "Poder recomendado {n}, tienes {have}",
+  "Recommended Power {n}": "Poder recomendado {n}",
+  "Unlock {name} to train further": "Desbloquea {name} para entrenar más",
   "3 chambers · 1 crown": "3 cámaras · 1 corona",
   Threat: "Amenaza",
   "First descent": "Primer descenso",

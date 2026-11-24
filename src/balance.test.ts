@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { initialProgress, type Progress } from "./game";
 import { getDifficulty } from "./progression";
-import { playRun, playerAfter, summarize } from "./sim";
+import { playRun, playerAfter, playerAtCap, summarize } from "./sim";
+import { EXPEDITIONS } from "./expeditions";
 
 /** Win rate of the medium bot over several seeds; fully deterministic. */
 function winRate(progress: Progress, team: string[], seeds = 12) {
@@ -57,7 +58,7 @@ describe("balance targets (medium bot)", () => {
     const progress: Progress = {
       ...initialProgress(),
       xp: 1500,
-      wins: 20,
+      expeditionWins: { catacombs: 3, warrens: 5 },
       generalLevel: 8,
       catLevels: { miso: 8, luna: 8, clover: 8, ember: 8, pip: 8 },
       equipment: {
@@ -76,4 +77,26 @@ describe("balance targets (medium bot)", () => {
     expect(won.won).toBe(true);
     expect(won.rounds).toHaveLength(3);
   });
+});
+
+/**
+ * Each Expedition is tuned for a party at its own Rank cap. Ascension follows
+ * Power, so the same party also faces tougher enemies after it trains: a party
+ * at the previous cap is not reliably weaker in the next Expedition.
+ */
+describe("expedition balance (capped party, medium bot)", () => {
+  it.each([1, 2])(
+    "a party at the cap wins half to two thirds of Expedition %i",
+    (index) => {
+      const rates = TEAMS.map((team) => {
+        const progress = playerAtCap(index, team);
+        const runs = Array.from({ length: 16 }, (_, i) =>
+          playRun(progress, team, i + 1, "medium", EXPEDITIONS[index]!.id),
+        );
+        return summarize(runs).winRate;
+      });
+      expect(average(rates)).toBeGreaterThanOrEqual(0.5);
+      expect(average(rates)).toBeLessThanOrEqual(0.7);
+    },
+  );
 });

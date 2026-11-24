@@ -7,8 +7,10 @@ import { Lobby } from "./Lobby";
 import { Battle } from "./Battle";
 import { useTutorial } from "./useTutorial";
 import {
+  EXPEDITION_KEY,
   PARTY_KEY,
   SAVE_KEY,
+  loadExpedition,
   loadParty,
   loadProgress,
   runCrit,
@@ -16,6 +18,8 @@ import {
 } from "./storage";
 import { TutorialCoach, TutorialOffer } from "./Tutorial";
 import { preloadArt } from "./preload";
+
+import { playableExpedition } from "./expeditions";
 
 import {
   LangContext,
@@ -60,6 +64,16 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
       /* The party simply is not remembered. */
     }
   }, [party]);
+  const [expedition, setExpedition] = useState(loadExpedition);
+  useEffect(() => {
+    try {
+      localStorage.setItem(EXPEDITION_KEY, expedition);
+    } catch {
+      /* The Expedition simply is not remembered. */
+    }
+  }, [expedition]);
+  // A saved choice that is locked (for example after a save reset) falls back to the first Expedition.
+  const open = playableExpedition(progress, expedition).id;
   const [run, setRun] = useState<Run | null>(null);
   const [notice, setNotice] = useState("");
   const [showFaq, setShowFaq] = useState(false);
@@ -189,6 +203,8 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
           <Lobby
             progress={progress}
             party={party}
+            expedition={open}
+            onExpedition={setExpedition}
             entering={entering}
             onChoose={choose}
             onStore={storeProgress}
@@ -196,7 +212,10 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
             onEnter={() => {
               setNotice("");
               void startRun(() =>
-                createRun(progress, party, runSeed(), { crit: runCrit() }),
+                createRun(progress, party, runSeed(), {
+                  crit: runCrit(),
+                  expedition: open,
+                }),
               );
             }}
           />

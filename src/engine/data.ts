@@ -184,7 +184,7 @@ export function initialProgress(): Progress {
     equipment: {},
     inventory: [ITEMS[0]!],
     claimedRuns: [],
-    wins: 0,
+    expeditionWins: {},
     spentGold: 0,
   };
 }

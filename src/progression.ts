@@ -1,3 +1,4 @@
+import { masteryCap, totalWins } from "./expeditions";
 /** Shared balance rules. Keep UI explanations and engine calculations on these values. */
 export const MAX_TRAINING_RANK = 8;
 export const MAX_MASTERY_LEVEL = 10;
@@ -458,12 +459,16 @@ export function nextHearthDescription(rank: number): string {
 export function masteryLevel(xp: number): number {
   return Math.min(MAX_MASTERY_LEVEL, Math.floor(whole(xp) / XP_PER_MASTERY));
 }
-export function masteryBonuses(xp: number): {
+/** The mastery level in effect: the XP level, held down by the Rank cap. */
+export const masteryOf = (progress: {
+  xp: number;
+  expeditionWins: Record<string, number>;
+}) => Math.min(masteryLevel(progress.xp), masteryCap(progress));
+export function masteryBonuses(level: number): {
   hp: number;
   power: number;
   attack: number;
 } {
-  const level = masteryLevel(xp);
   const power = Math.floor(level / 3);
   // `attack` remains an alias for existing callers; never add it to `power`.
   return { hp: level * 2, power, attack: power };
@@ -477,7 +482,7 @@ export function nextTrainingDescription(catId: string, rank: number): string {
     : "No training available.";
 }
 export interface DifficultyProgress {
-  wins: number;
+  expeditionWins: Record<string, number>;
   xp: number;
   generalLevel?: number;
   catLevels?: Record<string, number>;
@@ -495,7 +500,7 @@ export function powerPoints(progress: DifficultyProgress): number {
   return (
     top3 +
     Math.min(MAX_TRAINING_RANK, whole(progress.generalLevel ?? 0)) +
-    masteryLevel(progress.xp)
+    masteryOf(progress)
   );
 }
 export interface Difficulty {
@@ -520,16 +525,6 @@ export const DIFFICULTY_TUNING = {
   reinforcementTiers: [10] as const,
   armorEveryTiers: 8,
 };
-/** Loot for clearing a room (0-2). Banked only after the boss falls and the player returns to the lobby. */
-export const ROOM_REWARD = { gold: [40, 60, 80], xp: [30, 45, 60] } as const;
-export const roomReward = (room: number) => ({
-  gold: ROOM_REWARD.gold[room] ?? 0,
-  xp: ROOM_REWARD.xp[room] ?? 0,
-});
-export const EXPEDITION_REWARD = {
-  gold: ROOM_REWARD.gold.reduce((a, b) => a + b, 0),
-  xp: ROOM_REWARD.xp.reduce((a, b) => a + b, 0),
-};
 /** Chance in percent that any hit misses; only when luck is on. */
 export const MISS_CHANCE = 5;
 /** Fast units dodge: one percent per initiative point above 12, at most 12. */
@@ -553,9 +548,8 @@ export function tierFacts(tier: number) {
 }
 /** No hidden scaling from unspent gold. Snapshot this once when a run begins. */
 export function getDifficulty(progress: DifficultyProgress): Difficulty {
-  const wins = whole(progress.wins);
   const tier =
-    wins === 0
+    totalWins(progress) === 0
       ? 0
       : Math.min(
           DIFFICULTY_TUNING.maxTier,

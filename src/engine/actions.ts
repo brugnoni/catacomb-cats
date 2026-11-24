@@ -6,6 +6,11 @@ import {
   CRIT_MULTIPLIER,
 } from "../progression";
 import {
+  EXPEDITIONS,
+  expeditionById,
+  expeditionUnlocked,
+} from "../expeditions";
+import {
   isDamaging,
   LINE_FALLOFF,
   type Ability,
@@ -52,6 +57,9 @@ export function createRun(
     party.some((id) => !CATS.some((c) => c.id === id))
   )
     throw new Error("Choose three different cats.");
+  const chosen = expeditionById(options.expedition ?? EXPEDITIONS[0]!.id);
+  if (!expeditionUnlocked(progress, chosen))
+    throw new Error("That expedition is still locked.");
   const difficulty = getDifficulty(progress);
   const hearth = hearthBonuses(progress.generalLevel);
   const crit = options.crit ?? "off";
@@ -71,13 +79,14 @@ export function createRun(
     events: [],
     eventId: 0,
     party: party.map((id) => buildCat(progress, id)),
-    enemies: roomEnemies(0, difficulty),
+    enemies: roomEnemies(0, difficulty, chosen.id),
     order: [],
     turn: 0,
     round: 1,
     ap: 6 + hearth.openingAp,
     maxAp: 6,
     room: 0,
+    expedition: chosen.id,
     status: "combat",
     log: [`The descent begins. ${difficulty.label}.`],
     gold: 0,
@@ -226,7 +235,7 @@ export function nextRoom(state: Run): Run {
   run.events = [];
   run.eventId++;
   run.room++;
-  run.enemies = roomEnemies(run.room, run.difficulty);
+  run.enemies = roomEnemies(run.room, run.difficulty, run.expedition);
   run.round = 1;
   run.maxAp = 6;
   run.ap = 6 + run.hearthAp;

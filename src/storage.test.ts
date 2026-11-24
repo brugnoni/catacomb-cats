@@ -48,8 +48,15 @@ describe("saved progress", () => {
   it("loads a valid save", () => {
     memory.set(
       SAVE_KEY,
-      JSON.stringify({ ...initialProgress(), gold: 77, wins: 2 }),
+      JSON.stringify({
+        ...initialProgress(),
+        gold: 77,
+        expeditionWins: { catacombs: 2 },
+      }),
     );
-    expect(loadProgress()).toMatchObject({ gold: 77, wins: 2 });
+    expect(loadProgress()).toMatchObject({
+      gold: 77,
+      expeditionWins: { catacombs: 2 },
+    });
   });
 });

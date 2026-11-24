@@ -99,6 +99,8 @@ const SAME = new Set([
   "{1}",
 ]);
 
+/** Every Expedition opened: no Rank cap holds the numbers back. */
+const OPEN = { catacombs: 3, warrens: 5 };
 describe("Spanish dictionary", () => {
   it("covers every literal t(...) key used in the interface", () => {
     const missing = [...literalKeys()].filter(([key]) => !(key in ES));
@@ -139,7 +141,7 @@ describe("Spanish dictionary", () => {
     const names = new Set<string>();
     const progress: Progress = {
       ...initialProgress(),
-      wins: 12,
+      expeditionWins: OPEN,
       spentGold: 3000,
       xp: 1500,
     };
@@ -175,7 +177,7 @@ describe("translated helpers match the English rules text", () => {
   it("builds the same English difficulty text as the engine", () => {
     for (let wins = 0; wins <= 14; wins++) {
       const d = getDifficulty({
-        wins,
+        expeditionWins: wins === 0 ? {} : OPEN,
         xp: wins * 90,
         generalLevel: Math.min(8, wins),
         catLevels: { miso: Math.min(8, wins), pip: Math.min(8, wins) },
@@ -194,7 +196,11 @@ describe("translated helpers match the English rules text", () => {
       expect(nextHearthText(rank, identityT)).toBe(nextHearthDescription(rank));
   });
   it("renders Spanish for the lobby helpers", () => {
-    const d = getDifficulty({ wins: 3, xp: 0, catLevels: { miso: 8, pip: 1 } });
+    const d = getDifficulty({
+      expeditionWins: OPEN,
+      xp: 0,
+      catLevels: { miso: 8, pip: 1 },
+    });
     expect(difficultyLabel(d, es)).toBe("Ascensión 3");
     expect(nextTrainingText("miso", 0, es)).toBe(
       "Siguiente rango 1 · Patas robustas: +3 PV máx.",
@@ -212,7 +218,7 @@ function collectEngineText(): Set<string> {
     ...initialProgress(),
     generalLevel: 8,
     catLevels: { miso: 8, luna: 8, clover: 8, pip: 8, ember: 8 },
-    wins: 6,
+    expeditionWins: OPEN,
     spentGold: 1200,
     xp: 900,
   };

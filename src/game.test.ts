@@ -26,12 +26,8 @@ import {
   type Progress,
   type Run,
 } from "./game";
-import {
-  EXPEDITION_REWARD,
-  GUARD_TURNS,
-  ROOM_HEAL,
-  evadeChance,
-} from "./progression";
+import { GUARD_TURNS, ROOM_HEAL, evadeChance } from "./progression";
+import { EXPEDITION_REWARD } from "./expeditions";
 /** Healing a surviving cat gets when a room is cleared. */
 const roomHeal = (maxHp: number) =>
   Math.max(ROOM_HEAL.flat, Math.ceil((maxHp * ROOM_HEAL.percent) / 100));
@@ -144,7 +140,7 @@ describe("basic expedition and lobby regression", () => {
     const p = claimRewards(initialProgress(), r);
     expect(p.gold).toBe(30 + EXPEDITION_REWARD.gold);
     expect(p.xp).toBe(135);
-    expect(p.wins).toBe(1);
+    expect(p.expeditionWins).toEqual({ catacombs: 1 });
     expect(claimRewards(p, r)).toBe(p);
   });
   it("unequips same cat and preserves inventory through persistence", () => {
@@ -192,14 +188,20 @@ describe("training, migration and increasing challenge", () => {
     expect(c.maxHp).toBe(35);
     expect(c.abilities[0]!.power).toBe(5);
     expect(c.abilities[1]!.power).toBe(8);
-    expect(buildCat({ ...p, xp: 100000 }, "clover").maxHp).toBe(49);
+    expect(
+      buildCat(
+        { ...p, xp: 100000, expeditionWins: { catacombs: 3, warrens: 5 } },
+        "clover",
+      ).maxHp,
+    ).toBe(49);
+    expect(buildCat({ ...p, xp: 100000 }, "clover").maxHp).toBe(37);
   });
   it("difficulty increases after a win using investment and mastery but unspentgold does not matter", () => {
     const p = initialProgress();
     const first = createRun({ ...p, gold: 9999 }, ["pip", "miso", "clover"]);
     expect(first.difficulty.tier).toBe(0);
     const trained = {
-      wins: 2,
+      expeditionWins: { catacombs: 2 },
       xp: 600,
       generalLevel: 8,
       catLevels: { miso: 8, pip: 8, clover: 8 },
@@ -223,12 +225,12 @@ describe("training, migration and increasing challenge", () => {
       catLevels: { miso: 12 },
       claimedRuns: ["legacy-victory"],
     };
-    delete p.wins;
+    delete p.expeditionWins;
     delete p.spentGold;
     const q = parseProgress(JSON.stringify(p));
     expect(q.gold).toBe(77);
     expect(q.catLevels.miso).toBe(12);
-    expect(q.wins).toBe(1);
+    expect(q.expeditionWins).toEqual({ catacombs: 1 });
     expect(q.spentGold).toBe(1560);
     expect(buildCat(q, "miso").maxHp).toBe(56);
     expect(parseProgress(JSON.stringify({ ...q, wins: -1 }))).toEqual(

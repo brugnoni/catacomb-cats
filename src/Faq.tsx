@@ -14,9 +14,7 @@ import {
   MISS_CHANCE,
   evadeChance,
   DIFFICULTY_TUNING,
-  EXPEDITION_REWARD,
   ROOM_HEAL,
-  roomReward,
   tierFacts,
   HEARTH_TRACK,
   MAX_TRAINING_RANK,
@@ -24,6 +22,7 @@ import {
   trainingTrack,
   trainingCost,
 } from "./progression";
+import { EXPEDITIONS, EXPEDITION_REWARD, roomReward } from "./expeditions";
 function buildEntries(t: Translate): [string, string][] {
   return [
     [
@@ -222,9 +221,25 @@ function buildEntries(t: Translate): [string, string][] {
       ),
     ],
     [
-      t("Will there be more expeditions?"),
+      t("How do expeditions, unlocks and rank caps work?"),
       t(
-        "More rooms, selectable expeditions and objective-based unlocks are planned for a later iteration. For now The Hollow Below remains a three-room expedition with repeat-clear difficulty. No additional expedition is currently selectable or unlockable.",
+        "There are {n} expeditions of three rooms each; pick one in the camp before you enter. After {w1} victories in {a}, {b} opens, and after {w2} victories in {b}, {c} opens. Later expeditions pay more (x{m1} and x{m2}) and are tuned for a stronger party: the list shows a recommended Power, and a warning if yours is lower, but you may always try. Training, Hearth blessings and mastery can only grow up to the cap of the highest expedition you have opened: ranks {c1}, {c2} and {c3}, and mastery levels {k1}, {k2} and {k3}. Extra gold and XP stay banked. Ascension still follows your Power in every expedition.",
+        {
+          n: EXPEDITIONS.length,
+          a: t(EXPEDITIONS[0]!.name),
+          b: t(EXPEDITIONS[1]!.name),
+          c: t(EXPEDITIONS[2]!.name),
+          w1: EXPEDITIONS[1]!.unlock!.wins,
+          w2: EXPEDITIONS[2]!.unlock!.wins,
+          m1: EXPEDITIONS[1]!.rewardMultiplier,
+          m2: EXPEDITIONS[2]!.rewardMultiplier,
+          c1: EXPEDITIONS[0]!.rankCap,
+          c2: EXPEDITIONS[1]!.rankCap,
+          c3: EXPEDITIONS[2]!.rankCap,
+          k1: EXPEDITIONS[0]!.masteryCap,
+          k2: EXPEDITIONS[1]!.masteryCap,
+          k3: EXPEDITIONS[2]!.masteryCap,
+        },
       ),
     ],
     [

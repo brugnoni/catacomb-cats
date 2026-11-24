@@ -3,8 +3,8 @@ import {
   MISS_CHANCE,
   ROOM_HEAL,
   evadeChance,
-  roomReward,
 } from "../progression";
+import { roomReward } from "../expeditions";
 import { type Unit, type Run } from "./model";
 import { ITEMS } from "./data";
 
@@ -147,7 +147,7 @@ export function check(run: Run): boolean {
     return true;
   }
   if (run.enemies.every((u) => u.hp <= 0)) {
-    const reward = roomReward(run.room);
+    const reward = roomReward(run.room, run.expedition);
     run.gold += reward.gold;
     run.xp += reward.xp;
     run.status = run.room === 2 ? "victory" : "reward";

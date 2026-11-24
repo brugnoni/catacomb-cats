@@ -1,5 +1,7 @@
 import { CATS, initialProgress, parseProgress, type Progress } from "./game";
 
+import { EXPEDITIONS } from "./expeditions";
+
 declare global {
   interface Window {
     /** Optional fixed seed so browser tests get reproducible enemy marks. */
@@ -13,6 +15,17 @@ export const runSeed = () =>
 export const runCrit = () => window.__CATACOMB_CRIT__ ?? "on";
 export const SAVE_KEY = "catacomb-cats.progress.v1";
 export const PARTY_KEY = "catacomb-cats.party";
+export const EXPEDITION_KEY = "catacomb-cats.expedition";
+/** The last chosen Expedition, or the first when nothing valid was saved. */
+export function loadExpedition(): string {
+  try {
+    const id = localStorage.getItem(EXPEDITION_KEY);
+    if (EXPEDITIONS.some((e) => e.id === id)) return id!;
+  } catch {
+    /* Fall back to the first Expedition. */
+  }
+  return EXPEDITIONS[0]!.id;
+}
 const defaultParty = () => CATS.slice(0, 3).map((cat) => cat.id);
 /** The last chosen party, or the default when nothing valid was saved. */
 export function loadParty(): string[] {
