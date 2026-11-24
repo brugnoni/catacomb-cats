@@ -443,14 +443,15 @@ hr {
   gap: 10px;
   align-items: end;
   justify-content: center;
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
 }
 .combatant {
   text-align: center;
   box-sizing: border-box;
-  /* Every card has the same size; effects and outlines stay inside it. */
-  width: 140px;
-  flex: none;
+  /* Cards share one size and shrink together when a side holds four fighters. */
+  flex: 0 1 140px;
+  min-width: 0;
   position: relative;
   padding: 5px;
   background: #101723bb;
@@ -522,8 +523,12 @@ hr {
   font-size: 18px;
 }
 .combatant .sprite {
-  width: 105px;
-  height: 105px;
+  display: block;
+  width: 100%;
+  max-width: 105px;
+  height: auto;
+  aspect-ratio: 1;
+  margin-inline: auto;
 }
 .combatant .muted {
   font-size: 15px;
@@ -667,14 +672,13 @@ hr {
     grid-template-columns: minmax(0, 1fr) 200px;
   }
   .combatant .sprite {
-    width: 80px;
-    height: 80px;
+    max-width: 80px;
   }
   .battle-team {
     gap: 5px;
   }
   .combatant {
-    width: 100px;
+    flex-basis: 100px;
   }
   .top-meta {
     gap: 14px;
@@ -769,6 +773,7 @@ hr {
   box-shadow: none;
   padding: 0;
   display: block;
+  width: 100%;
   margin: auto;
 }
 .unit-target:hover:not(:disabled) {
