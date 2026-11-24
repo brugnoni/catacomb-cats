@@ -16,5 +16,10 @@ for f in data:
         if not keep: return ''
         return 'import { ' + ', '.join(keep) + ' } from ' + match.group(2) + ';'
     s = re.sub(r'import \{([^}]*)\} from ("[^"]+");', fix, s)
+    def fix_destructure(match):
+        items = [x.strip() for x in match.group(1).split(',') if x.strip()]
+        keep = [x for x in items if x not in names]
+        return 'const { ' + ', '.join(keep) + ' } = ' + match.group(2)
+    s = re.sub(r'const \{([^}]*)\} = (use\w+\()', fix_destructure, s)
     open(f['filePath'], 'w', encoding='utf-8').write(s)
     print(sorted(names))
