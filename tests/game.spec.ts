@@ -776,7 +776,7 @@ test("hovering an enemy shows its marked cat and what it will do next", async ({
   );
   await expect(page.locator(".intent-line.hostile")).toHaveCount(1);
   await expect(page.locator(".combatant.marked")).toHaveCount(1);
-  await previewDone(page);
+  await page.mouse.move(0, 0);
   await page.getByRole("button", { name: "Target Moss slime" }).hover();
   await expect(page.getByTestId("intent-note")).toContainText(
     "Moss slime next turn: Inspire an ally → Crypt rat",
@@ -856,35 +856,6 @@ test("a hit flashes the target's border, name, HP bar and HP numbers red", async
     .locator(".allies .combatant")
     .filter({ has: page.getByRole("heading", { name: "Miso" }) });
   await expect(miso).not.toHaveClass(/hit-/);
-});
-
-test("each turn shows enemy threats one at a time, then stops", async ({
-  page,
-}) => {
-  await realTiming(page);
-  await page.goto("/");
-  await enterDungeon(page);
-  const watch = () =>
-    page.evaluate(async () => {
-      const seen = new Set<string>();
-      let most = 0;
-      for (let i = 0; i < 50; i++) {
-        const paths = [...document.querySelectorAll(".intent-line")];
-        most = Math.max(most, paths.length);
-        for (const path of paths) seen.add(path.getAttribute("d")!);
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-      return { distinct: seen.size, most };
-    });
-  const first = await watch();
-  expect(first.most).toBe(1);
-  expect(first.distinct).toBeGreaterThanOrEqual(2);
-  await expect(page.locator(".intent-line")).toHaveCount(0);
-  await page.getByTestId("end-turn").click();
-  await expect(page.locator(".command-deck h2")).toHaveText("Luna");
-  const second = await watch();
-  expect(second.most).toBe(1);
-  expect(second.distinct).toBeGreaterThanOrEqual(2);
 });
 
 test("threats are threads under the cards connecting an enemy to its mark", async ({
@@ -1247,7 +1218,7 @@ test("Needle strike ignores armor and shields in the preview and the result", as
   await expect(needle).not.toContainText("blocked");
 });
 
-test("hovering is locked during the threat preview of each turn", async ({
+test("hovering is locked during the enemy phase and works after it", async ({
   page,
 }) => {
   await realTiming(page);
@@ -1258,17 +1229,11 @@ test("hovering is locked during the threat preview of each turn", async ({
     "true",
   );
   await page.getByRole("button", { name: "Target Crypt rat" }).hover();
-  // The note and the hovered thread do not appear while the preview plays.
   await expect(page.getByTestId("intent-note")).toHaveCount(0);
   await previewDone(page);
   await page.mouse.move(0, 0);
   await page.getByRole("button", { name: "Target Crypt rat" }).hover();
   await expect(page.getByTestId("intent-note")).toContainText("Crypt rat");
-  await page.getByTestId("end-turn").click();
-  await expect(page.locator(".battlefield")).toHaveAttribute(
-    "data-previewing",
-    "true",
-  );
 });
 
 async function chooseParty(page: Page, add: string[], remove: string[]) {
@@ -1282,7 +1247,7 @@ async function chooseParty(page: Page, add: string[], remove: string[]) {
     await card(name).getByRole("button", { name: "Add to party" }).click();
 }
 
-test("a room opens with the round banner, then each enemy attacks alone, then threads show", async ({
+test("a room opens with the round banner, then each enemy attacks alone, then the Threats button shows threads", async ({
   page,
 }) => {
   await realTiming(page);
@@ -1310,13 +1275,24 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
   await expect(page.locator(".next-target")).toHaveCount(0);
   await expect(page.locator(".combatant.acting")).toHaveCount(0);
-  // The threads come after, one enemy at a time, each with its label.
-  await expect(page.locator(".next-target")).toHaveCount(1);
-  await expect(page.locator(".next-target")).toContainText(/^Next/);
-  await expect(page.locator(".intent-line")).toHaveCount(1);
+  // Nothing is drawn on its own afterwards; the Threats button reveals every thread.
+  await previewDone(page);
+  await expect(page.locator(".intent-line")).toHaveCount(0);
+  await page.getByTestId("threats-button").hover();
+  await expect(page.locator(".next-target").first()).toContainText(/^Next/);
+  expect(await page.locator(".intent-line").count()).toBeGreaterThan(1);
+  await page.mouse.move(0, 0);
+  await expect(page.locator(".intent-line")).toHaveCount(0);
+  await page.getByTestId("threats-button").click();
+  await page.mouse.move(0, 0);
+  await expect(page.locator(".intent-line").first()).toBeVisible();
+  await page.getByTestId("threats-button").click();
+  await page.mouse.move(0, 0);
+  await expect(page.locator(".intent-line")).toHaveCount(0);
+  await page.getByTestId("threats-button").hover();
   // The label sits just under the thread, centred where the thread starts.
-  const tag = (await page.locator(".next-target").boundingBox())!;
-  const line = (await page.locator(".intent-line").boundingBox())!;
+  const tag = (await page.locator(".next-target").first().boundingBox())!;
+  const line = (await page.locator(".intent-line").first().boundingBox())!;
   expect(tag.y).toBeGreaterThanOrEqual(line.y + line.height - 1);
   const centres = await page
     .locator(".enemies .combatant")
@@ -1326,7 +1302,7 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   expect(centres.some((x) => Math.abs(x - (tag.x + tag.width / 2)) < 2)).toBe(
     true,
   );
-  await previewDone(page);
+  await page.mouse.move(0, 0);
   await page.getByRole("button", { name: "Target Moss slime" }).hover();
   await expect(page.getByTestId("intent-note")).toContainText(
     "Moss slime next turn: Inspire an ally → Crypt rat",
@@ -1341,6 +1317,16 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await page.getByRole("button", { name: "Target Miso" }).hover();
   await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
   await expect(page.locator(".combatant.marked")).toHaveCount(0);
+});
+
+test("the round banner is anchored to the battlefield, not the window", async ({
+  page,
+}) => {
+  await realTiming(page);
+  await page.goto("/");
+  await enterDungeon(page);
+  await expect(page.locator(".round-banner")).toHaveCSS("position", "absolute");
+  await expect(page.locator(".battlefield")).toContainText("ROUND 1");
 });
 
 test("the round banner stays visible when the system asks for reduced motion", async ({

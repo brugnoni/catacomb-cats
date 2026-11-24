@@ -2083,7 +2083,7 @@ hr {
   transition: transform 0.2s ease-out;
 }
 .round-banner {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 80;
   display: grid;
@@ -2115,6 +2115,24 @@ hr {
     opacity: 0;
     transform: translateY(-20px) scale(1.8);
   }
+}
+.threats-button {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 2px 14px;
+  font: inherit;
+  font-size: 18px;
+  color: #ffd2ca;
+  background: #2a0d0dd9;
+  border: 1px solid #ff6a5c;
+  cursor: pointer;
+}
+.threats-button:hover,
+.threats-button[aria-pressed="true"] {
+  background: #5a1a14;
 }
 .next-target {
   position: absolute;

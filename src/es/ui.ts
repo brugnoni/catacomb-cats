@@ -141,6 +141,7 @@ export const UI: Record<string, string> = {
   "Ability points are shared by the whole party, not owned by one cat.":
     "Los puntos de habilidad son del grupo entero, no de un solo gato.",
   "The enemies strike first!": "¡Los enemigos atacan primero!",
+  Threats: "Amenazas",
   "Next target: {name}": "Siguiente objetivo: {name}",
   "Next: supports {name}": "Siguiente: apoya a {name}",
   "MISS!": "¡FALLO!",
