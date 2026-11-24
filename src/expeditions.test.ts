@@ -10,6 +10,7 @@ import {
   type Progress,
   type Run,
 } from "./game";
+import { ENEMY_TRAITS } from "./engine/data";
 import { powerPoints } from "./progression";
 import {
   EXPEDITIONS,
@@ -191,5 +192,15 @@ describe("later Expeditions", () => {
     for (let i = 0; i < 6; i++) p = buyUpgrade(p, "pip");
     expect(p.catLevels.pip).toBe(6);
     expect(buyUpgrade(p, "pip")).toBe(p);
+  });
+});
+
+describe("enemy traits", () => {
+  it("every trait names an enemy that exists, so a rename cannot silently drop a behaviour", () => {
+    const names = new Set(
+      EXPEDITIONS.flatMap((e) => e.rooms.flat().map(([name]) => name)),
+    );
+    names.add("Bone sentry");
+    for (const name of Object.keys(ENEMY_TRAITS)) expect(names).toContain(name);
   });
 });

@@ -3,7 +3,6 @@ import {
   getDifficulty,
   BASE_CRIT_CHANCE,
   GUARD_TURNS,
-  CRIT_MULTIPLIER,
 } from "../progression";
 import {
   EXPEDITIONS,
@@ -24,7 +23,7 @@ import { buildCat, roomEnemies } from "./units";
 import {
   clone,
   units,
-  rollCrit,
+  healUnit,
   markAll,
   setOrder,
   currentUnit,
@@ -145,22 +144,8 @@ export function applyAbility(
     );
   } else if (ability.effect === "heal" || ability.effect === "heal-all") {
     for (const t of abilityReach(run, ability, target.id)) {
-      const crit = rollCrit(run, actor);
       // A curse lowers what a cat receives: healing as well as shields.
-      const amount = Math.max(
-        0,
-        (crit ? Math.ceil(power * CRIT_MULTIPLIER) : power) - t.curse,
-      );
-      const healed = Math.min(t.maxHp - t.hp, amount);
-      t.hp += healed;
-      run.events.push({
-        type: "heal",
-        targetId: t.id,
-        amount: healed,
-        ...(crit ? { crit } : {}),
-      });
-      if (crit)
-        run.log.push(`${actor.name} lands a critical heal on ${t.name}!`);
+      const { healed, amount } = healUnit(run, actor, t, power);
       run.log.push(
         `${actor.name} heals ${t.name}: +${healed} HP (${amount} healing power; ${t.hp}/${t.maxHp} HP).`,
       );

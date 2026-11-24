@@ -7,7 +7,12 @@ import {
 } from "../progression";
 import { EXPEDITIONS, expeditionById } from "../expeditions";
 import { isDamaging, type Progress, type Unit, type Run } from "./model";
-import { CATS, SIGNATURE_ABILITIES, REVIVE_ABILITY } from "./data";
+import {
+  CATS,
+  ENEMY_TRAITS,
+  SIGNATURE_ABILITIES,
+  REVIVE_ABILITY,
+} from "./data";
 
 export function statusFields() {
   return {
@@ -130,11 +135,12 @@ export function roomEnemies(
     u.hp = u.maxHp = Math.round(u.hp * d.hpMultiplier);
     u.initiative += d.initiativeBonus;
     u.abilities[0]!.power += d.damageBonus;
-    if (u.name === "Bone sentry" || u.name === "Bone squire") {
-      u.armor = 2 + d.armorBonus;
-      u.guard = 6;
+    const { armor, openingGuard } = ENEMY_TRAITS[u.name] ?? {};
+    if (armor !== undefined) u.armor = armor + d.armorBonus;
+    if (openingGuard) {
+      u.guard = openingGuard;
       u.guardTurns = 2;
-    } else if (u.name === "The Hollow King") u.armor = 1 + d.armorBonus;
+    }
   }
   return team;
 }

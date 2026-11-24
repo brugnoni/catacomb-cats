@@ -1,4 +1,9 @@
-import { GUARD_TURNS, MISS_CHANCE, evadeChance } from "../progression";
+import {
+  CRIT_MULTIPLIER,
+  GUARD_TURNS,
+  MISS_CHANCE,
+  evadeChance,
+} from "../progression";
 import { type Unit, type Run } from "./model";
 
 export const clone = <T>(value: T): T => structuredClone(value);
@@ -167,4 +172,28 @@ export function fury(run: Run, target: Unit, power: number, turns = 3) {
   run.log.push(
     `${target.name} ${active ? "renews" : "gains"} Inspired +${target.fury} for ${turns} turns.`,
   );
+}
+
+/**
+ * `actor` heals `target` with `power` (a curse on the target lowers it): rolls a
+ * critical, restores HP up to the maximum and records the event. Returns the HP
+ * restored and the healing power after crit and curse.
+ */
+export function healUnit(run: Run, actor: Unit, target: Unit, power: number) {
+  const crit = rollCrit(run, actor);
+  const amount = Math.max(
+    0,
+    (crit ? Math.ceil(power * CRIT_MULTIPLIER) : power) - target.curse,
+  );
+  const healed = Math.min(target.maxHp - target.hp, amount);
+  target.hp += healed;
+  run.events.push({
+    type: "heal",
+    targetId: target.id,
+    amount: healed,
+    ...(crit ? { crit } : {}),
+  });
+  if (crit)
+    run.log.push(`${actor.name} lands a critical heal on ${target.name}!`);
+  return { healed, amount };
 }

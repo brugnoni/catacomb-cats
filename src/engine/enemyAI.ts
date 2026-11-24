@@ -1,4 +1,4 @@
-import { CRIT_MULTIPLIER } from "../progression";
+import { ENEMY_TRAITS } from "./data";
 import {
   type Unit,
   type Run,
@@ -8,7 +8,7 @@ import {
 } from "./model";
 import {
   units,
-  rollCrit,
+  healUnit,
   pickLiving,
   markTarget,
   currentUnit,
@@ -41,25 +41,13 @@ export function planEnemyAction(
   const wounded = allies
     .filter((u) => u.hp < u.maxHp)
     .sort((a, b) => b.maxHp - b.hp - (a.maxHp - a.hp))[0];
-  const phase = round % 3;
-  if (
-    actor.name === "Royal wisp" &&
-    wounded &&
-    phase === 1 &&
-    (run.roomUses[actor.id + ":heal"] ?? 0) < 2
-  )
-    return { kind: "heal", allyId: wounded.id };
-  if (actor.name === "Moss slime" && ally && phase === 1)
-    return { kind: "inspire", allyId: ally.id };
-  if (actor.name === "Spore imp" && ally && phase === 2)
-    return { kind: "ward", allyId: ally.id };
-  if (actor.name === "Spore imp" && phase === 0) return { kind: "mirror" };
-  if (
-    (actor.name === "Spore imp" || actor.name === "The Hollow King") &&
-    phase === 1
-  )
-    return { kind: "curse", targetId: weakestCat(run)?.id };
-  if (actor.name === "Bone squire" && phase === 1) return { kind: "rally" };
+  const kind = ENEMY_TRAITS[actor.name]?.cycle?.[(round % 3) as 0 | 1 | 2];
+  if (kind === "heal" && wounded && (run.roomUses[actor.id + ":heal"] ?? 0) < 2)
+    return { kind, allyId: wounded.id };
+  if ((kind === "inspire" || kind === "ward") && ally)
+    return { kind, allyId: ally.id };
+  if (kind === "curse") return { kind, targetId: weakestCat(run)?.id };
+  if (kind === "mirror" || kind === "rally") return { kind };
   return { kind: "attack" };
 }
 
@@ -143,23 +131,12 @@ export function resolveEnemies(run: Run) {
         const wounded = run.enemies.find((u) => u.id === plan.allyId)!;
         run.roomUses[actor.id + ":heal"] =
           (run.roomUses[actor.id + ":heal"] ?? 0) + 1;
-        const crit = rollCrit(run, actor);
-        const base = Math.max(0, 6 + actor.fury - actor.curse);
-        const healed = Math.min(
-          wounded.maxHp - wounded.hp,
-          crit ? Math.ceil(base * CRIT_MULTIPLIER) : base,
+        const { healed } = healUnit(
+          run,
+          actor,
+          wounded,
+          Math.max(0, 6 + actor.fury - actor.curse),
         );
-        wounded.hp += healed;
-        run.events.push({
-          type: "heal",
-          targetId: wounded.id,
-          amount: healed,
-          ...(crit ? { crit } : {}),
-        });
-        if (crit)
-          run.log.push(
-            `${actor.name} lands a critical heal on ${wounded.name}!`,
-          );
         run.log.push(
           `${actor.name} heals ${wounded.name}: +${healed} HP (${wounded.hp}/${wounded.maxHp}).`,
         );
@@ -187,7 +164,7 @@ export function resolveEnemies(run: Run) {
         const victim = run.party.find((u) => u.id === plan.targetId)!;
         const power = Math.max(
           0,
-          (actor.name === "The Hollow King" ? 2 : 1) - actor.curse,
+          (ENEMY_TRAITS[actor.name]?.curse ?? 1) - actor.curse,
         );
         victim.curse = Math.max(victim.curse, power);
         victim.curseTurns = 2;

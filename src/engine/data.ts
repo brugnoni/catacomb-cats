@@ -1,4 +1,9 @@
-import { type Ability, type Cat, type Progress } from "./model";
+import {
+  type Ability,
+  type Cat,
+  type EnemyPlanKind,
+  type Progress,
+} from "./model";
 
 export const strike: Ability = {
   id: "strike",
@@ -188,3 +193,24 @@ export function initialProgress(): Progress {
     spentGold: 0,
   };
 }
+
+/** What sets an enemy apart, keyed by its name. Enemies not listed just attack. */
+export interface EnemyTraits {
+  /** Plan for the rounds whose number modulo 3 is the key; it falls back to an attack when it has no one to act on. */
+  cycle?: Partial<Record<0 | 1 | 2, EnemyPlanKind>>;
+  /** Armor before the Ascension bonus. */
+  armor?: number;
+  /** Guard shield (lasting 2 turns) each room opens with. */
+  openingGuard?: number;
+  /** Curse power (1 when missing). */
+  curse?: number;
+}
+
+export const ENEMY_TRAITS: Record<string, EnemyTraits> = {
+  "Royal wisp": { cycle: { 1: "heal" } },
+  "Moss slime": { cycle: { 1: "inspire" } },
+  "Spore imp": { cycle: { 0: "mirror", 1: "curse", 2: "ward" } },
+  "The Hollow King": { cycle: { 1: "curse" }, armor: 1, curse: 2 },
+  "Bone squire": { cycle: { 1: "rally" }, armor: 2, openingGuard: 6 },
+  "Bone sentry": { armor: 2, openingGuard: 6 },
+};
