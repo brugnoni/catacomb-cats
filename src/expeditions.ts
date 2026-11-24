@@ -39,18 +39,18 @@ export const EXPEDITIONS: readonly Expedition[] = [
     recommendedPower: 0,
     rooms: [
       [
-        ["Crypt rat", 31, 14, 8],
-        ["Moss slime", 38, 7, 8],
+        ["Crypt rat", 36, 14, 9],
+        ["Moss slime", 44, 7, 9],
       ],
       [
-        ["Bone sentry", 43, 13, 9],
-        ["Cave bat", 31, 22, 8],
-        ["Spore imp", 36, 9, 8],
+        ["Bone sentry", 49, 13, 10],
+        ["Cave bat", 36, 22, 9],
+        ["Spore imp", 41, 9, 9],
       ],
       [
-        ["The Hollow King", 80, 11, 10],
-        ["Royal wisp", 32, 17, 8],
-        ["Bone squire", 40, 8, 9],
+        ["The Hollow King", 92, 11, 11],
+        ["Royal wisp", 37, 17, 9],
+        ["Bone squire", 46, 8, 10],
       ],
     ],
   },
@@ -65,19 +65,19 @@ export const EXPEDITIONS: readonly Expedition[] = [
     recommendedPower: 31,
     rooms: [
       [
-        ["Moss slime", 58, 7, 10],
-        ["Spore imp", 48, 9, 10],
-        ["Cave bat", 41, 22, 10],
-      ],
-      [
-        ["Spore imp", 53, 9, 11],
-        ["Moss slime", 65, 7, 11],
-        ["Bone squire", 55, 8, 11],
-      ],
-      [
-        ["Royal wisp", 115, 17, 12],
+        ["Moss slime", 67, 7, 11],
         ["Spore imp", 55, 9, 11],
-        ["Moss slime", 70, 7, 11],
+        ["Cave bat", 47, 22, 11],
+      ],
+      [
+        ["Spore imp", 61, 9, 12],
+        ["Moss slime", 75, 7, 12],
+        ["Bone squire", 63, 8, 12],
+      ],
+      [
+        ["Royal wisp", 132, 17, 13],
+        ["Spore imp", 63, 9, 12],
+        ["Moss slime", 81, 7, 12],
       ],
     ],
   },
@@ -92,19 +92,19 @@ export const EXPEDITIONS: readonly Expedition[] = [
     recommendedPower: 42,
     rooms: [
       [
-        ["Bone sentry", 36, 13, 9],
-        ["Bone squire", 32, 8, 9],
-        ["Cave bat", 25, 22, 9],
+        ["Bone sentry", 45, 13, 10],
+        ["Bone squire", 41, 8, 10],
+        ["Cave bat", 32, 22, 10],
       ],
       [
-        ["Bone sentry", 39, 13, 10],
-        ["Bone squire", 35, 8, 9],
-        ["Spore imp", 34, 9, 9],
+        ["Bone sentry", 50, 13, 11],
+        ["Bone squire", 44, 8, 10],
+        ["Spore imp", 43, 9, 10],
       ],
       [
-        ["Bone sentry", 90, 13, 11],
-        ["Bone squire", 36, 8, 9],
-        ["Royal wisp", 27, 17, 9],
+        ["Bone sentry", 113, 13, 12],
+        ["Bone squire", 45, 8, 10],
+        ["Royal wisp", 34, 17, 10],
       ],
     ],
   },

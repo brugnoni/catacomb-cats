@@ -71,15 +71,15 @@ describe("basic expedition and lobby regression", () => {
     expect(currentUnit(r)?.id).toBe("pip");
     const next = act(r, "strike", "e0");
     expect(next.ap).toBe(5);
-    expect(next.enemies[0]!.hp).toBe(27);
-    expect(r.enemies[0]!.hp).toBe(31);
+    expect(next.enemies[0]!.hp).toBe(32);
+    expect(r.enemies[0]!.hp).toBe(36);
     expect(currentUnit(endTurn(next))?.id).toBe("miso");
   });
   it("invalid actions never mutate or spend AP", () => {
     const r = start();
     expect(act(r, "strike", "pip")).toBe(r);
     expect(act(r, "bad", "e0")).toBe(r);
-    r.ap = 1;
+    r.ap = 0;
     expect(act(r, "line", "e0")).toBe(r);
   });
   it("1AP skills stop at three uses and new actors reset counts", () => {
@@ -120,14 +120,14 @@ describe("basic expedition and lobby regression", () => {
   });
   it("room rewards/recovery happen once immediately and loot accumulates", () => {
     let r = start();
-    r.party[0]!.hp -= 12;
+    r.party[0]!.hp -= 20;
     r = clear(r);
     expect(r.status).toBe("reward");
     expect(r.gold).toBe(40);
     expect(r.xp).toBe(30);
     expect(r.bonus).toBe(1);
     expect(r.party[0]!.hp).toBe(
-      r.party[0]!.maxHp - 12 + roomHeal(r.party[0]!.maxHp),
+      r.party[0]!.maxHp - 20 + roomHeal(r.party[0]!.maxHp),
     );
     expect(act(r, "strike", "e0")).toBe(r);
     r = nextRoom(r);
@@ -185,7 +185,7 @@ describe("training, migration and increasing challenge", () => {
   it("mastery increases HP slowly and every numerical skill every third mastery", () => {
     const p = { ...initialProgress(), xp: 450 };
     const c = buildCat(p, "clover");
-    expect(c.maxHp).toBe(35);
+    expect(c.maxHp).toBe(42);
     expect(c.abilities[0]!.power).toBe(5);
     expect(c.abilities[1]!.power).toBe(8);
     expect(
@@ -193,8 +193,8 @@ describe("training, migration and increasing challenge", () => {
         { ...p, xp: 100000, expeditionWins: { catacombs: 3, warrens: 5 } },
         "clover",
       ).maxHp,
-    ).toBe(49);
-    expect(buildCat({ ...p, xp: 100000 }, "clover").maxHp).toBe(37);
+    ).toBe(56);
+    expect(buildCat({ ...p, xp: 100000 }, "clover").maxHp).toBe(44);
   });
   it("difficulty increases after a win using investment and mastery but unspentgold does not matter", () => {
     const p = initialProgress();
@@ -389,7 +389,7 @@ describe("enemy role actions", () => {
     r.order = ["pip", "e1", "e0", "miso", "clover"];
     r = endTurn(r);
     expect(r.log.some((l) => l.includes("Inspired +2"))).toBe(true);
-    expect(r.log.some((l) => l.includes("10 attack power"))).toBe(true);
+    expect(r.log.some((l) => l.includes("11 attack power"))).toBe(true);
   });
   it("tank foes have initial armor/guard and agile bats have higher initiative", () => {
     const r = nextRoom(clear(start()));
@@ -429,7 +429,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
     (fallen) => {
       let r = start();
       const live = r.party[0]!;
-      live.hp -= 12;
+      live.hp -= 20;
       for (let i = 1; i <= fallen; i++) {
         const c = r.party[i]!;
         c.hp = 0;
@@ -442,7 +442,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
       }
       r.tauntId = r.party[1]!.id;
       r = clear(r);
-      expect(r.party[0]!.hp).toBe(live.maxHp - 12 + roomHeal(live.maxHp));
+      expect(r.party[0]!.hp).toBe(live.maxHp - 20 + roomHeal(live.maxHp));
       for (let i = 1; i <= fallen; i++) {
         const c = r.party[i]!;
         expect(c.hp).toBe(Math.ceil(c.maxHp / 4));
@@ -806,7 +806,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r = nextRoom(clear(r));
     expect(r.party.find((c) => c.id === "clover")!.cooldowns).toEqual({});
   });
-  it("Ember Cinder jab never has a cooldown and Flame paw waits two own turns", () => {
+  it("Ember Cinder jab never has a cooldown and Flame paw waits one own turn", () => {
     let r = trained("ember");
     r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
     const claw = r.party[0]!.abilities[0]!;
@@ -821,20 +821,18 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r = onlyOwnTurns(r, "ember");
     expect(abilityUnavailableReason(r, claw)).toBeUndefined();
     r = act(r, "slam", "e0");
-    expect(cooldownRemaining(r.party[0]!, slam)).toBe(3);
+    expect(cooldownRemaining(r.party[0]!, slam)).toBe(2);
     expect(abilityUnavailableReason(r, claw)).toBeUndefined();
   });
-  it("Ember Flame paw is blocked for two own turns and returns on the third", () => {
+  it("Ember Flame paw is blocked for one own turn and returns on the second", () => {
     let r = trained("ember");
     r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
     const slam = r.party[0]!.abilities.find((a) => a.id === "slam")!;
     r = act(r, "slam", "e0");
-    expect(cooldownRemaining(r.party[0]!, slam)).toBe(3);
+    expect(cooldownRemaining(r.party[0]!, slam)).toBe(2);
     r = onlyOwnTurns(r, "ember");
     expect(abilityUnavailableReason(r, slam)).toContain("Cooldown");
     expect(act(r, "slam", "e0")).toBe(r);
-    r = onlyOwnTurns(r, "ember");
-    expect(abilityUnavailableReason(r, slam)).toContain("Cooldown");
     r = onlyOwnTurns(r, "ember");
     expect(abilityUnavailableReason(r, slam)).toBeUndefined();
     expect(act(r, "slam", "e0")).not.toBe(r);
@@ -899,7 +897,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r.turn = 0;
     r = endTurn(r);
     const after = r.party.find((c) => c.id === "luna")!;
-    expect(after.hp).toBe(4);
+    expect(after.hp).toBe(3);
     expect(after.iceCharges).toBe(2);
     expect(r.log.some((line) => line.includes("2 Ice Ward blocked"))).toBe(
       true,
@@ -916,7 +914,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r.turn = 0;
     r = endTurn(r);
     const mei = r.party.find((c) => c.id === "clover")!;
-    expect(mei.hp).toBe(4);
+    expect(mei.hp).toBe(3);
     expect(mei.reactiveHealCharges).toBe(2);
     mei.hp = 1;
     r.order = ["pip", "e0", "clover", "miso", "e1"];
@@ -1410,7 +1408,7 @@ describe("critical hits", () => {
     let r = createRun(initialProgress(), party, 1, { crit: 100 });
     r = act(r, "strike", "e0");
     expect(r.events[0]).toMatchObject({ type: "hit", crit: true, damage: 6 });
-    expect(r.enemies[0]!.hp).toBe(31 - 6);
+    expect(r.enemies[0]!.hp).toBe(36 - 6);
     expect(r.log.join(" ")).toContain(
       "Pip scores a critical hit on Crypt rat!",
     );
@@ -1519,7 +1517,7 @@ describe("lifesteal and Miso's shield", () => {
     r = act(r, "cleave", "ember");
     expect(r.party[0]!.hp).toBe(5 + 2 * Math.ceil(power * 0.3));
   });
-  it("Dagger line drains 15 percent per target hit and critical hits do not raise it", () => {
+  it("Dagger line drains 30 percent per target hit and critical hits do not raise it", () => {
     let r = turn(
       createRun(initialProgress(), ["pip", "miso", "clover"], 1, { crit: 100 }),
       "pip",
@@ -1531,7 +1529,7 @@ describe("lifesteal and Miso's shield", () => {
     const gained = r.party[0]!.hp - 5;
     const expected = hits.reduce(
       (sum, e) =>
-        sum + Math.ceil(((e as { damage: number }).damage * 15) / 100),
+        sum + Math.ceil(((e as { damage: number }).damage * 30) / 100),
       0,
     );
     expect(gained).toBe(expected);
@@ -1647,7 +1645,7 @@ describe("cooldown ready events", () => {
     r.enemies.forEach((e) => (e.hp = e.maxHp = 500));
     r = act(r, "slam", "e0");
     const slam = r.party[0]!.abilities.find((a) => a.id === "slam")!;
-    expect(cooldownRemaining(r.party[0]!, slam)).toBe(3);
+    expect(cooldownRemaining(r.party[0]!, slam)).toBe(2);
     let ready: string | undefined;
     for (let i = 0; i < 20 && !ready; i++) {
       r = endTurn(r);
@@ -1694,5 +1692,31 @@ describe("curse lowers received healing too", () => {
     expect(others.every((c) => gained(c.id) > 0)).toBe(true);
     expect(gained("pip")).toBe(Math.max(0, gained(others[0]!.id) - 3));
     expect(power).toBeGreaterThan(0);
+  });
+});
+
+describe("Mei lifts curses", () => {
+  it("Healing purr can target a cursed ally at full HP and lifts the curse", () => {
+    let r = turn(start(), "clover");
+    const miso = r.party.find((c) => c.id === "miso")!;
+    expect(act(r, "heal", "miso")).toBe(r); // full HP and not cursed: still refused
+    miso.curse = 2;
+    miso.curseTurns = 2;
+    r = act(r, "heal", "miso");
+    const after = r.party.find((c) => c.id === "miso")!;
+    expect(after.curse + after.curseTurns).toBe(0);
+    expect(r.log.some((l) => l.includes("lifts the curse on Miso"))).toBe(true);
+  });
+  it("Circle of renewal lifts every curse even when everyone is at full HP", () => {
+    let r = trained("clover");
+    expect(act(r, "renewal", "clover")).toBe(r);
+    for (const c of r.party.slice(1)) {
+      c.curse = 1;
+      c.curseTurns = 2;
+    }
+    r = act(r, "renewal", "clover");
+    expect(r.party.every((c) => c.curse === 0 && c.curseTurns === 0)).toBe(
+      true,
+    );
   });
 });

@@ -35,12 +35,12 @@ El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La
 - **Marcas enemigas:** al iniciar la sala y al terminar cada turno suyo, cada enemigo marca un gato vivo al azar (`Unit.mark`, generador con semilla `Run.rng`; `createRun(progress, party, seed)` usa semilla 1 por defecto para pruebas deterministas y `App.tsx` usa una aleatoria). Su siguiente ataque va a esa marca; Taunt la sustituye y, si la marca cayó, se vuelve a sortear. Las maldiciones siguen yendo al gato con menos HP. `enemyIntent()` expone la acción siguiente (también apoyo a aliados) y la UI dibuja hilos bajo las tarjetas (rojo al gato marcado, verde al aliado que recibirá apoyo): al inicio de cada turno se muestran de uno en uno, en el orden de actuación (máx. ~3 s en total), y después solo al pasar el mouse (o foco de teclado) por una unidad: un enemigo muestra su propio plan, un gato muestra quién lo atacará y un enemigo apoyado muestra quién lo ayudará. Los E2E fijan la semilla con `window.__CATACOMB_SEED__`.
 - **Eventos de combate:** cada transición (`act`, `endTurn`, `nextRoom`) reinicia `Run.events` con un evento `hit` por golpe y sube `Run.eventId`. La UI los usa para el destello rojo de 1 s (borde, nombre, barra y HP); alterna las clases `hit-0`/`hit-1` para reiniciar la animación.
 - **Bordes de estado:** un escudo (`guard > 0`) pone borde plateado persistente hasta que se rompe o expira; una curación (`CombatEvent` tipo `heal`, incluye Revive y la cura del Royal wisp) hace destellar el borde verde 1 s en cada unidad curada. Expedition Strength se muestra en la franja de dificultad bajo el nombre de la sala.
-- **Dagger line (Pip, 2 AP):** potencia 8; golpea al objetivo con 100%, al enemigo vivo siguiente (a su derecha en el campo, orden de `Run.enemies`) con 50% y al siguiente con 35% (`LINE_FALLOFF`, redondeo normal). La armadura y los escudos reducen cada golpe. Un uso por turno y cooldown de 1 turno. Nunca golpea a los enemigos que están delante del objetivo.
+- **Dagger line (Pip, 1 AP):** potencia 5; golpea al objetivo con 100%, al enemigo vivo siguiente (a su derecha en el campo, orden de `Run.enemies`) con 50% y al siguiente con 35% (`LINE_FALLOFF`, redondeo normal). La armadura y los escudos reducen cada golpe. Un uso por turno y cooldown de 1 turno. Nunca golpea a los enemigos que están delante del objetivo.
 - **Ataques perforantes (Needle strike):** ignoran por completo armadura, Guard y Ice Ward; no gastan cargas de Ice Ward ni escudo. Vista previa y resolución usan `damagePreview()`.
 - **Taunt y marcas:** al lanzar Taunt, todos los enemigos vivos marcan al gato que provoca (`mark`); mientras dure, cada marca nueva también es ese gato. Al terminar Taunt (inicio del turno del gato) se vuelven a sortear las marcas. Las maldiciones y el apoyo no siguen a Taunt: la maldición va al gato con menos HP y su hilo es **violeta**; el ataque es rojo y el apoyo verde.
 - **Críticos:** cada golpe y cada curación (gatos y enemigos) tiene `BASE_CRIT_CHANCE` = 10% de ser crítico (`CRIT_MULTIPLIER` = 1.5, redondeo hacia arriba, antes de armadura). La probabilidad es fija: solo la bendición del Hogar suma (+5% en rango 6 y +5% en rango 8, solo gatos). Cada objetivo de un ataque en área o de Dagger line tira por separado. Tiene su propio generador (`Run.critRng`) para no alterar las marcas. `createRun(..., { crit })`: `"off"` (por defecto en el motor y en las pruebas), `"on"` (juego real) o un número fijo; los E2E usan `window.__CATACOMB_CRIT__`.
 - **Rango siguiente:** el lobby escribe "Next rank N · título: …" para que quede claro que ese es el próximo rango, no el actual.
-- **Robo de vida (`Ability.lifesteal`):** Flame paw y Sweeping embers (Ember) curan al lanzador el 30% del daño que llega a la vida; Dagger line (Pip) el 15%. Por objetivo, redondeo hacia arriba, nunca sobre armadura/escudo ni sobre el máximo; los críticos no suben el porcentaje. Emite evento `heal` (destello verde) y la línea "X drains N HP from Y".
+- **Robo de vida (`Ability.lifesteal`):** Flame paw y Sweeping embers (Ember) curan al lanzador el 30% del daño que llega a la vida; Dagger line (Pip) también el 30%. Por objetivo, redondeo hacia arriba, nunca sobre armadura/escudo ni sobre el máximo; los críticos no suben el porcentaje. Emite evento `heal` (destello verde) y la línea "X drains N HP from Y".
 - **Guard dura 3 turnos** (`GUARD_TURNS` en `src/progression.ts`) y **Stand behind me** da además un escudo de 5 a Miso.
 - **Fallos y esquivas:** con `crit: "on"` (juego real) cada golpe tiene `MISS_CHANCE` = 5% de fallar y, además, el objetivo esquiva `evadeChance(iniciativa)` = 1% por punto de iniciativa sobre 12 (máx. 12%). Usan el generador `critRng` (no alteran las marcas); curar, escudar y bendecir nunca fallan. Evento `avoid` (`miss`/`evade`) y avisos "MISS!/EVADED!" sobre el objetivo. Los E2E y el simulador usan `crit: "off"`/numérico, por lo que no hay azar. **El balance medido por el simulador no incluye fallos/esquivas.**
 - **Curse afecta a todo:** daño, curación y escudos que hace el gato maldecido **y** la curación y los escudos que recibe salen reducidos por su maldición (mínimo 0).
@@ -65,7 +65,7 @@ El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La
 
 La última aclaración expresa del usuario es que **solo Revive de Mei tiene cooldown de dos turnos**. No comparte cooldown con la cura de grupo ni con Healing purr. Usar Revive en el turno N lo bloquea en N+1 y N+2; vuelve en N+3. Se puede elegir un gato muerto desde su sprite o el selector. El revivido actúa desde la siguiente ronda, no gana un turno inmediato.
 
-**Ember:** Cinder jab **no tiene cooldown**. Flame paw (potencia 20, 3 AP) tiene cooldown de 2 turnos: usado en N, bloqueado en N+1 y N+2, disponible en N+3. Sweeping embers conserva su cooldown de 1 turno. Cada ataque tiene su propio cooldown, y otro ataque listo sigue siendo utilizable. Flame paw debe rendir más daño por AP que repetir Cinder jab (prueba en `game.test.ts`). Los cooldowns cuentan inicios de turno del propio gato y se reinician entre salas.
+**Ember:** Cinder jab **no tiene cooldown**. Flame paw (potencia 24, 3 AP) tiene cooldown de 1 turno: usado en N, bloqueado en N+1, disponible en N+2. Sweeping embers conserva su cooldown de 1 turno. Cada ataque tiene su propio cooldown, y otro ataque listo sigue siendo utilizable. Flame paw debe rendir más daño por AP que repetir Cinder jab (prueba en `game.test.ts`). Los cooldowns cuentan inicios de turno del propio gato y se reinician entre salas.
 
 ## Idiomas (inglés y español)
 
@@ -116,7 +116,7 @@ Tras la primera victoria, se fija al entrar una dificultad de Ascension según e
 
 `tier = min(14, floor(Poder / 3))` (0 antes de la primera victoria)
 
-HP enemigo × `(1 + 0.12 × tier)`; potencia +`ceil(tier / 2)`; iniciativa +`floor(tier / 4)`. Desde el tier 10 aparece un refuerzo por sala. Los enemigos ya acorazados ganan +1 de armadura desde el tier 8. Objetivo de balance: ver `outputs/balance-report.md` (bot medio 75-85%, bot óptimo 92-97%; el simulador está en `src/sim.ts`).
+HP enemigo × `(1 + 0.13 × tier)`; potencia +`ceil(tier / 2)`; iniciativa +`floor(tier / 4)`. Desde el tier 10 aparece un refuerzo por sala. Los enemigos ya acorazados ganan +1 de armadura desde el tier 8. Objetivo de balance: ver `outputs/balance-report.md` (bot medio 75-85%, bot óptimo 92-97%; el simulador está en `src/sim.ts`).
 
 ## Recompensas, recuperación y guardado
 
@@ -170,8 +170,19 @@ Vocabulario en `GLOSSARY.md`; decisión del tope de rango en `docs/adr/0001-rank
 - **Ascension:** global y sin cambios; sin piso por Expedición. El selector muestra un Poder recomendado (31 y 42 para las nuevas; es el Poder en el tope de la Expedición anterior y de la propia) como aviso, nunca bloqueo.
 - **Balance medido** (`playerAtCap` en `src/sim.ts`, test en `src/balance.test.ts`, bot medio, tres grupos, 16 semillas): en el tope de su Expedición el grupo gana ≈58% en Moss Warrens y ≈60% en Bone Vault. **Límite conocido:** no se cumple "menos de 30% con el tope de la Expedición anterior" (≈71% y ≈52%), porque Ascension sube con el Poder y compensa; el salto de tier 10 añade un enemigo extra. The Catacombs en su tope (tier 6) se gana ~100%: es la Expedición de arranque.
 
+## Ronda de balance del 24 de noviembre de 2026
+
+Resultado de la auditoría (`docs/AUDIT.md`) y de las mediciones de `outputs/balance-report.md`:
+
+- **Estadísticas base de los gatos:** HP Miso 40, Luna 30, Pip 40, Mei 36, Ember 42; iniciativa de Ember 12. **Nine lives** cuesta 1 AP. **Dagger line** 1 AP, potencia 5, robo de vida 30%. **Flame paw** potencia 24 y cooldown de 1 turno; **Sweeping embers** potencia 8.
+- **Mei** quita maldiciones: Healing purr y Circle of renewal limpian la maldición de quien curan, y se pueden lanzar sobre un aliado maldecido con la vida completa.
+- **Enemigos** de las tres Expediciones: +15% de HP y +1 de potencia base; Bone Vault un 10% más de HP.
+- **Modelo de AP:** se probó ahorrar AP entre rondas (hasta +3) y se descartó: no mejora las decisiones y alarga los combates un 13%. Los 6 AP compartidos se mantienen.
+- **Cómo medir:** el azar apagado y el bot voraz exageran el desequilibrio entre equipos. Para comparar equipos usar críticos y fallos activados, 12 o más semillas y un planificador de anchura 3 (`optimalPlan(run, 3)`). Los bots ganan casi siempre; la dificultad absoluta se calibra con partidas humanas.
+- **Rondas por sala** (ronda = un ciclo de la cola de iniciativa, con 6 AP repuestos): sala 1 ≈ 21% de las rondas, sala 2 ≈ 34%, jefe ≈ 44%. Grupo en nivel 1 sin Ascension: ~15–16 rondas en total (3,3 / 5,2 / 6,9 con jugador competente); grupo al tope con Ascension 10: ~22 (5,2 / 7,4 / 9,7).
+
 ## Siguiente trabajo
 
-1. Probar balance con partidas humanas y combinaciones distintas (el grupo sin sanador pierde casi siempre en Bone Vault).
+1. Probar balance con partidas humanas (los bots ganan casi siempre) y ajustar la dificultad absoluta por pasos. Mei sigue pasando ~50% de sus turnos sin acción con el bot competente.
 2. Revisar si hace falta endurecer el salto entre Expediciones (ver límite conocido arriba) sin tocar la fórmula de Ascension.
 3. Sprites y fondos propios para Moss Warrens y Bone Vault; más salas por Expedición; objetivos opcionales de desbloqueo.

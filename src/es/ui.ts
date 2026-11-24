@@ -204,6 +204,8 @@ export const UI: Record<string, string> = {
   "Deal {power} damage to all enemies.":
     "Inflige {power} de daño a todos los enemigos.",
   "Heal 1 ally for {power} HP.": "Cura a 1 aliado {power} PV.",
+  "Also lifts a curse.": "También quita una maldición.",
+  "Also lifts curses.": "También quita las maldiciones.",
   "Heal all living allies for {power} HP each.":
     "Cura a todos los aliados vivos {power} PV a cada uno.",
   "Revive a fallen ally at 60% max HP.":

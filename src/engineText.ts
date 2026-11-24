@@ -39,6 +39,7 @@ export const RULES: [RegExp, string][] = [
   ],
   [/^(.+)'s Guard fades\.$/, "{1}'s Guard fades."],
   [/^(.+) is no longer cursed\.$/, "{1} is no longer cursed."],
+  [/^(.+) lifts the curse on (.+)\.$/, "{1} lifts the curse on {2}."],
   [
     /^(.+)'s taunt ends at the start of their turn\.$/,
     "{1}'s taunt ends at the start of their turn.",

@@ -183,6 +183,7 @@ export const GAME: Record<string, string> = {
     "Tu expedición ha caído. Las mejoras permanentes se conservan.",
   "{1}'s Guard fades.": "La Guardia de {1} se desvanece.",
   "{1} is no longer cursed.": "{1} ya no sufre la maldición.",
+  "{1} lifts the curse on {2}.": "{1} libera a {2} de la maldición.",
   "{1}'s taunt ends at the start of their turn.":
     "La provocación de {1} termina al inicio de su turno.",
   "{1} restores a {2} shield for {3} turns.":

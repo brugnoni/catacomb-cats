@@ -272,7 +272,7 @@ test("the field guide can be opened during combat without losing the turn", asyn
   );
 });
 
-test("two AP support skills stop after two uses with AP still available", async ({
+test("1 AP support skills stop after three uses with AP still available", async ({
   page,
 }) => {
   await page.goto("/");
@@ -285,8 +285,9 @@ test("two AP support skills stop after two uses with AP still available", async 
   await pickTarget(page, "luna");
   await guard.click();
   await pickTarget(page, "pip");
+  await guard.click();
   await expect(guard).toBeDisabled();
-  await expect(page.locator(".round-counter")).toContainText("2 / 6 AP");
+  await expect(page.locator(".round-counter")).toContainText("3 / 6 AP");
 });
 
 test("training explains and applies its permanent health and power improvement", async ({
@@ -431,7 +432,7 @@ test("attacks retain a living enemy target while ending a turn clears it", async
   await rat.click();
   const strike = page.getByRole("button", { name: /^Claw strike/ });
   await expect(strike.locator(".damage-preview")).toContainText(
-    "Deals 4 · 27 HP left",
+    "Deals 4 · 32 HP left",
   );
   await strike.click();
   await expect(page.locator('[data-unit="e0"] .unit-target')).toHaveAttribute(
@@ -498,10 +499,12 @@ test("exhausting shared AP resolves enemy turns and skips cats until the next ro
   );
   await strike.click();
   await strike.click();
-  // One AP remains but Pip has nothing usable left, so the turn passes by itself.
+  // Two AP remain but Pip has nothing usable left, so the turn passes by itself.
   await expect(page.locator(".command-deck h2")).toHaveText("Luna");
   await pickTarget(page, "e1");
-  await page.getByRole("button", { name: /^Moon bolt/ }).click();
+  const moonBolt = page.getByRole("button", { name: /^Moon bolt/ });
+  await moonBolt.click();
+  await moonBolt.click();
   await expect(page.locator(".round-counter")).toContainText("ROUND 2");
   await expect(page.locator(".round-counter")).toContainText("6 / 6 AP");
   await expect(page.locator(".command-deck h2")).toHaveText("Pip");
@@ -548,8 +551,12 @@ test("effect icons expose themed descriptions on hover and keyboard focus and Gu
 test("an attack clears a defeated target even when the same cat still has AP", async ({
   page,
 }) => {
-  // Hearth rank 2 adds +1 attack so two bolts leave the rat alive and the third finishes it.
-  await seedLegacySave(page, { catLevels: { luna: 3 }, generalLevel: 2 });
+  // Hearth rank 2 and mastery 3 add +2 attack so two bolts leave the rat alive and the third finishes it.
+  await seedLegacySave(page, {
+    catLevels: { luna: 3 },
+    generalLevel: 2,
+    xp: 450,
+  });
   await page.goto("/");
   await enterDungeon(page);
   await pickTarget(page, "e0");
@@ -593,7 +600,7 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
       break;
     await page.getByTestId("end-turn").click();
   }
-  await expect(luna.locator(".health-value")).toHaveText("0 / 25 HP");
+  await expect(luna.locator(".health-value")).toHaveText("0 / 30 HP");
   await advanceToCat(page, "Mei");
   await expect(
     page.getByRole("button", { name: "Target Luna", exact: true }),
@@ -608,7 +615,7 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
   await expect(revive).toContainText("60% max HP");
   await revive.click();
   await expect(luna).toHaveClass(/heal-[01]/);
-  await expect(luna.locator(".health-value")).toHaveText("15 / 25 HP");
+  await expect(luna.locator(".health-value")).toHaveText("18 / 30 HP");
   await expect(page.locator('.unit-target[aria-pressed="true"]')).toHaveCount(
     0,
   );
@@ -643,7 +650,7 @@ test("Mei can revive at 60 percent with a revive-only cooldown while party heali
   );
 });
 
-test("Ember Flame paw has a two-turn cooldown while Cinder jab has none", async ({
+test("Ember Flame paw has a one-turn cooldown while Cinder jab has none", async ({
   page,
 }) => {
   await seedLegacySave(page, { catLevels: { ember: 3 } });
@@ -660,7 +667,7 @@ test("Ember Flame paw has a two-turn cooldown while Cinder jab has none", async 
   const flame = page.getByRole("button", { name: /^Flame paw/ });
   await flame.click();
   await expect(flame.locator(".ability-cooldown")).toContainText(
-    "Ready in 3 turns",
+    "Ready in 2 turns",
   );
   const claw = page.getByRole("button", { name: /^Cinder jab/ });
   await expect(claw).toBeEnabled();
@@ -670,7 +677,7 @@ test("Ember Flame paw has a two-turn cooldown while Cinder jab has none", async 
   await pickTarget(page, "e1");
   await expect(flame).toBeDisabled();
   await expect(flame.locator(".ability-cooldown")).toContainText(
-    "Ready in 2 turns",
+    "Ready in 1 turn",
   );
   await expect(claw).toBeEnabled();
   await claw.click();
@@ -679,9 +686,9 @@ test("Ember Flame paw has a two-turn cooldown while Cinder jab has none", async 
   await page.getByTestId("end-turn").click();
   await advanceToCat(page, "Ember");
   await pickTarget(page, "e1");
-  await expect(flame).toBeDisabled();
+  await expect(flame).toBeEnabled();
   await expect(flame.locator(".ability-cooldown")).toContainText(
-    "Ready in 1 turn",
+    "Cooldown: 1 turn",
   );
 });
 
@@ -977,7 +984,7 @@ test("the field guide has two sections and shows skills as cards", async ({
   await expect(skills("Miso")).toContainText("Valiant slash");
   await expect(skills("Mei")).toContainText("Thorn swipe");
   await expect(skills("Ember")).toContainText("Cinder jab");
-  await expect(skills("Ember")).toContainText("Cooldown: 2 turns");
+  await expect(skills("Ember")).toContainText("Cooldown: 1 turn");
   await expect(skills("Pip")).toContainText("Claw strike");
   await expect(skills("Mei").getByRole("listitem").nth(3)).toContainText(
     "Revive a fallen ally",
@@ -1081,7 +1088,7 @@ test("the field guide is fully available in Spanish", async ({ page }) => {
   });
   await expect(skills).toContainText("Jab de brasa");
   await expect(skills).toContainText("Garra de fuego");
-  await expect(skills).toContainText("Enfriamiento: 2 turnos");
+  await expect(skills).toContainText("Enfriamiento: 1 turno");
   await expect(
     page.getByRole("list", {
       name: "Rangos de entrenamiento de Miso",
@@ -1157,14 +1164,14 @@ test("Dagger line hits the target and the enemy behind it", async ({
   await pickTarget(page, "e0");
   const line = page.getByRole("button", { name: /^Dagger line/ });
   await expect(line).toContainText(
-    "Hit 1 enemy for 8, the one behind it for 4 and the next for 3.",
+    "Hit 1 enemy for 5, the one behind it for 3 and the next for 2.",
   );
   await line.click();
   await expect(page.locator('[data-unit="e0"] .health-value')).toHaveText(
-    "23 / 31 HP",
+    "31 / 36 HP",
   );
   await expect(page.locator('[data-unit="e1"] .health-value')).toHaveText(
-    "34 / 38 HP",
+    "41 / 44 HP",
   );
   await expect(line).toBeDisabled();
 });
@@ -1186,7 +1193,7 @@ test("a critical hit is announced over its target", async ({ page }) => {
     "Pip scores a critical hit on Crypt rat!",
   );
   await expect(page.locator('[data-unit="e0"] .health-value')).toHaveText(
-    "25 / 31 HP",
+    "30 / 36 HP",
   );
 });
 

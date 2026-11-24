@@ -152,6 +152,11 @@ export function applyAbility(
       run.log.push(
         `${actor.name} heals ${t.name}: +${healed} HP (${amount} healing power; ${t.hp}/${t.maxHp} HP).`,
       );
+      if (t.curse > 0) {
+        t.curse = 0;
+        t.curseTurns = 0;
+        run.log.push(`${actor.name} lifts the curse on ${t.name}.`);
+      }
     }
   } else if (ability.effect === "guard") guard(run, target, power, GUARD_TURNS);
   else if (ability.effect === "fury") fury(run, target, power);

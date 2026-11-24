@@ -91,10 +91,14 @@ function textOf(
     case "cleave":
       return { text: t("Deal {power} damage to all enemies.", { power }) };
     case "heal":
-      return { text: t("Heal 1 ally for {power} HP.", { power }) };
+      return {
+        text: t("Heal 1 ally for {power} HP.", { power }),
+        note: t("Also lifts a curse."),
+      };
     case "heal-all":
       return {
         text: t("Heal all living allies for {power} HP each.", { power }),
+        note: t("Also lifts curses."),
       };
     case "revive":
       return {

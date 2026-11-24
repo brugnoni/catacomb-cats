@@ -76,7 +76,7 @@ export function abilityTargetUnavailableReason(
       return "This skill targets the caster or whole group";
     if (
       ability.effect === "heal-all" &&
-      !run.party.some((u) => u.hp > 0 && u.hp < u.maxHp)
+      !run.party.some((u) => u.hp > 0 && (u.hp < u.maxHp || u.curse > 0))
     )
       return "All living allies are already at full HP";
     return undefined;
@@ -89,7 +89,8 @@ export function abilityTargetUnavailableReason(
   const group = ability.target === "enemy" ? run.enemies : run.party;
   const target = group.find((u) => u.id === targetId && u.hp > 0);
   if (!target) return "Choose a living " + ability.target;
-  if (ability.effect === "heal" && target.hp >= target.maxHp)
+  // A cursed ally can still be targeted: healing also lifts the curse.
+  if (ability.effect === "heal" && target.hp >= target.maxHp && !target.curse)
     return "Already at full HP";
   if (
     ability.effect === "guard" &&

@@ -92,3 +92,26 @@ Each Expedition is tuned for a party at its own Rank cap (`playerAtCap` in `src/
 Enemy stats of the two new Expeditions were tuned by scaling their base teams until the capped rows landed between 50% and 70% (tested in `src/balance.test.ts`). The Ascension formula was not touched.
 
 **Known gap:** the target "under 30% with the previous cap" is not met. Ascension follows Power, so a party at the previous cap meets proportionally weaker enemies; going up a cap also crosses the tier 10 reinforcement and costs as much as it gives. The Rank cap, not enemy strength, is what stops farming The Catacombs to the maximum. The team without a healer (Miso + Pip + Ember) loses almost every Moss Warrens boss fight and Bone Vault run.
+
+## Round 3: audit of 24 November 2026
+
+Full findings in `docs/AUDIT.md`. Measured with luck on (crits, misses, evasion), 12 seeds, 10 teams, and a width-3 planner as the competent player (`optimalPlan(run, 3)`).
+
+**What changed** (data only): Nine lives 1 AP; Dagger line 1 AP, power 5, lifesteal 30%; Pip HP 40, Mei 36, Luna 30, Ember 42 (initiative 12); Flame paw power 24 with a 1-turn cooldown; Sweeping embers power 8; Healing purr and Circle of renewal lift curses; every enemy +15% HP and +1 power, Bone Vault +10% HP more.
+
+**Why:** with luck off, the same bot lost 0-13% with Pip teams without Luna (sd 39 points between teams). That was mostly the luck setting and the greedy bot. With luck on the spread is already small, so the goals became relevance (turns without action per cat) and difficulty.
+
+| Setting (competent bot, luck on) | Win  | Spread between teams |
+| -------------------------------- | ---- | -------------------- |
+| Catacombs first descent          | 100% | 0                    |
+| Catacombs at cap                 | 100% | 0                    |
+| Moss Warrens at cap              | 100% | 0                    |
+| Bone Vault at cap                | 100% | 0                    |
+
+Turns without action (percent of turns, same bot): Miso 36-56, Luna 5-9, Pip 4-10, Mei 49-84, Ember 27-42. Mei is still high: heals are rarely needed.
+
+**Dropped idea:** carrying unspent AP into the next round (bank of 3). With a width-24 planner, fights took 13% longer (26.6 to 30.1 rounds at the Warrens cap) and the idle turns of Ember rose from 26% to 69%.
+
+**Rounds per room** (win-only means, crits on, 3 teams x 12 seeds, Catacombs enemies): fresh party Ascension 0 competent bot 3.3 / 5.2 / 6.9 (21 / 34 / 45% of rounds); capped party Ascension 10 5.2 / 7.4 / 9.7 (23 / 33 / 43%); Ascension 15 (formula beyond the current max tier 14) 6.4 / 9.3 / 12.5, 22% wins.
+
+**Open:** the bots win almost everything, so absolute difficulty needs human play. The greedy bot with luck off still passes the capped-party targets in `src/balance.test.ts`.
