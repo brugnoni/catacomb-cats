@@ -444,8 +444,10 @@ hr {
 }
 .combatant {
   text-align: center;
-  min-width: 95px;
-  max-width: 145px;
+  box-sizing: border-box;
+  /* Every card has the same size; effects and outlines stay inside it. */
+  width: 140px;
+  flex: none;
   position: relative;
   padding: 5px;
   background: #101723bb;
@@ -455,12 +457,59 @@ hr {
   border-color: var(--gold);
   background: #3b3526cc;
 }
+.combatant.active {
+  box-shadow:
+    inset 0 0 0 2px #ffd84a,
+    0 0 14px #ffd84acc;
+}
 .combatant.active:before {
   content: "▼";
-  color: var(--gold);
+  color: #ffd84a;
+  font-size: 30px;
+  line-height: 1;
+  text-shadow: 0 0 8px #ffd84a;
   position: absolute;
-  top: -22px;
-  left: 45%;
+  top: -34px;
+  left: 0;
+  right: 0;
+}
+.turn-banner {
+  position: absolute;
+  top: -58px;
+  left: 0;
+  right: 0;
+  z-index: 25;
+  color: #ffd84a;
+  font-weight: 700;
+  text-shadow: 0 0 6px #000;
+  pointer-events: none;
+  animation: turn-fade 1.6s ease-out forwards;
+}
+@keyframes turn-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  15% {
+    opacity: 1;
+    transform: none;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hit-shake {
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
 }
 .combatant.dead {
   opacity: 0.3;
@@ -622,7 +671,7 @@ hr {
     gap: 5px;
   }
   .combatant {
-    min-width: 80px;
+    width: 100px;
   }
   .top-meta {
     gap: 14px;
@@ -1165,7 +1214,10 @@ hr {
   z-index: 20;
 }
 .combatant.active:has(.unit-effects):before {
-  top: -57px;
+  top: -69px;
+}
+.combatant.active:has(.unit-effects) .turn-banner {
+  top: -93px;
 }
 .battlefield {
   padding-top: 105px;
@@ -1362,10 +1414,14 @@ hr {
 
 /* Hit feedback: the card border, name, HP bar and HP numbers flash red for 1s */
 .combatant.hit-0 {
-  animation: hit-card 1s ease-out var(--flash-delay, 0s);
+  animation:
+    hit-card 1s ease-out var(--flash-delay, 0s),
+    hit-shake 0.4s ease-out var(--flash-delay, 0s);
 }
 .combatant.hit-1 {
-  animation: hit-card-alt 1s ease-out var(--flash-delay, 0s);
+  animation:
+    hit-card-alt 1s ease-out var(--flash-delay, 0s),
+    hit-shake 0.4s ease-out var(--flash-delay, 0s);
 }
 .combatant.hit-0 h3,
 .combatant.hit-0 .health-value {
@@ -1504,13 +1560,6 @@ hr {
 }
 .cat-info > .milestone-progress {
   align-self: start;
-}
-
-/* Guard: a silver border for as long as the shield lasts */
-.combatant.guarded {
-  box-shadow:
-    inset 0 0 0 3px #d5dde8,
-    0 0 12px #b8c6d85c;
 }
 
 /* Heal: the healed units' borders flash green for 1s */

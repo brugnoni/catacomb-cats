@@ -135,6 +135,7 @@ test("the practice battle teaches by doing and never touches real progress", asy
     const attack = page.getByRole("button", {
       name: /^(Claw strike|Moon bolt|Valiant slash)/,
     });
+    await expect(page.getByTestId("end-turn")).toBeEnabled();
     if (await attack.isEnabled()) await attack.click();
     else await page.getByTestId("end-turn").click();
   }

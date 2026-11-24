@@ -94,7 +94,10 @@ export function abilityTargetUnavailableReason(
   if (
     ability.effect === "guard" &&
     target.guard > 0 &&
-    target.guardTurns >= GUARD_TURNS
+    target.guardTurns >= GUARD_TURNS &&
+    // A stronger shield can still replace a weaker one at full duration.
+    Math.max(0, abilityPower(run, actor, ability) - target.curse) <=
+      target.guard
   )
     return "Guard is already at full duration";
   if (ability.effect === "fury" && target.furyTurns >= 3)

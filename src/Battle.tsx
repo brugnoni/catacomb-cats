@@ -13,6 +13,8 @@ import { endTurn, isDamaging, type Ability, type Run } from "./game";
 
 /** How long the opening enemy hits wait before they are shown. */
 const INTRO_MS = 1600;
+/** How long the controls stay locked after an action, so its effects can be read. */
+const ACTION_MS = 700;
 
 /**
  * One battle: the field, the skills panel, results and the log. It owns the
@@ -66,8 +68,16 @@ export function Battle({
     targetUnit,
     setAim,
   } = useBattleView(run, target, intro);
+  // A short pause after each action so its animations can be followed.
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!busy) return;
+    const timer = setTimeout(() => setBusy(false), ACTION_MS);
+    return () => clearTimeout(timer);
+  }, [busy, run]);
   const applyCombatAction = (next: Run, ability?: Ability) => {
     if (next === run) return;
+    setBusy(true);
     const attacking = ability && isDamaging(ability);
     const sameTurn =
       next.status === "combat" &&
@@ -143,6 +153,16 @@ export function Battle({
                   {...hoverProps(unit.id)}
                 >
                   {critPop(unit.id)}
+                  {unit.id === currentId &&
+                    run.status === "combat" &&
+                    !intro && (
+                      <span
+                        className="turn-banner"
+                        key={`${run.round}:${run.turn}`}
+                      >
+                        {t("Your turn!")}
+                      </span>
+                    )}
                   <UnitEffects
                     unit={unit}
                     units={units}
@@ -271,7 +291,7 @@ export function Battle({
                     {run.ap}
                     <small>
                       {" "}
-                      / {run.maxAp} {t("AP")}
+                      / {Math.max(run.ap, run.maxAp)} {t("AP")}
                     </small>
                   </strong>
                   <span className="ap-note">
@@ -293,7 +313,7 @@ export function Battle({
                     current={current}
                     ability={ability}
                     target={target}
-                    locked={intro}
+                    locked={intro || busy}
                     onAim={setAim}
                     onAct={applyCombatAction}
                   />
@@ -301,7 +321,7 @@ export function Battle({
                 <button
                   className="quiet end-turn"
                   data-testid="end-turn"
-                  disabled={intro}
+                  disabled={intro || busy}
                   onClick={() => applyCombatAction(endTurn(run))}
                 >
                   {nextCat

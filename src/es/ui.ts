@@ -77,6 +77,8 @@ export const UI: Record<string, string> = {
     "{wins} victorias · Poder {points} · Maestría {level}",
   "Difficulty is fixed when you enter. Future victories and permanent investment strengthen the next expedition.":
     "La dificultad queda fija al entrar. Las futuras victorias y la inversión permanente refuerzan la próxima expedición.",
+  "Blessing complete": "Bendición completa",
+  "Your turn!": "¡Tu turno!",
   "Upgrades stay.": "Las mejoras se quedan.",
   "Dungeon spoils must make it home.":
     "El botín de la mazmorra debe llegar a casa.",

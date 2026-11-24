@@ -303,9 +303,11 @@ export function Lobby({
               progress.gold < upgradeCost(progress)
             }
           >
-            {t("Improve blessing · {cost} gold", {
-              cost: upgradeCost(progress),
-            })}
+            {progress.generalLevel >= MAX_TRAINING_RANK
+              ? t("Blessing complete")
+              : t("Improve blessing · {cost} gold", {
+                  cost: upgradeCost(progress),
+                })}
           </button>
           <div className="camp-rule">
             {t("Upgrades stay.")}

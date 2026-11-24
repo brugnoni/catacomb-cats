@@ -535,12 +535,26 @@ describe("revival, inspiration and safe targeting regressions", () => {
     let r = turn(start(), "miso");
     r = act(r, "guard", "pip");
     const target = r.party.find((c) => c.id === "pip")!;
-    target.guard = 2;
+    target.guard = 8;
     expect(act(r, "guard", "pip")).toBe(r);
     target.guardTurns = 1;
     r = act(r, "guard", "pip");
     expect(r.party.find((c) => c.id === "pip")!.guard).toBe(8);
     expect(r.party.find((c) => c.id === "pip")!.guardTurns).toBe(GUARD_TURNS);
+  });
+  it("lets a stronger shield replace Stand behind me at full duration, never adding to it", () => {
+    let r = turn(trained("miso"), "miso");
+    r.ap = 10;
+    r = act(r, "taunt", "miso");
+    const miso = () => r.party.find((c) => c.id === "miso")!;
+    const weak = miso().guard;
+    expect(miso().guardTurns).toBe(GUARD_TURNS);
+    const guard = miso().abilities.find((a) => a.id === "guard")!;
+    expect(abilityPower(r, miso(), guard)).toBeGreaterThan(weak);
+    expect(abilityTargetUnavailableReason(r, guard, "miso")).toBeUndefined();
+    r = act(r, "guard", "miso");
+    expect(miso().guard).toBe(abilityPower(r, miso(), guard));
+    expect(abilityTargetUnavailableReason(r, guard, "miso")).toBeDefined();
   });
   it("prevents full-HP single and area healing without spending resources, while injured allies remain legal", () => {
     const r = trained("clover");

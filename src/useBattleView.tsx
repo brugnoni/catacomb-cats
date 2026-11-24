@@ -1,12 +1,7 @@
 import { useEffect, useEffectEvent, useState, type CSSProperties } from "react";
 import { type IntentEntry } from "./IntentArrows";
 import { useT } from "./i18n";
-import {
-  abilityTargetUnavailableReason,
-  enemyIntent,
-  type Run,
-  type Unit,
-} from "./game";
+import { enemyIntent, type Run, type Unit } from "./game";
 
 /**
  * Everything the battle screen derives from a run: whose turn it is, the threat
@@ -182,10 +177,6 @@ export function useBattleView(run: Run, target: string, intro: boolean) {
   if (run?.status === "combat" && current && aimAbility) {
     const livingFoes = run.enemies.filter((unit) => unit.hp > 0);
     const livingCats = run.party.filter((unit) => unit.hp > 0);
-    const legal = (group: Unit[]) =>
-      group.filter(
-        (unit) => !abilityTargetUnavailableReason(run, aimAbility, unit.id),
-      );
     const chosen = target;
     const pickOne = (group: Unit[]) =>
       group.some((unit) => unit.id === chosen)
@@ -198,7 +189,13 @@ export function useBattleView(run: Run, target: string, intro: boolean) {
     } else if (aimAbility.target === "enemy") ids = pickOne(livingFoes);
     else if (aimAbility.target === "all-enemies") ids = livingFoes;
     else if (aimAbility.target === "all-allies") ids = livingCats;
-    else if (aimAbility.target === "ally") ids = pickOne(legal(livingCats));
+    else if (aimAbility.target === "ally")
+      // The chosen cat, or the caster when nobody is chosen.
+      ids = livingCats.filter(
+        (unit) =>
+          unit.id ===
+          (livingCats.some((u) => u.id === chosen) ? chosen : current.id),
+      );
     else if (aimAbility.target === "fallen-ally")
       ids = run.party.filter((unit) => unit.hp <= 0);
     else ids = [current];

@@ -219,7 +219,8 @@ export function guard(
 ) {
   const active = target.guard > 0 && target.guardTurns > 0;
   // A curse lowers the shields a cat receives, too.
-  target.guard = Math.max(0, power - target.curse);
+  // Shields replace each other, never add: the stronger one stays.
+  target.guard = Math.max(active ? target.guard : 0, power - target.curse, 0);
   target.guardTurns = turns;
   run.log.push(
     `${target.name} ${active ? "restores" : "gains"} a ${target.guard} shield for ${turns} turns.`,

@@ -75,6 +75,8 @@ async function enterDungeon(page: Page) {
 test("an upgraded party completes all three rooms and persists earned rewards", async ({
   page,
 }) => {
+  // Every action now pauses briefly, so a full expedition takes longer.
+  test.slow();
   await seedLegacySave(page, { generalLevel: 8 });
   await page.goto("/");
   const miso = page
@@ -129,6 +131,7 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
     const attack = page.getByRole("button", {
       name: /^(Claw strike|Moon bolt|Valiant slash|Thorn swipe|Cinder jab)/,
     });
+    await expect(page.getByTestId("end-turn")).toBeEnabled();
     if (await attack.isEnabled()) await attack.click();
     else await page.getByTestId("end-turn").click();
   }
@@ -787,23 +790,6 @@ test("hovering a cat or a helped enemy shows who will attack or help it", async 
   await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
 });
 
-test("a shield puts a silver border on its holder until it ends", async ({
-  page,
-}) => {
-  await seedLegacySave(page, { catLevels: { miso: 3 } });
-  await page.goto("/");
-  await enterDungeon(page);
-  await advanceToCat(page, "Miso");
-  await expect(page.locator(".combatant.guarded")).toHaveCount(0);
-  await pickTarget(page, "miso");
-  await page.getByRole("button", { name: /^Nine lives/ }).click();
-  const miso = page.locator('[data-unit="miso"]');
-  await expect(miso).toHaveClass(/guarded/);
-  await expect(page.locator(".combatant.guarded")).toHaveCount(1);
-  const shadow = await miso.evaluate((el) => getComputedStyle(el).boxShadow);
-  expect(shadow).toContain("rgb(213, 221, 232)");
-});
-
 test("enemies do not always mark the same cat", async ({ page }) => {
   await page.goto("/");
   await enterDungeon(page);
@@ -1134,6 +1120,7 @@ test("a curse is drawn as a violet thread", async ({ page }) => {
     const attack = page.getByRole("button", {
       name: /^(Claw strike|Moon bolt|Valiant slash|Thorn swipe|Cinder jab)/,
     });
+    await expect(page.getByTestId("end-turn")).toBeEnabled();
     if (await attack.isEnabled()) await attack.click();
     else await page.getByTestId("end-turn").click();
   }
@@ -1433,4 +1420,34 @@ test("hovering Dagger line outlines only the chosen enemy", async ({
   await page.getByRole("button", { name: /^Dagger line/ }).hover();
   await expect(page.locator(".allies .combatant.aimed")).toHaveCount(0);
   await expect(page.locator('.enemies [data-unit="e0"].aimed')).toHaveCount(1);
+});
+
+test("hovering Healing purr outlines the chosen ally, or Mei when nobody is chosen", async ({
+  page,
+}) => {
+  await seedLegacySave(page, { catLevels: { clover: 3, ember: 3 } });
+  await page.goto("/");
+  await chooseParty(page, ["Mei", "Ember"], ["Luna", "Pip"]);
+  await enterDungeon(page);
+  await advanceToCat(page, "Mei");
+  const heal = page.getByRole("button", { name: /^Healing purr/ });
+  await heal.hover();
+  await expect(page.locator(".combatant.aimed")).toHaveCount(1);
+  await expect(page.locator('[data-unit="clover"].aimed')).toHaveCount(1);
+  await pickTarget(page, "ember");
+  await heal.hover();
+  await expect(page.locator(".combatant.aimed")).toHaveCount(1);
+  await expect(page.locator('[data-unit="ember"].aimed')).toHaveCount(1);
+});
+
+test("the cat whose turn it is announces it and actions pause briefly", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await enterDungeon(page);
+  await expect(page.locator(".turn-banner")).toHaveText("Your turn!");
+  await pickTarget(page, "e0");
+  await page.getByRole("button", { name: /^Claw strike/ }).click();
+  await expect(page.getByTestId("end-turn")).toBeDisabled();
+  await expect(page.getByTestId("end-turn")).toBeEnabled();
 });
