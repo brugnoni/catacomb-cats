@@ -4,7 +4,7 @@ import type { EnemyIntent } from "./game";
 export interface IntentEntry {
   enemyId: string;
   intent: EnemyIntent;
-  /** The Next target: who the thread points at, written under its start. */
+  /** The next target: who the thread points at, written above its enemy. */
   tag?: { text: string; friendly: boolean };
 }
 interface Line {
@@ -12,14 +12,13 @@ interface Line {
   kind: "hostile" | "friendly" | "curse";
   d: string;
 }
-/** Where each enemy's Next target hangs, by enemy id. */
+/** Where each enemy's next-target label sits, by enemy id. */
 type TagSpots = Record<string, { x: number; y: number }>;
 /** Gap between the unit cards and the first thread, and between stacked threads. */
 const BASE_GAP = 14;
-/** One row per thread: tall enough for its label, which hangs under the line. */
-const STACK_GAP = 28;
-/** Space between a thread's floor run and the label hung under it. */
-const TAG_GAP = 4;
+const STACK_GAP = 7;
+/** Space between the label and the top of its enemy's card or status icons. */
+const TAG_GAP = 6;
 /**
  * Draws enemy intents as threads under the battlefield cards: down from the
  * enemy, along the floor, and up to the cat it marked (red) or the enemy it
@@ -59,12 +58,16 @@ export function IntentArrows({
       const originX = box.left + container.clientLeft * scale;
       const originY = box.top + container.clientTop * scale;
       const card = (id: string) => {
-        const rect = container
-          .querySelector(`[data-unit="${id}"]`)
-          ?.getBoundingClientRect();
-        return rect
+        const unit = container.querySelector(`[data-unit="${id}"]`);
+        const rect = unit?.getBoundingClientRect();
+        // The top counts the status icons that float above the card.
+        const top = (
+          unit?.querySelector(".unit-effects") ?? unit
+        )?.getBoundingClientRect().top;
+        return rect && top !== undefined
           ? {
               x: (rect.left + rect.width / 2 - originX) / scale,
+              top: (top - originY) / scale,
               bottom: (rect.bottom - originY) / scale,
             }
           : undefined;
@@ -78,11 +81,7 @@ export function IntentArrows({
       const next: Line[] = [];
       const nextSpots: TagSpots = {};
       let stack = 0;
-      // Leftmost enemy first: its label ends at its own thread and no later thread crosses it.
-      const byPosition = [...entries].sort(
-        (a, b) => (card(a.enemyId)?.x ?? 0) - (card(b.enemyId)?.x ?? 0),
-      );
-      for (const { enemyId, intent } of byPosition) {
+      for (const { enemyId, intent } of entries) {
         const from = card(enemyId);
         for (const [id, kind] of [
           [intent.targetId, intent.kind === "curse" ? "curse" : "hostile"],
@@ -96,7 +95,7 @@ export function IntentArrows({
             kind,
             d: `M${from.x} ${from.bottom} V${y} H${to.x} V${to.bottom}`,
           });
-          nextSpots[enemyId] ??= { x: from.x, y: y + TAG_GAP };
+          nextSpots[enemyId] ??= { x: from.x, y: from.top - TAG_GAP };
         }
       }
       setSize({ width: box.width / scale, height: box.height / scale });
@@ -147,12 +146,12 @@ export function IntentArrows({
           />
         ))}
       </svg>
-      {entries.map(({ enemyId, tag }) => {
+      {entries.map(({ enemyId, intent, tag }) => {
         const spot = spots[enemyId];
         return tag && spot ? (
           <span
             key={enemyId}
-            className={`next-target ${tag.friendly ? "friendly" : ""}`}
+            className={`next-target ${tag.friendly ? "friendly" : intent.kind === "curse" ? "curse" : ""}`}
             style={{ left: spot.x, top: spot.y }}
           >
             {tag.text}

@@ -589,6 +589,17 @@ hr {
 .turn-side .end-turn {
   width: 100%;
 }
+/* All party grids overlap in one cell; only the acting cat's is visible. */
+.ability-stack {
+  display: grid;
+}
+.ability-stack > .ability-grid {
+  grid-area: 1 / 1;
+}
+.ability-grid.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
 .ability-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1547,9 +1558,9 @@ hr {
   background: var(--gold);
 }
 
-/* Room under the cards for one row per thread (at least four) and its label */
+/* Room for the threads under the cards */
 .battlefield {
-  padding-bottom: calc(28px + var(--thread-rows, 4) * 28px);
+  padding-bottom: 42px;
 }
 
 /* Lobby roster: every row lines up across the five cats */
@@ -2154,16 +2165,22 @@ hr {
 }
 .next-target {
   position: absolute;
-  /* Ends at the start of its thread, so it never runs under a thread that follows. */
-  transform: translateX(-100%);
+  /* Sits above the enemy's status icons, centred on its card. */
+  transform: translate(-50%, -100%);
   z-index: 30;
   white-space: nowrap;
-  padding: 2px 8px;
+  padding: 0 7px;
   font-size: 14px;
+  line-height: 18px;
   color: #ffd2ca;
   background: #2a0d0dd9;
   border: 1px solid #ff6a5c;
   pointer-events: none;
+}
+.next-target.curse {
+  color: #e6d2ff;
+  background: #1f0f33d9;
+  border-color: #b57cff;
 }
 .next-target.friendly {
   color: #d5f5cd;

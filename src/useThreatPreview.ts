@@ -66,12 +66,12 @@ export function useThreatPreview(
         const ally = run.enemies.find((unit) => unit.id === intent.allyId);
         const tag = cat
           ? {
-              text: t("Next target: {name}", { name: t(cat.name) }),
+              text: `→ ${t(cat.name)}`,
               friendly: false,
             }
           : ally
             ? {
-                text: t("Next: supports {name}", { name: t(ally.name) }),
+                text: `→ ${t(ally.name)}`,
                 friendly: true,
               }
             : undefined;

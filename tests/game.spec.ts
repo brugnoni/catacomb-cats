@@ -1279,7 +1279,7 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await previewDone(page);
   await expect(page.locator(".intent-line")).toHaveCount(0);
   await page.getByTestId("threats-button").hover();
-  await expect(page.locator(".next-target").first()).toContainText(/^Next/);
+  await expect(page.locator(".next-target").first()).toContainText(/^→/);
   expect(await page.locator(".intent-line").count()).toBeGreaterThan(1);
   await page.mouse.move(0, 0);
   await expect(page.locator(".intent-line")).toHaveCount(0);
@@ -1290,28 +1290,25 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await page.mouse.move(0, 0);
   await expect(page.locator(".intent-line")).toHaveCount(0);
   await page.getByTestId("threats-button").hover();
-  // Each label hangs just under its own thread and ends where that thread starts.
+  // Each label sits above its enemy, centred on the card, with just the target's name.
   const tag = (await page.locator(".next-target").first().boundingBox())!;
-  const lines = await page
-    .locator(".intent-line")
-    .evaluateAll((els) =>
-      els.map((el) => el.getBoundingClientRect()).map((r) => r.bottom),
-    );
-  expect(lines.some((b) => tag.y >= b - 1 && tag.y - b < 8)).toBe(true);
-  const centres = await page
+  await expect(page.locator(".next-target").first()).toHaveText(/^→ \w/);
+  const cards = await page
     .locator(".enemies .combatant")
-    .evaluateAll((cards) =>
-      cards.map((c) => c.getBoundingClientRect()).map((r) => r.x + r.width / 2),
-    );
-  expect(centres.some((x) => Math.abs(x - (tag.x + tag.width)) < 2)).toBe(true);
+    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()));
+  expect(
+    cards.some(
+      (c) =>
+        Math.abs(c.x + c.width / 2 - (tag.x + tag.width / 2)) < 2 &&
+        tag.y + tag.height <= c.y,
+    ),
+  ).toBe(true);
   await page.mouse.move(0, 0);
   await page.getByRole("button", { name: "Target Moss slime" }).hover();
   await expect(page.getByTestId("intent-note")).toContainText(
     "Moss slime next turn: Inspire an ally → Crypt rat",
   );
-  await expect(page.locator(".next-target.friendly")).toContainText(
-    "Next: supports Crypt rat",
-  );
+  await expect(page.locator(".next-target.friendly")).toHaveText("→ Crypt rat");
   await expect(page.locator(".intent-line.friendly")).toHaveCount(1);
   await expect(page.locator(".intent-line.hostile")).toHaveCount(0);
   await expect(page.locator(".combatant.marked")).toHaveCount(0);
@@ -1619,7 +1616,7 @@ async function seedFourEnemies(page: Page) {
   });
 }
 
-test("with four enemies every Threats label stays inside the field and apart", async ({
+test("with four enemies every Threats label stays inside the field and apart from the others", async ({
   page,
 }) => {
   await seedFourEnemies(page);
@@ -1637,7 +1634,7 @@ test("with four enemies every Threats label stays inside the field and apart", a
   for (const b of boxes) {
     expect(b.left).toBeGreaterThanOrEqual(field.x);
     expect(b.right).toBeLessThanOrEqual(field.x + field.width);
-    expect(b.bottom).toBeLessThanOrEqual(field.y + field.height);
+    expect(b.top).toBeGreaterThanOrEqual(field.y);
   }
   for (const [i, a] of boxes.entries())
     for (const b of boxes.slice(i + 1))
@@ -1667,7 +1664,7 @@ test("the turn button stays under Shared AP and the skills fit the deck", async 
     expect(Math.abs(turn.x - counter.x)).toBeLessThan(2);
     positions.push(Math.round(turn.x));
     const skills = await page
-      .locator('.actions button[data-testid="ability"]')
+      .locator('.ability-grid:not(.ghost) button[data-testid="ability"]')
       .evaluateAll((els) =>
         els.map((el) => el.getBoundingClientRect().toJSON()),
       );
@@ -1703,7 +1700,9 @@ test("Mei's four skills sit in one row inside the deck without clipping", async 
   await previewDone(page);
   await advanceToCat(page, "Mei");
   const deck = (await page.locator(".actions").boundingBox())!;
-  const skills = page.locator('.actions button[data-testid="ability"]');
+  const skills = page.locator(
+    '.ability-grid:not(.ghost) button[data-testid="ability"]',
+  );
   await expect(skills).toHaveCount(4);
   const rows = await skills.evaluateAll((els) =>
     els.map((el) => ({
@@ -1715,5 +1714,39 @@ test("Mei's four skills sit in one row inside the deck without clipping", async 
   for (const r of rows) {
     expect(r.clipped).toBe(false);
     expect(r.right).toBeLessThanOrEqual(deck.x + deck.width + 1);
+  }
+});
+
+test("the skills deck keeps the same height for every cat, in both languages", async ({
+  page,
+}) => {
+  await seedLegacySave(page, { catLevels: { clover: 8, miso: 8, ember: 8 } });
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "catacomb-cats.party",
+      JSON.stringify(["clover", "ember", "miso"]),
+    ),
+  );
+  for (const lang of ["en", "es"]) {
+    await page.addInitScript(
+      (l) => localStorage.setItem("catacomb-cats.lang", l),
+      lang,
+    );
+    await page.goto("/");
+    await page
+      .getByRole("button", { name: /Enter the dungeon|Entrar/ })
+      .click();
+    await expect(page.locator(".command-deck")).toBeVisible();
+    await previewDone(page);
+    const heights = new Set<number>();
+    for (let i = 0; i < 3; i++) {
+      await pickTarget(page, "e0");
+      heights.add(
+        Math.round((await page.locator(".command-deck").boundingBox())!.height),
+      );
+      await page.getByTestId("end-turn").click();
+      await previewDone(page);
+    }
+    expect(heights.size).toBe(1);
   }
 });

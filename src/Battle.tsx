@@ -4,7 +4,7 @@ import { Combatant } from "./Combatant";
 import { turnView } from "./battleView";
 import { useCombatFeedback } from "./useCombatFeedback";
 import { useThreatPreview } from "./useThreatPreview";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IntentArrows } from "./IntentArrows";
 import { useEnemyPhase } from "./useEnemyPhase";
 import { pace } from "./storage";
@@ -127,11 +127,6 @@ export function Battle({
             className="battlefield"
             ref={battlefieldRef}
             data-previewing={previewing ? "true" : "false"}
-            style={
-              {
-                "--thread-rows": Math.max(4, run.enemies.length),
-              } as CSSProperties
-            }
           >
             {run.status === "combat" && !phasing && (
               <button
@@ -291,19 +286,39 @@ export function Battle({
                       : t("End turn")}
                   </button>
                 </div>
-                <div className="ability-grid">
-                  {current?.abilities.map((ability) => (
-                    <AbilityButton
-                      key={ability.id}
-                      run={run}
-                      current={current}
-                      ability={ability}
-                      target={target}
-                      locked={phasing || busy}
-                      onAim={setAim}
-                      onAct={applyCombatAction}
-                    />
-                  ))}
+                {/* Every cat's skills share one cell, so the deck keeps the tallest height. */}
+                <div className="ability-stack">
+                  {run.party.map((unit) => {
+                    const live = unit.id === current?.id;
+                    // A hidden grid is drawn as if it were that cat's turn, so it is as tall as it will be.
+                    const view = live
+                      ? run
+                      : {
+                          ...run,
+                          turn: Math.max(0, run.order.indexOf(unit.id)),
+                        };
+                    return (
+                      <div
+                        key={unit.id}
+                        className={live ? "ability-grid" : "ability-grid ghost"}
+                        aria-hidden={live ? undefined : true}
+                        inert={!live}
+                      >
+                        {unit.abilities.map((ability) => (
+                          <AbilityButton
+                            key={ability.id}
+                            run={view}
+                            current={unit}
+                            ability={ability}
+                            target={target}
+                            locked={phasing || busy}
+                            onAim={setAim}
+                            onAct={applyCombatAction}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>
