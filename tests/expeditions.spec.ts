@@ -57,12 +57,16 @@ test("the expedition picker shows locked routes and enters an unlocked one", asy
   // Escape closes it without changing the choice.
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
-  await expect(page.locator(".expedition-gate h2")).toHaveText("The Catacombs");
+  await expect(page.locator(".expedition-gate > h2")).toHaveText(
+    "The Catacombs",
+  );
   await page.getByRole("button", { name: "Choose expedition" }).click();
   await page.locator('[data-expedition="warrens"] button').click();
   // Picking an open route closes the window by itself.
   await expect(dialog).toHaveCount(0);
-  await expect(page.locator(".expedition-gate h2")).toHaveText("Moss Warrens");
+  await expect(page.locator(".expedition-gate > h2")).toHaveText(
+    "Moss Warrens",
+  );
   await page.getByRole("button", { name: "Enter the dungeon" }).click();
   await expect(page.locator(".command-deck")).toBeVisible();
   await expect(
@@ -78,7 +82,9 @@ test("a saved but locked expedition falls back to the first one", async ({
     localStorage.setItem("catacomb-cats.expedition", "vault"),
   );
   await page.goto("/");
-  await expect(page.locator(".expedition-gate h2")).toHaveText("The Catacombs");
+  await expect(page.locator(".expedition-gate > h2")).toHaveText(
+    "The Catacombs",
+  );
   await expect(
     page.getByRole("button", { name: "Enter the dungeon" }),
   ).toBeEnabled();

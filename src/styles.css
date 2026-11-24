@@ -881,13 +881,6 @@ hr {
   border-bottom: 1px solid #414c5c;
   padding: 16px 0;
 }
-.guide-companions h2 {
-  margin-bottom: 12px;
-}
-.guide-companions p {
-  font-size: 20px;
-  line-height: 1.4;
-}
 .training-description,
 .mastery-progress {
   font-size: 15px;
@@ -1681,19 +1674,19 @@ hr {
   gap: 18px;
   align-items: start;
 }
-.guide-sprite.sprite {
+.guide-sprite {
   width: 180px;
   height: 180px;
   filter: drop-shadow(3px 5px 0 #0b1018aa);
 }
-.rank-track.guide-ranks {
+.guide-ranks {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 @media (max-width: 760px) {
   .guide-cat .cat-sheet {
     grid-template-columns: 1fr;
   }
-  .rank-track.guide-ranks {
+  .guide-ranks {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -2038,19 +2031,15 @@ hr {
   color: #e8bb63;
 }
 .expedition-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  display: grid;
-  place-items: center;
-  background: #05080ecc;
-}
-.expedition-modal section {
   width: min(460px, 92vw);
   padding: 18px 20px 20px;
+  color: inherit;
   background: #151c26;
   border: 3px solid #55505a;
   box-shadow: 0 5px #080c13;
+}
+.expedition-modal::backdrop {
+  background: #05080ecc;
 }
 .expedition-modal h2 {
   margin: 0 0 12px;

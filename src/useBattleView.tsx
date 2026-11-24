@@ -25,9 +25,8 @@ export function useBattleView(
   // Hovering (or keyboard-focusing) a unit shows who threatens or helps whom.
   const [hovered, setHovered] = useState("");
   // Skill under the mouse or keyboard focus: its possible targets are outlined in yellow.
-  const [aim, setRawAim] = useState("");
-  // True for a moment after the threat preview ends, while a resting cursor stays unoutlined.
-  const [aimHeld, setAimHeld] = useState(false);
+  // `live` is false for a cursor that was already resting there during the preview.
+  const [aim, setAimState] = useState({ id: "", live: false });
 
   const currentId = run?.order[run.turn];
   const current = run?.party.find((unit) => unit.id === currentId);
@@ -77,22 +76,17 @@ export function useBattleView(
     if (!turnKey || phasing) return;
     return startPreview();
   }, [turnKey, phasing]);
-  // A cursor already resting on a skill when the preview ends waits before outlining;
-  // entering a skill afterwards is immediate.
-  const [wasPreviewing, setWasPreviewing] = useState(previewing);
-  if (wasPreviewing !== previewing) {
-    setWasPreviewing(previewing);
-    if (!previewing && aim) setAimHeld(true);
-  }
+  // A cursor resting on a skill when the preview ends outlines after a short delay;
+  // entering a skill later is immediate.
   useEffect(() => {
-    if (!aimHeld) return;
-    const timer = setTimeout(() => setAimHeld(false), pace(AIM_DELAY));
+    if (previewing) return;
+    const timer = setTimeout(
+      () => setAimState((a) => ({ ...a, live: true })),
+      pace(AIM_DELAY),
+    );
     return () => clearTimeout(timer);
-  }, [aimHeld]);
-  const setAim = (id: string) => {
-    setRawAim(id);
-    if (id && !previewing) setAimHeld(false);
-  };
+  }, [previewing]);
+  const setAim = (id: string) => setAimState({ id, live: !previewing });
   const arrowEntries: IntentEntry[] = [];
   if (run?.status === "combat")
     for (const enemy of run.enemies) {
@@ -108,12 +102,18 @@ export function useBattleView(
       if ((enemy.id === previewId && !phasing) || related) {
         const cat = run.party.find((unit) => unit.id === intent.targetId);
         const ally = run.enemies.find((unit) => unit.id === intent.allyId);
-        const label = cat
-          ? t("Next target: {name}", { name: t(cat.name) })
+        const tag = cat
+          ? {
+              text: t("Next target: {name}", { name: t(cat.name) }),
+              friendly: false,
+            }
           : ally
-            ? t("Next: supports {name}", { name: t(ally.name) })
-            : "";
-        arrowEntries.push({ enemyId: enemy.id, intent, label });
+            ? {
+                text: t("Next: supports {name}", { name: t(ally.name) }),
+                friendly: true,
+              }
+            : undefined;
+        arrowEntries.push({ enemyId: enemy.id, intent, tag });
       }
     }
   const markedIds = new Set(
@@ -221,7 +221,7 @@ export function useBattleView(
   // Who the hovered skill can reach.
   const aimedIds = new Set<string>();
   const aimAbility = current?.abilities.find(
-    (ability) => ability.id === (previewing || aimHeld ? "" : aim),
+    (ability) => ability.id === (previewing || !aim.live ? "" : aim.id),
   );
   if (run?.status === "combat" && current && aimAbility) {
     const livingFoes = run.enemies.filter((unit) => unit.hp > 0);

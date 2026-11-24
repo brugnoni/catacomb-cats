@@ -4,21 +4,16 @@ import type { EnemyIntent } from "./game";
 export interface IntentEntry {
   enemyId: string;
   intent: EnemyIntent;
-  /** Who the thread points at, written under its start (the Next target). */
-  label: string;
+  /** The Next target: who the thread points at, written under its start. */
+  tag?: { text: string; friendly: boolean };
 }
 interface Line {
   key: string;
   kind: "hostile" | "friendly" | "curse";
   d: string;
 }
-interface Tag {
-  key: string;
-  friendly: boolean;
-  text: string;
-  x: number;
-  y: number;
-}
+/** Where each enemy's Next target hangs, by enemy id. */
+type TagSpots = Record<string, { x: number; y: number }>;
 /** Gap between the unit cards and the first thread, and between stacked threads. */
 const BASE_GAP = 14;
 const STACK_GAP = 7;
@@ -40,7 +35,7 @@ export function IntentArrows({
   version: number;
 }) {
   const [lines, setLines] = useState<Line[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [spots, setSpots] = useState<TagSpots>({});
   const [size, setSize] = useState({ width: 0, height: 0 });
   const signature = entries
     .map(
@@ -52,7 +47,7 @@ export function IntentArrows({
     const container = containerRef.current;
     if (!container || !signature) {
       setLines([]);
-      setTags([]);
+      setSpots({});
       return;
     }
     const measure = () => {
@@ -80,11 +75,10 @@ export function IntentArrows({
         ),
       );
       const next: Line[] = [];
-      const nextTags: Tag[] = [];
+      const nextSpots: TagSpots = {};
       let stack = 0;
-      for (const { enemyId, intent, label } of entries) {
+      for (const { enemyId, intent } of entries) {
         const from = card(enemyId);
-        let tagged = false;
         for (const [id, kind] of [
           [intent.targetId, intent.kind === "curse" ? "curse" : "hostile"],
           [intent.allyId, "friendly"],
@@ -97,21 +91,12 @@ export function IntentArrows({
             kind,
             d: `M${from.x} ${from.bottom} V${y} H${to.x} V${to.bottom}`,
           });
-          if (!tagged && label) {
-            tagged = true;
-            nextTags.push({
-              key: enemyId,
-              friendly: kind === "friendly",
-              text: label,
-              x: from.x,
-              y: y + TAG_GAP,
-            });
-          }
+          nextSpots[enemyId] ??= { x: from.x, y: y + TAG_GAP };
         }
       }
       setSize({ width: box.width / scale, height: box.height / scale });
       setLines(next);
-      setTags(nextTags);
+      setSpots(nextSpots);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -157,15 +142,18 @@ export function IntentArrows({
           />
         ))}
       </svg>
-      {tags.map((tag) => (
-        <span
-          key={tag.key}
-          className={`next-target ${tag.friendly ? "friendly" : ""}`}
-          style={{ left: tag.x, top: tag.y }}
-        >
-          {tag.text}
-        </span>
-      ))}
+      {entries.map(({ enemyId, tag }) => {
+        const spot = spots[enemyId];
+        return tag && spot ? (
+          <span
+            key={enemyId}
+            className={`next-target ${tag.friendly ? "friendly" : ""}`}
+            style={{ left: spot.x, top: spot.y }}
+          >
+            {tag.text}
+          </span>
+        ) : null;
+      })}
     </>
   );
 }
