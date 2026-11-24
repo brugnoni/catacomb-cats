@@ -218,6 +218,9 @@ p {
   right: 26px;
   bottom: 26px;
   max-width: 295px;
+  /* An open Expedition list scrolls inside the box instead of leaving the scene. */
+  max-height: calc(100% - 52px);
+  overflow-y: auto;
   padding: 16px;
   background: #101723eb;
   border: 2px solid #77624d;
@@ -1997,10 +2000,8 @@ hr {
 .expedition-picker ul {
   display: grid;
   gap: 6px;
-  max-height: 260px;
   margin: 8px 0 0;
   padding: 0;
-  overflow-y: auto;
   list-style: none;
 }
 .expedition-picker li button {
