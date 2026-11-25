@@ -1594,18 +1594,18 @@ hr {
 }
 .cat-card {
   display: grid;
-  grid-row: span 9;
+  grid-row: span 10;
   grid-template-rows: subgrid;
 }
 .cat-info {
   display: grid;
-  grid-row: 2 / span 8;
+  grid-row: 2 / span 9;
   grid-template-rows: subgrid;
   align-content: start;
 }
 .card-actions {
   display: grid;
-  grid-row: span 4;
+  grid-row: span 5;
   grid-template-rows: subgrid;
   row-gap: 6px;
 }

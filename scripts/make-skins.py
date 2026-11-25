@@ -88,7 +88,12 @@ def gradient(t, stops):
     return arr[i] * (1 - f) + arr[i + 1] * f
 
 
+# Yellow irises keep their color so the eyes never melt into a dark fur or cloak.
+EYES = rule(None, hue=(42, 60), sat=(0.5, 1), val=(0.5, 1), hf=3)
+
+
 def apply(cell, rules, extra=None):
+    rules = [EYES, *rules]
     rgba = np.asarray(cell, dtype=float)
     alpha = rgba[..., 3]
     rgb = fill_edges(rgba[..., :3], alpha)
@@ -121,7 +126,7 @@ def apply(cell, rules, extra=None):
 BLACK = ["#101018", "#1c1c28", "#2c2c3c", "#464a5e"]
 WHITE = ["#8f94ae", "#c4c8dc", "#eceef8", "#ffffff"]
 OUTLINE = (24, 12, 16)
-CREAM = dict(hue=(5, 50), sat=(0.1, 1), val=(0.5, 1))  # Pursian's fur
+CREAM = dict(hue=(5, 42), sat=(0.1, 1), val=(0.5, 1), hf=6)  # Pursian's fur
 GRAYFUR = dict(hue=(260, 25), sat=(0.04, 0.45), val=(0.2, 0.78))  # Tuntun's fur
 
 
@@ -142,7 +147,7 @@ SKINS = {
         [
             rule(None, val=(0, 1), poly=box(150, 270, 197, 312)),  # leather panel keeps its color
             rule(["#6c7088", "#a4a8c0", "#d6d9ea", "#f6f7ff"], hue=(350, 6), sat=(0.45, 1), hf=5, poly=box(0, 150, 340, 300)),
-            rule(["#1e2638", "#3a4a6c", "#6a80a8", "#aebcd6"], hue=(12, 44), sat=(0.45, 1), val=(0.4, 1), hf=8),
+            rule(["#1e2638", "#3a4a6c", "#6a80a8", "#aebcd6"], hue=(12, 38), sat=(0.45, 1), val=(0.4, 1), hf=6),
             rule(["#8e98b4", "#bec6da", "#e4e8f4", "#fbfcff"], hue=(350, 50), sat=(0.08, 0.6), val=(0.7, 1)),
             rule(["#18243c", "#34548c", "#5f88c4", "#b4cef0"], sat=(0, 0.22), val=(0.3, 1)),
         ],
@@ -150,7 +155,7 @@ SKINS = {
         [
             rule(None, val=(0, 1), poly=box(150, 270, 197, 312)),  # leather panel keeps its color
             rule(["#2a1a52", "#503c9c", "#7e66d8", "#c0b0ff"], hue=(350, 6), sat=(0.45, 1), hf=5, poly=box(0, 150, 340, 300)),
-            rule(["#5e402a", "#a67e52", "#dfba88", "#fbe9c6"], hue=(12, 44), sat=(0.45, 1), val=(0.4, 1), hf=8),
+            rule(["#5e402a", "#a67e52", "#dfba88", "#fbe9c6"], hue=(12, 38), sat=(0.45, 1), val=(0.4, 1), hf=6),
             rule(["#c4a070", "#eacfa0", "#fbe9c6", "#fffbef"], hue=(350, 50), sat=(0.08, 0.6), val=(0.7, 1)),
             rule(["#4e3810", "#a5761c", "#dcae2e", "#fff0a0"], sat=(0, 0.22), val=(0.3, 1)),
         ],
@@ -159,12 +164,14 @@ SKINS = {
     "luna": [
         # Nightshade: near-black cat, deep indigo robe.
         [
+            rule(["#206a7a", "#58c8d8", "#b4f4ff", "#ffffff"], hue=(270, 345), sat=(0.12, 1), val=(0.45, 1), poly=box(201, 120, 230, 154)),  # iris
             rule(["#403e58", "#6c6a88", "#9a98b4", "#cac8de"], hue=(345, 30), sat=(0.04, 0.4), val=(0.78, 1), hf=8, poly=box(140, 90, 300, 215)),
             rule(BLACK, hue=(270, 350), sat=(0, 0.38), val=(0.5, 1)),
             rule(["#0a0c28", "#1a2064", "#3a44ae", "#8896ff"], hue=(255, 350), sat=(0.3, 1), hf=10),
         ],
         # Persian Eclipse: white fluffy cat, midnight robe.
         [
+            rule(["#8a4a10", "#d88a20", "#ffd060", "#fff4c0"], hue=(270, 345), sat=(0.12, 1), val=(0.45, 1), poly=box(201, 120, 230, 154)),  # iris
             rule(["#8085a8", "#bcc0dc", "#e8eaf8", "#ffffff"], hue=(270, 350), sat=(0, 0.38), val=(0.5, 1)),
             rule(["#070b26", "#13206a", "#2c46b0", "#7c9ef2"], hue=(255, 350), sat=(0.3, 1), hf=10),
         ],
