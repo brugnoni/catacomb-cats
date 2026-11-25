@@ -27,6 +27,7 @@ export { currentUnit } from "./engine/state";
 export {
   abilityLimit,
   abilityUses,
+  abilityCost,
   cooldownRemaining,
   abilityUnavailableReason,
   abilityPower,
@@ -35,7 +36,8 @@ export {
 } from "./engine/abilities";
 export { damagePreview } from "./engine/damage";
 export { INTENT_LABELS, enemyIntent } from "./engine/enemyAI";
-export { createRun, act, endTurn, nextRoom } from "./engine/actions";
+export { createRun, act, endTurn, nextRoom, pickRelic } from "./engine/actions";
+export { RELICS, type Relic } from "./engine/relics";
 export {
   claimRewards,
   upgradeCost,

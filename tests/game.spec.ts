@@ -987,7 +987,7 @@ test("the field guide has two sections and shows skills as cards", async ({
   await expect(faqTab).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".faq-entries details").first()).toBeVisible();
   // Only the most important questions are kept.
-  await expect(page.locator(".faq-entries details")).toHaveCount(14);
+  await expect(page.locator(".faq-entries details")).toHaveCount(15);
   await expect(page.locator(".guide-companions")).toHaveCount(0);
   await companionsTab.click();
   await expect(companionsTab).toHaveAttribute("aria-selected", "true");
@@ -1928,4 +1928,28 @@ test("progress exports to a file and imports back, rejecting a bad file", async 
   page.once("dialog", (dialog) => void dialog.accept());
   await picker.setInputFiles(file);
   await expect(page.locator(".currency")).toContainText("77 gold");
+});
+
+// Relic offers have their own test; the rest start straight in the room.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __CATACOMB_RELICS__?: boolean };
+    w.__CATACOMB_RELICS__ ??= false;
+  });
+});
+
+test("a run opens by picking one of three Relics", async ({ page }) => {
+  await page.addInitScript(() => {
+    (
+      window as unknown as { __CATACOMB_RELICS__: boolean }
+    ).__CATACOMB_RELICS__ = true;
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Enter the dungeon" }).click();
+  const cards = page.locator(".relic-cards button");
+  await expect(cards).toHaveCount(3);
+  const name = await cards.first().locator("strong").innerText();
+  await cards.first().press("Enter");
+  await expect(page.locator(".command-deck")).toBeVisible();
+  await expect(page.locator(".held-relics")).toContainText(name);
 });

@@ -89,3 +89,11 @@ test("a saved but locked expedition falls back to the first one", async ({
     page.getByRole("button", { name: "Enter the dungeon" }),
   ).toBeEnabled();
 });
+
+// Relic offers have their own test; the rest start straight in the room.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __CATACOMB_RELICS__?: boolean };
+    w.__CATACOMB_RELICS__ ??= false;
+  });
+});

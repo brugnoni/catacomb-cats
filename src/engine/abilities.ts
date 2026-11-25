@@ -19,6 +19,16 @@ export function abilityUses(run: Run, abilityId: string): number {
   return run.uses[abilityId] ?? 0;
 }
 
+/** What using the skill takes from the shared AP right now. */
+export function abilityCost(run: Run, ability: Ability): number {
+  const free =
+    run.relics.includes("Kindling") &&
+    currentUnit(run)?.id === "ember" &&
+    ability.id === "strike" &&
+    abilityUses(run, ability.id) === 0;
+  return free ? 0 : ability.cost;
+}
+
 export function cooldownRemaining(unit: Unit, ability: Ability): number {
   return unit.cooldowns[ability.cooldownGroup ?? ability.id] ?? 0;
 }
@@ -38,7 +48,7 @@ export function abilityUnavailableReason(
   const remaining = cooldownRemaining(actor, ability);
   if (remaining > 0)
     return `Cooldown: ready in ${remaining} turn${remaining === 1 ? "" : "s"}`;
-  if (ability.cost > run.ap) return "Not enough shared AP";
+  if (abilityCost(run, ability) > run.ap) return "Not enough shared AP";
   if (abilityUses(run, ability.id) >= abilityLimit(ability))
     return "Turn limit reached";
   if (
@@ -132,7 +142,9 @@ export function abilityReach(
       : group.slice(0, 1);
   if (ability.effect === "line") {
     const from = foes.findIndex((u) => u.id === chosenId);
-    return from >= 0 ? foes.slice(from, from + LINE_FALLOFF.length) : foes;
+    return from >= 0
+      ? foes.slice(from, from + (ability.falloff ?? LINE_FALLOFF).length)
+      : foes;
   }
   switch (ability.target) {
     case "enemy":

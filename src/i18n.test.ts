@@ -7,6 +7,7 @@ import {
   CATS,
   INTENT_LABELS,
   ITEMS,
+  RELICS,
   REVIVE_ABILITY,
   SIGNATURE_ABILITIES,
   abilityTargetUnavailableReason,
@@ -116,6 +117,10 @@ describe("Spanish dictionary", () => {
     for (const a of [...Object.values(SIGNATURE_ABILITIES), REVIVE_ABILITY])
       wanted.add(a.name);
     for (const item of ITEMS) wanted.add(item);
+    for (const [name, relic] of Object.entries(RELICS)) {
+      wanted.add(name).add(relic.text);
+      if (relic.drawback) wanted.add(relic.drawback);
+    }
     for (const label of Object.values(INTENT_LABELS)) wanted.add(label);
     for (const name of [...ROOM_NAMES, ...ROOM_PATH]) wanted.add(name);
     for (const rows of Object.values(TRAINING_TRACKS))

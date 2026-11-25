@@ -77,17 +77,29 @@ function textOf(
         text: t("Deal {power} damage to 1 enemy.", { power }),
         note: t("Ignores armor, shields and Ice Ward."),
       };
-    case "line":
+    case "line": {
+      const share = ability.falloff ?? LINE_FALLOFF;
+      if (share.length === 2)
+        return {
+          text: t(
+            "Hit 1 enemy for {power} and the one behind it for {second}.",
+            {
+              power,
+              second: Math.round(power * share[1]!),
+            },
+          ),
+        };
       return {
         text: t(
           "Hit 1 enemy for {power}, the one behind it for {second} and the next for {third}.",
           {
             power,
-            second: Math.round(power * LINE_FALLOFF[1]),
-            third: Math.round(power * LINE_FALLOFF[2]),
+            second: Math.round(power * share[1]!),
+            third: Math.round(power * share[2]!),
           },
         ),
       };
+    }
     case "cleave":
       return { text: t("Deal {power} damage to all enemies.", { power }) };
     case "heal":
