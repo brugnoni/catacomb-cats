@@ -88,6 +88,9 @@ def gradient(t, stops):
     return arr[i] * (1 - f) + arr[i + 1] * f
 
 
+LEVELS = 6
+
+
 # Yellow irises keep their color so the eyes never melt into a dark fur or cloak.
 EYES = rule(None, hue=(42, 60), sat=(0.5, 1), val=(0.5, 1), hf=3)
 
@@ -96,7 +99,8 @@ def apply(cell, rules, extra=None):
     rules = [EYES, *rules]
     rgba = np.asarray(cell, dtype=float)
     alpha = rgba[..., 3]
-    rgb = fill_edges(rgba[..., :3], alpha)
+    own = rgba[..., :3]
+    rgb = fill_edges(own, alpha)
     h, s, v = to_hsv(rgb)
     lum = (0.299 * rgb[..., 0] + 0.587 * rgb[..., 1] + 0.114 * rgb[..., 2]) / 255
     out = rgb.copy()
@@ -114,8 +118,14 @@ def apply(cell, rules, extra=None):
         core = w > 0.5
         lo, hi = np.percentile(lum[core], [4, 96]) if core.sum() > 40 else (0.1, 0.9)
         t = np.clip((lum - lo) / max(hi - lo, 0.05), 0, 1)
+        t = np.round(t * (LEVELS - 1)) / (LEVELS - 1)  # flat bands, like the original pixel art
         out += w[..., None] * (gradient(t, ru["ramp"]) - out)
         rem = rem * (1 - w)
+    # A translucent edge pixel is a blend with black: keep its darkness, take the new hue.
+    fill_lum = (0.299 * rgb[..., 0] + 0.587 * rgb[..., 1] + 0.114 * rgb[..., 2]).clip(min=1)
+    own_lum = 0.299 * own[..., 0] + 0.587 * own[..., 1] + 0.114 * own[..., 2]
+    edge = (alpha < 230) & (alpha > 0)
+    out[edge] *= np.clip(own_lum / fill_lum, 0, 1)[edge][:, None]
     if extra:
         extra(out)
     res = np.concatenate([np.clip(out, 0, 255), alpha[..., None]], -1)
@@ -164,14 +174,14 @@ SKINS = {
     "luna": [
         # Nightshade: near-black cat, deep indigo robe.
         [
-            rule(["#206a7a", "#58c8d8", "#b4f4ff", "#ffffff"], hue=(270, 345), sat=(0.12, 1), val=(0.45, 1), poly=box(201, 120, 230, 154)),  # iris
+            rule(["#164c5c", "#2c8ea4", "#62c8dc", "#b8f0fa"], hue=(270, 345), sat=(0.12, 1), val=(0.45, 1), poly=box(201, 120, 230, 154)),  # iris
             rule(["#403e58", "#6c6a88", "#9a98b4", "#cac8de"], hue=(345, 30), sat=(0.04, 0.4), val=(0.78, 1), hf=8, poly=box(140, 90, 300, 215)),
             rule(BLACK, hue=(270, 350), sat=(0, 0.38), val=(0.5, 1)),
             rule(["#0a0c28", "#1a2064", "#3a44ae", "#8896ff"], hue=(255, 350), sat=(0.3, 1), hf=10),
         ],
         # Persian Eclipse: white fluffy cat, midnight robe.
         [
-            rule(["#8a4a10", "#d88a20", "#ffd060", "#fff4c0"], hue=(270, 345), sat=(0.12, 1), val=(0.45, 1), poly=box(201, 120, 230, 154)),  # iris
+            rule(["#7a4010", "#c47a1c", "#f0b840", "#ffe8a0"], hue=(270, 345), sat=(0.12, 1), val=(0.45, 1), poly=box(201, 120, 230, 154)),  # iris
             rule(["#8085a8", "#bcc0dc", "#e8eaf8", "#ffffff"], hue=(270, 350), sat=(0, 0.38), val=(0.5, 1)),
             rule(["#070b26", "#13206a", "#2c46b0", "#7c9ef2"], hue=(255, 350), sat=(0.3, 1), hf=10),
         ],
