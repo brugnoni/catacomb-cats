@@ -1,0 +1,221 @@
+/* Command deck: centered tags and the AP counter beside the abilities */
+.ability-tags {
+  justify-content: center;
+}
+.actions .round-counter {
+  align-items: center;
+  min-width: 104px;
+  padding: 8px 12px;
+  background: #151c27;
+  border: 1px solid #5b6672;
+}
+.ap-pips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  max-width: 120px;
+}
+.ap-pips i {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #7c6a3c;
+  background: transparent;
+}
+.ap-pips i.on {
+  background: var(--gold);
+}
+
+/* Room for the threads under the cards */
+.battlefield {
+  padding-bottom: 42px;
+}
+
+/* Lobby roster: every row lines up across the five cats */
+.roster {
+  row-gap: 0;
+  column-gap: 8px;
+}
+.cat-card {
+  display: grid;
+  grid-row: span 10;
+  grid-template-rows: subgrid;
+}
+.cat-info {
+  display: grid;
+  grid-row: 2 / span 9;
+  grid-template-rows: subgrid;
+  align-content: start;
+}
+.card-actions {
+  display: grid;
+  grid-row: span 5;
+  grid-template-rows: subgrid;
+  row-gap: 6px;
+}
+.cat-info > .milestone-progress {
+  align-self: start;
+}
+
+/* Heal: the healed units' borders flash green for 1s */
+.combatant.heal-0 {
+  animation: heal-card 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.heal-1 {
+  animation: heal-card-alt 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.heal-0 .health {
+  animation: heal-bar 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.heal-1 .health {
+  animation: heal-bar-alt 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.heal-0 .health-value {
+  animation: heal-text 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.heal-1 .health-value {
+  animation: heal-text-alt 1s ease-out var(--flash-delay, 0s);
+}
+@keyframes heal-card {
+  0%,
+  55% {
+    box-shadow:
+      inset 0 0 0 3px #62e07a,
+      0 0 16px #3fd25ecc;
+    background-color: #14401f99;
+  }
+}
+@keyframes heal-card-alt {
+  0%,
+  55% {
+    box-shadow:
+      inset 0 0 0 3px #62e07a,
+      0 0 16px #3fd25ecc;
+    background-color: #14401f99;
+  }
+}
+@keyframes heal-bar {
+  0%,
+  55% {
+    border-color: #62e07a;
+    box-shadow: 0 0 10px #3fd25e;
+  }
+}
+@keyframes heal-bar-alt {
+  0%,
+  55% {
+    border-color: #62e07a;
+    box-shadow: 0 0 10px #3fd25e;
+  }
+}
+@keyframes heal-text {
+  0%,
+  55% {
+    color: #8cf0a0;
+    text-shadow: 0 0 8px #3fd25e;
+  }
+}
+@keyframes heal-text-alt {
+  0%,
+  55% {
+    color: #8cf0a0;
+    text-shadow: 0 0 8px #3fd25e;
+  }
+}
+.expedition-strength {
+  color: #f0d58a;
+  font-weight: 400;
+}
+
+/* Field guide: two sections and skill cards */
+.guide-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 18px 0 16px;
+  flex-wrap: wrap;
+}
+.guide-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex: 1 1 260px;
+  font-size: 20px;
+  padding: 10px 16px;
+}
+.guide-tab.active {
+  color: #1b1405;
+  background: var(--gold);
+  border-color: #b98f3f;
+}
+.guide-cats {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+  flex-wrap: wrap;
+}
+.guide-cats .guide-tab {
+  flex: 1 1 150px;
+  justify-content: flex-start;
+}
+.guide-cats .sprite {
+  width: 48px;
+  height: 48px;
+}
+.guide-cat .cat-sheet {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.guide-sprite {
+  width: 180px;
+  height: 180px;
+  filter: drop-shadow(3px 5px 0 #0b1018aa);
+}
+.guide-ranks {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 760px) {
+  .guide-cat .cat-sheet {
+    grid-template-columns: 1fr;
+  }
+  .guide-ranks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.skills-heading {
+  margin: 16px 0 8px;
+  font: inherit;
+  font-size: 20px;
+  color: #d7d8c9;
+}
+.skill-cards {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 26px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+}
+.ability-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 12px;
+  color: #d9d1ba;
+  background: #293039;
+  border: 2px solid #69615b;
+  border-bottom: 4px solid #0b1018;
+  border-right: 4px solid #0b1018;
+  box-shadow: inset 2px 2px #ffffff12;
+}
+.ability-card .ability-detail {
+  max-width: none;
+}
+.ability-unlock {
+  margin-top: 4px;
+  font-size: 14px;
+  color: #cdb7ef;
+}

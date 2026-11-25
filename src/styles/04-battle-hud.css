@@ -1,0 +1,157 @@
+.brand small {
+  font-family: "VT323", monospace;
+  font-size: 16px;
+  color: #727e8c;
+  margin-left: 15px;
+  letter-spacing: 1px;
+}
+.scene-coordinate {
+  position: absolute;
+  bottom: 10px;
+  left: 18px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #a6b0b0;
+}
+.scene-companion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.scene-companion > span:last-child:not(.sprite) {
+  background: #101723de;
+  color: #dbcda7;
+  font-size: 17px;
+  padding: 1px 10px;
+  border-bottom: 2px solid #a98a4f;
+}
+.gate-note {
+  display: block;
+  font-size: 16px;
+  color: #c4bea9;
+  margin-top: 8px;
+}
+.cat-name-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.cat-level {
+  font-size: 15px;
+  color: #8f9caa;
+}
+.equipment-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.equipment-label > span {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #8f9caa;
+}
+.camp-rule {
+  font-size: 16px !important;
+  color: #868f98;
+}
+.hearth-symbol {
+  display: none;
+}
+.blessing-rank {
+  margin-top: 15px;
+}
+.round-counter {
+  display: flex;
+  flex-direction: column;
+  align-items: end;
+  gap: 5px;
+  color: #afbbc4;
+}
+.round-counter strong {
+  color: var(--gold);
+  font-size: 25px;
+  font-weight: 400;
+}
+.command-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.command-heading p {
+  font-size: 17px;
+}
+.unit-target {
+  border: 0;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  display: block;
+  width: 100%;
+  margin: auto;
+}
+.unit-target:hover:not(:disabled) {
+  background: #e3ba6815;
+  transform: none;
+}
+.unit-target[aria-pressed="true"] {
+  outline: 2px dashed #dfc17c;
+  outline-offset: -3px;
+}
+.unit-target:disabled {
+  opacity: 1;
+  cursor: var(--paw);
+}
+.combatant:has(.unit-target[aria-pressed="true"]) {
+  border-color: #d2aa64;
+}
+.enemies .unit-target {
+  transform: scaleX(-1);
+}
+.enemies .unit-target:not(:disabled) {
+  cursor: var(--paw-attack);
+}
+.enemies .unit-target:hover:not(:disabled) {
+  transform: scaleX(-1);
+}
+.health-value {
+  font-size: 16px;
+}
+.status-effect {
+  font-size: 15px;
+  color: #c6b4db;
+}
+.queue-label {
+  align-self: center;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #808e9b;
+  padding-right: 8px;
+}
+.run-loot {
+  color: #d4b77c;
+}
+.battlefield {
+  background-image: url("/art/crypt.png");
+}
+.combatant {
+  background: #0e142070;
+}
+.scene-party {
+  bottom: 35px;
+}
+.scene-caption .eyebrow {
+  display: block;
+}
+.party-count {
+  color: #b8b5a0;
+  font-size: 17px;
+}
+@media (prefers-reduced-motion: reduce) {
+  button {
+    transition: none;
+  }
+  button:active:not(:disabled) {
+    transform: none;
+  }
+}
