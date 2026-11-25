@@ -114,8 +114,9 @@ export function abilityTargetUnavailableReason(
 
 /**
  * The units a skill reaches if `chosenId` is picked: the one place that knows
- * how lines, groups and single targets spread. With no valid pick it covers the
- * whole group (the caster for ally skills), which is what the Aim outline shows.
+ * how lines, groups and single targets spread. With no valid pick a line covers
+ * every foe, a single-foe skill the first living foe and an ally skill the
+ * caster, which is what the Aim outline shows.
  */
 export function abilityReach(
   run: Run,
@@ -128,7 +129,7 @@ export function abilityReach(
   const pick = (group: Unit[]) =>
     group.some((u) => u.id === chosenId)
       ? group.filter((u) => u.id === chosenId)
-      : group;
+      : group.slice(0, 1);
   if (ability.effect === "line") {
     const from = foes.findIndex((u) => u.id === chosenId);
     return from >= 0 ? foes.slice(from, from + LINE_FALLOFF.length) : foes;

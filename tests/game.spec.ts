@@ -1468,7 +1468,7 @@ test("hovering a skill outlines the units it can reach in yellow", async ({
   await enterDungeon(page);
   await expect(page.locator(".combatant.aimed")).toHaveCount(0);
   await page.getByRole("button", { name: /^Claw strike/ }).hover();
-  await expect(page.locator(".enemies .combatant.aimed")).toHaveCount(2);
+  await expect(page.locator(".enemies .combatant.aimed")).toHaveCount(1);
   await expect(page.locator(".allies .combatant.aimed")).toHaveCount(0);
   const outline = await page
     .locator(".enemies .combatant.aimed")
@@ -1498,12 +1498,12 @@ test("a skill under the mouse is outlined only after the threat preview and a sh
   await expect(aimed).toHaveCount(0);
   await previewDone(page);
   await expect(aimed).toHaveCount(0);
-  await expect(aimed).toHaveCount(2, { timeout: 3000 });
+  await expect(aimed).toHaveCount(1, { timeout: 3000 });
   // A fresh hover after that is immediate.
   await page.mouse.move(0, 0);
   await expect(aimed).toHaveCount(0);
   await claw.hover();
-  expect(await aimed.count()).toBe(2);
+  expect(await aimed.count()).toBe(1);
 });
 
 test("Mei's group heal outlines all living allies and Sweeping embers all enemies", async ({
