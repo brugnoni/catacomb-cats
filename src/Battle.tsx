@@ -54,7 +54,6 @@ export function Battle({
     aimedIds,
     hoverProps,
     setAim,
-    threatsButton,
   } = useThreatPreview(run, target, view, phasing);
   const feedback = useCombatFeedback(run, phase);
   // A short pause after each action so its animations can be followed.
@@ -128,17 +127,6 @@ export function Battle({
             ref={battlefieldRef}
             data-previewing={previewing ? "true" : "false"}
           >
-            {run.status === "combat" && !phasing && (
-              <button
-                type="button"
-                className="threats-button"
-                data-testid="threats-button"
-                aria-pressed={threatsButton.pressed}
-                {...threatsButton.bind}
-              >
-                {t("Threats")}
-              </button>
-            )}
             {introShown && (
               <div className="intro-banner" role="status">
                 {t("The enemies strike first!")}

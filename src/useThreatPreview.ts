@@ -9,8 +9,7 @@ import { pace } from "./storage";
 const AIM_DELAY = 800;
 
 /**
- * The threat, hover and skill-aim state of a battle: whether the Threats
- * button shows every enemy's plan, what hovering a unit reveals and which
+ * The threat, hover and skill-aim state of a battle: what hovering a unit reveals and which
  * units the skill under the cursor can reach. The selected target and the turn come in.
  */
 export function useThreatPreview(
@@ -20,9 +19,6 @@ export function useThreatPreview(
   phasing: boolean,
 ) {
   const { t } = useT();
-  // The Threats button shows every enemy's plan at once while hovered, focused or pinned.
-  const [overButton, setOverButton] = useState(false);
-  const [pinned, setPinned] = useState(false);
   // Hovering (or keyboard-focusing) a unit shows who threatens or helps whom.
   const [hovered, setHovered] = useState("");
   // Skill under the mouse or keyboard focus: its possible targets are outlined in yellow.
@@ -48,7 +44,6 @@ export function useThreatPreview(
     return () => clearTimeout(timer);
   }, [previewing]);
   const setAim = (id: string) => setAimState({ id, live: !previewing });
-  const showAll = overButton || pinned;
   const arrowEntries: IntentEntry[] = [];
   if (run.status === "combat")
     for (const enemy of run.enemies) {
@@ -61,7 +56,7 @@ export function useThreatPreview(
         (enemy.id === hoverId ||
           intent.targetId === hoverId ||
           intent.allyId === hoverId);
-      if ((showAll && !phasing) || related) {
+      if (related) {
         const cat = run.party.find((unit) => unit.id === intent.targetId);
         const ally = run.enemies.find((unit) => unit.id === intent.allyId);
         const tag = cat
@@ -107,15 +102,5 @@ export function useThreatPreview(
     markedIds,
     aimedIds,
     setAim,
-    threatsButton: {
-      pressed: showAll,
-      bind: {
-        onMouseEnter: () => setOverButton(true),
-        onMouseLeave: () => setOverButton(false),
-        onFocus: () => setOverButton(true),
-        onBlur: () => setOverButton(false),
-        onClick: () => setPinned((p) => !p),
-      },
-    },
   };
 }

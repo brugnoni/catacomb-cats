@@ -1247,7 +1247,7 @@ async function chooseParty(page: Page, add: string[], remove: string[]) {
     await card(name).getByRole("button", { name: "Add to party" }).click();
 }
 
-test("a room opens with the round banner, then each enemy attacks alone, then the Threats button shows threads", async ({
+test("a room opens with the round banner, then each enemy attacks alone, then hovering an enemy shows its thread", async ({
   page,
 }) => {
   await realTiming(page);
@@ -1275,21 +1275,15 @@ test("a room opens with the round banner, then each enemy attacks alone, then th
   await expect(page.getByTestId("intent-arrows")).toHaveCount(0);
   await expect(page.locator(".next-target")).toHaveCount(0);
   await expect(page.locator(".combatant.acting")).toHaveCount(0);
-  // Nothing is drawn on its own afterwards; the Threats button reveals every thread.
+  // Nothing is drawn on its own afterwards; hovering an enemy reveals its thread.
   await previewDone(page);
   await expect(page.locator(".intent-line")).toHaveCount(0);
-  await page.getByTestId("threats-button").hover();
+  await page.getByRole("button", { name: "Target Moss slime" }).hover();
   await expect(page.locator(".next-target").first()).toContainText(/\w/);
-  expect(await page.locator(".intent-line").count()).toBeGreaterThan(1);
-  await page.mouse.move(0, 0);
-  await expect(page.locator(".intent-line")).toHaveCount(0);
-  await page.getByTestId("threats-button").click();
-  await page.mouse.move(0, 0);
   await expect(page.locator(".intent-line").first()).toBeVisible();
-  await page.getByTestId("threats-button").click();
   await page.mouse.move(0, 0);
   await expect(page.locator(".intent-line")).toHaveCount(0);
-  await page.getByTestId("threats-button").hover();
+  await page.getByRole("button", { name: "Target Moss slime" }).hover();
   // Each label sits above its enemy, centred on the card, with a crosshair and just the target's name.
   const tag = (await page.locator(".next-target").first().boundingBox())!;
   await expect(page.locator(".next-target").first()).toHaveText(/^\w/);
@@ -1616,7 +1610,7 @@ async function seedFourEnemies(page: Page) {
   });
 }
 
-test("with four enemies every Threats label stays inside the field and apart from the others", async ({
+test("with four enemies a hovered enemy's label stays inside the field", async ({
   page,
 }) => {
   await seedFourEnemies(page);
@@ -1624,9 +1618,9 @@ test("with four enemies every Threats label stays inside the field and apart fro
   await enterDungeon(page);
   await previewDone(page);
   await expect(page.locator(".enemies .combatant")).toHaveCount(4);
-  await page.getByTestId("threats-button").hover();
+  await page.locator(".enemies .unit-target").last().hover();
   const tags = page.locator(".next-target");
-  expect(await tags.count()).toBeGreaterThanOrEqual(3);
+  expect(await tags.count()).toBeGreaterThanOrEqual(1);
   const field = (await page.locator(".battlefield").boundingBox())!;
   const boxes = await tags.evaluateAll((els) =>
     els.map((el) => el.getBoundingClientRect().toJSON()),
