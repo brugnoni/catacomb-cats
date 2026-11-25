@@ -109,6 +109,11 @@ describe("basic expedition and lobby regression", () => {
     ).toBe(2);
     expect(act(r, "heal", "miso")).toBe(r);
   });
+  it("Moon blessing works once per turn", () => {
+    const r = act(trained("luna"), "fury", "luna");
+    expect(r.ap).toBeGreaterThanOrEqual(2);
+    expect(act(r, "fury", "pip")).toBe(r);
+  });
   it("AP resets each round and next turn allows same skill again", () => {
     let r = start();
     r = act(r, "strike", "e0");
@@ -549,6 +554,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
     expect(abilityUses(r, "fury")).toBe(1);
     const tank = r.party[1]!;
     tank.furyTurns = 2;
+    r.uses = {};
     const refreshed = act(r, "fury", "miso");
     expect(refreshed).not.toBe(r);
     expect(refreshed.party[1]!.furyTurns).toBe(3);
