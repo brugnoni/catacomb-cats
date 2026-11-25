@@ -104,14 +104,26 @@ function register(lanes, branch, f, base) {
   save(next);
 }
 
+// A lane whose local branch was deleted (landed, cleaned up) must not break status or the overlap check.
+function exists(b) {
+  try {
+    git("rev-parse", "--verify", "--quiet", `refs/heads/${b}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function touched(lanes) {
   return Object.fromEntries(
-    Object.entries(lanes).map(([b, lane]) => {
-      const diff = git("diff", "--name-only", `${ref(lane.parent)}...${b}`)
-        .split("\n")
-        .filter(Boolean);
-      return [b, [...new Set([...lane.files, ...diff])]];
-    }),
+    Object.entries(lanes)
+      .filter(([b]) => exists(b))
+      .map(([b, lane]) => {
+        const diff = git("diff", "--name-only", `${ref(lane.parent)}...${b}`)
+          .split("\n")
+          .filter(Boolean);
+        return [b, [...new Set([...lane.files, ...diff])]];
+      }),
   );
 }
 
@@ -121,6 +133,10 @@ function status() {
   for (const e of validate(lanes)) out(`ERROR ${e}`);
   for (const b of order(lanes)) {
     const { parent, base } = lanes[b];
+    if (!exists(b)) {
+      out(`${b}: branch missing locally (remove it from .scratch/lanes.json)`);
+      continue;
+    }
     const [behind, ahead] = git(
       "rev-list",
       "--left-right",
@@ -157,6 +173,33 @@ function status() {
   if (loose.length) out(`not registered (use adopt): ${loose.join(", ")}`);
 }
 
+// Tell the user, right after registering, which other lanes touch the same files.
+function reportOverlaps(branch) {
+  const lanes = load();
+  const all = touched(lanes);
+  for (const { a, b, files } of overlaps(lanes, all))
+    if (a === branch || b === branch)
+      out(
+        `OVERLAP ${a} & ${b}: ${files.join(", ")} - tell the user before editing`,
+      );
+  // Chats that never registered a lane still show up as open PRs.
+  try {
+    const mine = new Set(all[branch] ?? []);
+    for (const p of JSON.parse(
+      gh("pr", "list", "--state", "open", "--json", "headRefName,number,files"),
+    )) {
+      if (p.headRefName === branch || lanes[p.headRefName]) continue;
+      const files = p.files.map((x) => x.path).filter((x) => mine.has(x));
+      if (files.length)
+        out(
+          `OVERLAP ${branch} & PR #${p.number} (${p.headRefName}): ${files.join(", ")} - tell the user before editing`,
+        );
+    }
+  } catch {
+    out("PR overlap check skipped (gh failed)");
+  }
+}
+
 function newLane(f) {
   const [branch] = f.rest;
   if (!branch) fail("usage: new <branch> [--on parent] [--files a,b]");
@@ -167,6 +210,7 @@ function newLane(f) {
   const dir = join(main, ".claude", "worktrees", branch.replaceAll("/", "-"));
   git("worktree", "add", "-b", branch, dir, ref(parent));
   out(`${branch} <- ${parent} at ${dir}`);
+  reportOverlaps(branch);
 }
 
 function adopt(f) {
@@ -174,6 +218,7 @@ function adopt(f) {
   if (!branch) fail("usage: adopt <branch> [--on parent]");
   register(load(), branch, f, git("merge-base", ref(f.on ?? ROOT), branch));
   out(`adopted ${branch} (nothing rebased)`);
+  reportOverlaps(branch);
 }
 
 async function submit(f) {
