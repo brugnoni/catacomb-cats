@@ -1,3 +1,4 @@
+import { focusOnShow } from "./BattleParts";
 import { useT } from "./i18n";
 import { CATS, RELICS, type Run } from "./game";
 
@@ -31,7 +32,9 @@ export function RelicPick({
   const { t } = useT();
   return (
     <section className="relic-pick" aria-labelledby="relic-heading">
-      <h2 id="relic-heading">{t("Choose a Relic")}</h2>
+      <h2 id="relic-heading" tabIndex={-1} ref={focusOnShow}>
+        {t("Choose a Relic")}
+      </h2>
       <p>{t("It lasts until this expedition ends.")}</p>
       <div className="relic-cards">
         {run.offer.map((name) => (

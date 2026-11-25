@@ -5,6 +5,10 @@ import { ROOM_HEAL } from "./progression";
 import { roomReward } from "./expeditions";
 import type { Run } from "./game";
 
+/** Puts keyboard and screen reader users on a screen that just appeared. */
+export const focusOnShow = (element: HTMLElement | null) =>
+  element?.focus({ preventScroll: true });
+
 /** The Trinket the room just dropped, if any. */
 function DropLine({ run }: { run: Run }) {
   const { t } = useT();
@@ -67,7 +71,7 @@ export function BattleResult({
             </p>
           </div>
           {practice && <p>{t("Practice rewards are not kept.")}</p>}
-          <button className="primary" onClick={onContinue}>
+          <button className="primary" ref={focusOnShow} onClick={onContinue}>
             {practice ? t("Finish tutorial") : t("Continue to next room →")}
           </button>
         </section>
@@ -102,7 +106,7 @@ export function BattleResult({
               )}
             </p>
           )}
-          <button className="primary" onClick={onLeave}>
+          <button className="primary" ref={focusOnShow} onClick={onLeave}>
             {t("Return to lobby")}
           </button>
         </section>
@@ -142,6 +146,10 @@ export function FieldNotes({
           ))}
         </ul>
       )}
+      {/* Screen readers hear the newest line; the list below is the history. */}
+      <p className="sr-only" aria-live="polite" data-testid="announcer">
+        {translateEngine(t, run.log.at(-1) ?? "")}
+      </p>
       <ol className="log" aria-label={t("Combat log")}>
         {run.log.slice(-12).map((line, index) => (
           <li key={`${index}-${line}`}>{translateEngine(t, line)}</li>
