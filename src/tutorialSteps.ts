@@ -46,7 +46,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: "training",
     phase: "lobby",
-    spot: ".cat-card .train-button, .cat-card .equipment-label",
+    spot: ".cat-card .train-button, .cat-card .trinket-worn, .bag",
     title: "Training, gold and trinkets",
     body: "Gold buys training for one cat. Each rank improves its stats, and rank 3 unlocks a signature skill. A trinket gives one cat a small bonus. You earn gold by clearing rooms, but they are only banked when you beat the boss.",
   },

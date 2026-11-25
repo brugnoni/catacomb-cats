@@ -66,7 +66,6 @@ export const UI: Record<string, string> = {
   "Add to party": "Añadir al equipo",
   "Remove from party": "Quitar del equipo",
   TRINKET: "AMULETO",
-  "Equipment for {name}": "Equipo de {name}",
   "Empty slot": "Espacio vacío",
   SKIN: "ASPECTO",
   "Skin for {name}": "Aspecto de {name}",
@@ -108,6 +107,15 @@ export const UI: Record<string, string> = {
   "+{n} HP": "+{n} PV",
   "+{n} INIT": "+{n} INI",
   "+{n} ATK": "+{n} ATQ",
+  "Bag · {n}/{max} Trinkets": "Bolsa · {n}/{max} amuletos",
+  "Undiscovered Trinket": "Amuleto sin descubrir",
+  "Best on {name}": "Ideal para {name}",
+  Anyone: "Cualquiera",
+  "Worn by {name}": "Lo lleva {name}",
+  "Give to {name}": "Dar a {name}",
+  "Take off": "Quitar",
+  "Pick a Trinket, then who wears it.":
+    "Elige un amuleto y luego quién lo lleva.",
   "Export progress": "Exportar progreso",
   "Import progress": "Importar progreso",
   "That file is not a valid save. Nothing was changed.":

@@ -63,7 +63,7 @@ export function buildEntries(t: Translate): [string, string][] {
     [
       t("How do I equip or remove a trinket?"),
       t(
-        "Choose an owned item in a cat's TRINKET selector. Choose Empty slot to remove it; it stays in your inventory. Each item can belong to only one equipped cat at a time. Trinkets are found at random: each room before the boss has a {pct}% chance to drop one you do not own, and the boss always drops one. Once you own them all, a drop gives {gold} gold instead.",
+        "Pick a Trinket in the Bag under the companions, then choose who wears it. Take off removes it and it stays in the Bag. Each Trinket can be worn by only one cat at a time. Trinkets are found at random: each room before the boss has a {pct}% chance to drop one you do not own, and the boss always drops one. Once you own them all, a drop gives {gold} gold instead.",
         { pct: TRINKET_DROP_CHANCE, gold: TRINKET_DROP_GOLD },
       ),
     ],

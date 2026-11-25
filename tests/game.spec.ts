@@ -80,6 +80,11 @@ async function pickTarget(page: Page, id: string) {
   await page.locator(`[data-unit="${id}"] .unit-target`).click();
 }
 
+async function giveToMiso(page: Page, trinket: string) {
+  await page.getByRole("button", { name: new RegExp(`^${trinket}`) }).click();
+  await page.getByRole("button", { name: "Give to Miso" }).click();
+}
+
 async function enterDungeon(page: Page) {
   await page.getByRole("button", { name: "Enter the dungeon" }).click();
   await expect(page.locator(".command-deck")).toBeVisible();
@@ -221,11 +226,11 @@ test("reloading abandons the active dungeon and keeps only lobby progress", asyn
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("Equipment for Miso").selectOption("Iron bell");
+  await giveToMiso(page, "Iron bell");
   await enterDungeon(page);
   await page.reload();
   await expect(page.getByRole("heading", { name: "The Burrow" })).toBeVisible();
-  await expect(page.getByLabel("Equipment for Miso")).toHaveValue("Iron bell");
+  await expect(page.locator('[data-worn="miso"]')).toContainText("Iron bell");
 });
 
 test("malformed saved data recovers to a playable lobby", async ({ page }) => {
@@ -243,15 +248,19 @@ test("equipping and unequipping the same cat persists an empty slot", async ({
   page,
 }) => {
   await page.goto("/");
-  const equipment = page.getByLabel("Equipment for Miso");
-  await equipment.selectOption("Iron bell");
-  await expect(equipment).toHaveValue("Iron bell");
-  await equipment.selectOption("");
-  await expect(equipment).toHaveValue("");
+  const worn = page.locator('[data-worn="miso"]');
+  await giveToMiso(page, "Iron bell");
+  await expect(worn).toContainText("Iron bell");
+  await page.getByRole("button", { name: /^Iron bell/ }).press("Enter");
+  await page.getByRole("button", { name: "Take off" }).press("Enter");
+  await expect(worn).toContainText("Empty slot");
   await page.reload();
-  await expect(page.getByLabel("Equipment for Miso")).toHaveValue("");
-  await page.getByLabel("Equipment for Miso").selectOption("Iron bell");
-  await expect(page.getByLabel("Equipment for Miso")).toHaveValue("Iron bell");
+  await expect(worn).toContainText("Empty slot");
+  await expect(
+    page.getByRole("button", { name: "Undiscovered Trinket" }),
+  ).toHaveCount(9);
+  await giveToMiso(page, "Iron bell");
+  await expect(worn).toContainText("Iron bell");
 });
 
 test("one AP skills stop after three uses and reset on the next actor turn", async ({
@@ -945,7 +954,7 @@ test("lobby cat cards line up row by row even with different skill texts", async
       [
         ".milestone-progress",
         ".party-toggle",
-        ".equipment-label",
+        ".trinket-worn",
         ".training-description",
         ".train-button",
       ].map((selector) =>
@@ -1813,8 +1822,8 @@ test("every camp card shows all its rows without overlap, in both languages", as
       ".stats",
       ".milestone-progress",
       ".party-toggle",
-      ".equipment-label:nth-of-type(1)",
-      ".equipment-label:nth-of-type(2)",
+      ".trinket-worn",
+      "label.equipment-label",
       ".training-description",
       ".train-button",
     ];

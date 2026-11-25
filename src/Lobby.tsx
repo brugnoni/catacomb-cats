@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { Bag } from "./Bag";
 import { CatCard } from "./CatCard";
 import { ExpeditionPicker } from "./ExpeditionPicker";
 import { SaveFile } from "./SaveFile";
@@ -201,6 +202,7 @@ export function Lobby({
               />
             ))}
           </div>
+          <Bag progress={progress} onStore={onStore} />
         </section>
         <aside className="camp-upgrades">
           <span className="eyebrow">{t("At the hearth")}</span>
