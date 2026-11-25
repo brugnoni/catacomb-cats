@@ -102,6 +102,12 @@ export const UI: Record<string, string> = {
     "La dificultad queda fija al entrar. Las futuras victorias y la inversión permanente refuerzan la próxima expedición.",
   "Blessing complete": "Bendición completa",
   "Your turn!": "¡Tu turno!",
+  "+{n} HEAL": "+{n} CURA",
+  "+{n} GUARD": "+{n} GUARDIA",
+  "+{n} Inspired": "+{n} Inspiración",
+  "+{n} HP": "+{n} PV",
+  "+{n} INIT": "+{n} INI",
+  "+{n} ATK": "+{n} ATQ",
   "Export progress": "Exportar progreso",
   "Import progress": "Importar progreso",
   "That file is not a valid save. Nothing was changed.":
@@ -161,8 +167,8 @@ export const UI: Record<string, string> = {
   "{name} ready!": "¡{name} lista!",
   "CHAMBER CLEARED": "CÁMARA SUPERADA",
   "The way opens.": "El camino se abre.",
-  "Room reward: +{gold} gold, +{xp} XP and {item}.":
-    "Recompensa de sala: +{gold} de oro, +{xp} XP y {item}.",
+  "Room reward: +{gold} gold, +{xp} XP.":
+    "Recompensa de sala: +{gold} de oro, +{xp} XP.",
   "Added to expedition loot. Gold, XP and items are banked when the boss is defeated.":
     "Añadido al botín de la expedición. El oro, el XP y los objetos se guardan al derrotar al jefe.",
   "Applied now: surviving cats recovered {pct}% of their max HP (at least {flat}). Fallen cats returned at 25% max HP, rounded up, without extra recovery. Expedition Strength increased by +1 to +{n} damage.":

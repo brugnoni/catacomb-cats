@@ -22,7 +22,6 @@ import {
   setSkin,
   initialProgress,
   ITEMS,
-  ITEM_BONUS,
   nextRoom,
   parseProgress,
   SIGNATURE_ABILITIES,
@@ -147,7 +146,6 @@ describe("basic expedition and lobby regression", () => {
     r = clear(r);
     r = clear(nextRoom(r));
     expect(r.status).toBe("victory");
-    expect(r.items).toEqual(["Iron bell", "Silk ribbon", "Lucky fang"]);
     const p = claimRewards(initialProgress(), r);
     expect(p.gold).toBe(30 + EXPEDITION_REWARD.gold);
     expect(p.xp).toBe(135);
@@ -1854,15 +1852,42 @@ describe("ability reach", () => {
 
 describe("trinkets", () => {
   it("each trinket adds exactly its listed bonus to the cat wearing it", () => {
-    const base = buildCat(initialProgress(), "pip");
-    for (const [item, bonus] of Object.entries(ITEM_BONUS)) {
-      const owned = { ...initialProgress(), inventory: [...ITEMS] };
-      const worn = buildCat(equip(owned, "pip", item), "pip");
-      expect(worn.maxHp - base.maxHp).toBe(bonus.hp);
-      expect(worn.initiative - base.initiative).toBe(bonus.initiative);
-      expect(worn.abilities[0]!.power - base.abilities[0]!.power).toBe(
-        bonus.attack,
-      );
+    const owned = { ...initialProgress(), inventory: [...ITEMS] };
+    // [HP, initiative, attack, Healing purr, Nine lives, Moon blessing]
+    const expected: Record<string, number[]> = {
+      "Iron bell": [6, 0, 0, 0, 0, 0],
+      "Silk ribbon": [0, 3, 0, 0, 0, 0],
+      "Lucky fang": [0, 0, 1, 0, 0, 0],
+      "Copper locket": [3, 1, 0, 0, 0, 0],
+      "Brass whistle": [2, 2, 0, 0, 0, 0],
+      "Herb pouch": [0, 0, 0, 2, 0, 0],
+      "Knight's button": [0, 0, 0, 0, 2, 0],
+      "Moon pebble": [0, 0, 0, 0, 0, 1],
+      "Mint sprig": [3, 0, 0, 1, 0, 0],
+      "Pewter charm": [3, 0, 0, 0, 1, 0],
+    };
+    expect(ITEMS).toEqual(Object.keys(expected));
+    const gain = (id: string, item: string) => {
+      const base = buildCat(owned, id);
+      const worn = buildCat(equip(owned, id, item), id);
+      return {
+        hp: worn.maxHp - base.maxHp,
+        initiative: worn.initiative - base.initiative,
+        first: worn.abilities[0]!.power - base.abilities[0]!.power,
+        second: worn.abilities[1]!.power - base.abilities[1]!.power,
+      };
+    };
+    for (const [item, [hp, init, atk, heal, guard, fury]] of Object.entries(
+      expected,
+    )) {
+      expect(gain("miso", item), item).toEqual({
+        hp,
+        initiative: init,
+        first: atk,
+        second: guard,
+      });
+      expect(gain("clover", item).second, item).toBe(heal);
+      expect(gain("luna", item).second, item).toBe(fury);
     }
   });
 });
@@ -1880,5 +1905,48 @@ describe("lantern easter egg", () => {
     const old: Record<string, unknown> = { ...initialProgress() };
     delete old.lampBoosts;
     expect(parseProgress(JSON.stringify(old)).lampBoosts).toBe(0);
+  });
+});
+
+describe("Trinket drops", () => {
+  /** Settles the current room by felling the last foe. */
+  const win = (run: Run) => {
+    run.enemies.forEach((e, i) => (e.hp = i === 0 ? 1 : 0));
+    run.enemies[0]!.guard = run.enemies[0]!.armor = 0;
+    run.order = [run.party[0]!.id, ...run.enemies.map((e) => e.id)];
+    run.turn = 0;
+    return act(run, "strike", "e0");
+  };
+  const expedition = (progress: Progress, seed: number) => {
+    const rooms: Run[] = [];
+    let run = createRun(progress, ["miso", "luna", "pip"], seed);
+    for (let room = 0; room < 3; room++) {
+      run = win(room ? nextRoom(run) : run);
+      rooms.push(run);
+    }
+    return rooms;
+  };
+  it("drops half the time before the boss and always from the boss", () => {
+    let early = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      const [first, , last] = expedition(initialProgress(), seed);
+      early += first!.items.length;
+      expect(typeof last!.drop).toBe("string");
+      expect(new Set(last!.items).size).toBe(last!.items.length);
+      expect(last!.items).not.toContain("Iron bell");
+    }
+    expect(early).toBeGreaterThan(70);
+    expect(early).toBeLessThan(130);
+  });
+  it("is reproducible from the seed", () => {
+    const items = () => expedition(initialProgress(), 5)[2]!.items;
+    expect(items()).toEqual(items());
+  });
+  it("gives gold instead once every Trinket is owned", () => {
+    const all = { ...initialProgress(), inventory: [...ITEMS] };
+    const last = expedition(all, 5)[2]!;
+    expect(last.items).toEqual([]);
+    expect(last.drop).toBe(20);
+    expect(last.gold).toBeGreaterThanOrEqual(EXPEDITION_REWARD.gold + 20);
   });
 });

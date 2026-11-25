@@ -9,8 +9,13 @@ import type { Translate } from "./i18n";
 export const RULES: [RegExp, string][] = [
   [/^The descent begins\. (.+)\.$/, "The descent begins. {1}."],
   [
-    /^Room rewards: \+(\d+) gold, \+(\d+) XP and (.+)\. Spoils are banked when the boss is defeated\.$/,
-    "Room rewards: +{1} gold, +{2} XP and {3}. Spoils are banked when the boss is defeated.",
+    /^Room rewards: \+(\d+) gold, \+(\d+) XP\. Spoils are banked when the boss is defeated\.$/,
+    "Room rewards: +{1} gold, +{2} XP. Spoils are banked when the boss is defeated.",
+  ],
+  [/^Trinket found: (.+)\.$/, "Trinket found: {1}."],
+  [
+    /^No new Trinket to find: \+(\d+) gold\.$/,
+    "No new Trinket to find: +{1} gold.",
   ],
   [
     /^Expedition Strength \+1: all damage is now \+(\d+) for the rest of this run\.$/,

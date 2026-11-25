@@ -4,6 +4,19 @@ import { ROOM_HEAL } from "./progression";
 import { roomReward } from "./expeditions";
 import type { Run } from "./game";
 
+/** The Trinket the room just dropped, if any. */
+function DropLine({ run }: { run: Run }) {
+  const { t } = useT();
+  if (run.drop === undefined) return null;
+  return (
+    <p className="trinket-drop">
+      {typeof run.drop === "number"
+        ? t("No new Trinket to find: +{1} gold.", { 1: run.drop })
+        : t("Trinket found: {1}.", { 1: t(run.drop) })}
+    </p>
+  );
+}
+
 /** What follows a fight: the room reward, the victory or the defeat. */
 export function BattleResult({
   run,
@@ -25,12 +38,12 @@ export function BattleResult({
           <h2>{t("The way opens.")}</h2>
           <div className="reward-details">
             <p>
-              {t("Room reward: +{gold} gold, +{xp} XP and {item}.", {
+              {t("Room reward: +{gold} gold, +{xp} XP.", {
                 gold: roomReward(run.room, run.expedition).gold,
                 xp: roomReward(run.room, run.expedition).xp,
-                item: t(run.items[run.items.length - 1] ?? ""),
               })}
             </p>
+            <DropLine run={run} />
             <p>
               {t(
                 "Added to expedition loot. Gold, XP and items are banked when the boss is defeated.",
@@ -80,6 +93,7 @@ export function BattleResult({
                   "Your permanent upgrades remain. Return home and choose a new team.",
                 )}
           </p>
+          {run.status === "victory" && <DropLine run={run} />}
           {run.status === "victory" && (
             <p>
               {t(

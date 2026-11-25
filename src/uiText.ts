@@ -76,8 +76,14 @@ export const ROOM_PATH = ["Entrance", "Forgotten hall", "Boss chamber"];
 
 /** The short stat label of a trinket, like "(+6 HP)". */
 export function itemBonusText(item: string, t: Translate): string {
-  const bonus = ITEM_BONUS[item as keyof typeof ITEM_BONUS];
-  if (bonus.hp) return t("(+{n} HP)", { n: bonus.hp });
-  if (bonus.initiative) return t("(+{n} INIT)", { n: bonus.initiative });
-  return t("(+{n} ATK)", { n: bonus.attack });
+  const bonus = ITEM_BONUS[item] ?? {};
+  const parts = [
+    bonus.hp && t("+{n} HP", { n: bonus.hp }),
+    bonus.initiative && t("+{n} INIT", { n: bonus.initiative }),
+    bonus.attack && t("+{n} ATK", { n: bonus.attack }),
+    bonus.healing && t("+{n} HEAL", { n: bonus.healing }),
+    bonus.guard && t("+{n} GUARD", { n: bonus.guard }),
+    bonus.fury && t("+{n} Inspired", { n: bonus.fury }),
+  ];
+  return `(${parts.filter(Boolean).join(", ")})`;
 }

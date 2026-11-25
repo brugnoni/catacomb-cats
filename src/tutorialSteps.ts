@@ -122,7 +122,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     phase: "battle",
     spot: ".result",
     title: "Loot and what comes next",
-    body: "Clearing a room gives gold, XP and an item, but they are only banked when the boss falls. Practice rewards are not kept. You can open this tutorial again any time from the Tutorial button.",
+    body: "Clearing a room gives gold, XP and sometimes a Trinket, but they are only banked when the boss falls. Practice rewards are not kept. You can open this tutorial again any time from the Tutorial button.",
     next: "finish",
   },
 ];

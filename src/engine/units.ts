@@ -50,7 +50,7 @@ export function buildCat(progress: Progress, id: string): Unit {
   const growth = trainingBonuses(id, rank);
   const mastery = masteryBonuses(masteryOf(progress));
   const hearth = hearthBonuses(progress.generalLevel);
-  const gear = ITEM_BONUS[progress.equipment[id] as keyof typeof ITEM_BONUS];
+  const gear = ITEM_BONUS[progress.equipment[id] ?? ""];
   const hp = c.hp + growth.hp + mastery.hp + hearth.hp + (gear?.hp ?? 0);
   const abilities = [
     ...c.abilities,
@@ -60,11 +60,13 @@ export function buildCat(progress: Progress, id: string): Unit {
   ].map((a) => {
     let bonus = 0;
     if (a.effect === "heal" || a.effect === "heal-all")
-      bonus = growth.healing + mastery.power + hearth.support;
+      bonus =
+        growth.healing + mastery.power + hearth.support + (gear?.healing ?? 0);
     else if (a.effect === "guard")
-      bonus = growth.guard + mastery.power + hearth.support;
+      bonus =
+        growth.guard + mastery.power + hearth.support + (gear?.guard ?? 0);
     else if (a.effect === "fury")
-      bonus = growth.fury + mastery.power + hearth.support;
+      bonus = growth.fury + mastery.power + hearth.support + (gear?.fury ?? 0);
     else if (isDamaging(a))
       bonus =
         growth.attack + mastery.power + hearth.attack + (gear?.attack ?? 0);

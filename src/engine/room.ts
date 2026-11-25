@@ -1,8 +1,27 @@
 import { ROOM_HEAL } from "../progression";
 import { expeditionById, roomReward } from "../expeditions";
 import { type Run } from "./model";
-import { ITEMS } from "./data";
-import { clearEffects } from "./state";
+import { ITEMS, TRINKET_DROP_CHANCE, TRINKET_DROP_GOLD } from "./data";
+import { clearEffects, dropRandom } from "./state";
+
+/** The boss always drops a Trinket and other rooms sometimes; gold once all are owned. */
+function rollDrop(run: Run, boss: boolean) {
+  delete run.drop;
+  if (!boss && dropRandom(run) * 100 >= TRINKET_DROP_CHANCE) return;
+  const pool = ITEMS.filter(
+    (item) => !run.owned.includes(item) && !run.items.includes(item),
+  );
+  if (!pool.length) {
+    run.drop = TRINKET_DROP_GOLD;
+    run.gold += TRINKET_DROP_GOLD;
+    run.log.push(`No new Trinket to find: +${TRINKET_DROP_GOLD} gold.`);
+    return;
+  }
+  const item = pool[Math.floor(dropRandom(run) * pool.length)]!;
+  run.drop = item;
+  run.items.push(item);
+  run.log.push(`Trinket found: ${item}.`);
+}
 
 /**
  * Ends the room when a side has fallen: marks defeat, or banks the room reward,
@@ -21,10 +40,10 @@ export function settleRoom(run: Run): boolean {
     run.gold += reward.gold;
     run.xp += reward.xp;
     run.status = boss ? "victory" : "reward";
-    run.items = [...new Set([...run.items, ITEMS[run.room]!])];
     run.log.push(
-      `Room rewards: +${reward.gold} gold, +${reward.xp} XP and ${ITEMS[run.room]}. Spoils are banked when the boss is defeated.`,
+      `Room rewards: +${reward.gold} gold, +${reward.xp} XP. Spoils are banked when the boss is defeated.`,
     );
+    rollDrop(run, boss);
     if (!boss) {
       run.bonus++;
       run.log.push(

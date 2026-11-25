@@ -136,7 +136,7 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
       );
       // A real click keeps the page scroll where the player left it.
       // Stop short of the very bottom, so a shorter next room cannot clamp the scroll.
-      await next.scrollIntoViewIfNeeded();
+      await next.evaluate((el) => el.scrollIntoView({ block: "center" }));
       await page.evaluate(() => scrollBy(0, -80));
       const box = (await next.boundingBox())!;
       const before = await page.evaluate(() => scrollY);

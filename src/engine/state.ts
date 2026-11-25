@@ -28,6 +28,13 @@ export function random(run: Run): number {
   return value;
 }
 
+/** A separate stream for Trinket drops. */
+export function dropRandom(run: Run): number {
+  const [next, value] = mulberry32(run.dropRng);
+  run.dropRng = next;
+  return value;
+}
+
 /** A separate stream for crits, misses and evasion, so they never disturb the marks. */
 export function critRandom(run: Run): number {
   const [next, value] = mulberry32(run.critRng);

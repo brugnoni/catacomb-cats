@@ -11,7 +11,7 @@ import {
   masteryLevel,
   trainingCost,
 } from "./progression";
-import { ITEM_BONUS } from "./game";
+import { TRINKET_DROP_CHANCE, TRINKET_DROP_GOLD } from "./game";
 import { EXPEDITIONS, EXPEDITION_REWARD, roomReward } from "./expeditions";
 
 /** The Field Guide's frequently asked questions, as [question, answer] pairs. */
@@ -63,12 +63,8 @@ export function buildEntries(t: Translate): [string, string][] {
     [
       t("How do I equip or remove a trinket?"),
       t(
-        "Choose an owned item in a cat's TRINKET selector. Choose Empty slot to remove it; it stays in your inventory. Each item can belong to only one equipped cat at a time. Iron bell adds {hp} maximum HP, Silk ribbon adds {init} initiative, and Lucky fang adds {atk} attack damage.",
-        {
-          hp: ITEM_BONUS["Iron bell"].hp,
-          init: ITEM_BONUS["Silk ribbon"].initiative,
-          atk: ITEM_BONUS["Lucky fang"].attack,
-        },
+        "Choose an owned item in a cat's TRINKET selector. Choose Empty slot to remove it; it stays in your inventory. Each item can belong to only one equipped cat at a time. Trinkets are found at random: each room before the boss has a {pct}% chance to drop one you do not own, and the boss always drops one. Once you own them all, a drop gives {gold} gold instead.",
+        { pct: TRINKET_DROP_CHANCE, gold: TRINKET_DROP_GOLD },
       ),
     ],
     [

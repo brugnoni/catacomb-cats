@@ -138,7 +138,14 @@ export interface Run {
   log: string[];
   gold: number;
   xp: number;
+  /** Trinkets found in this Run, banked with the loot. */
   items: string[];
+  /** What the last cleared room dropped: a Trinket name, or gold. */
+  drop?: string | number;
+  /** Trinkets owned when the Run started, which never drop again. */
+  owned: string[];
+  /** Separate generator for Trinket drops. */
+  dropRng: number;
   bonus: number;
   uses: Record<string, number>;
   roomUses: Record<string, number>;

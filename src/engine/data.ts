@@ -178,13 +178,33 @@ export const REVIVE_ABILITY: Ability = {
   cooldownTurns: 2,
 };
 
-/** What each trinket adds to the cat wearing it. Order is the room that drops it. */
-export const ITEM_BONUS = {
-  "Iron bell": { hp: 6, initiative: 0, attack: 0 },
-  "Silk ribbon": { hp: 0, initiative: 3, attack: 0 },
-  "Lucky fang": { hp: 0, initiative: 0, attack: 1 },
-} as const;
+/** What a Trinket adds to the cat wearing it; a missing field adds nothing. */
+export interface TrinketBonus {
+  hp?: number;
+  initiative?: number;
+  attack?: number;
+  healing?: number;
+  guard?: number;
+  fury?: number;
+}
+/** Every Trinket. Saves hold these names, so never rename or remove one. */
+export const ITEM_BONUS: Record<string, TrinketBonus> = {
+  "Iron bell": { hp: 6 },
+  "Silk ribbon": { initiative: 3 },
+  "Lucky fang": { attack: 1 },
+  "Copper locket": { hp: 3, initiative: 1 },
+  "Brass whistle": { hp: 2, initiative: 2 },
+  "Herb pouch": { healing: 2 },
+  "Knight's button": { guard: 2 },
+  "Moon pebble": { fury: 1 },
+  "Mint sprig": { hp: 3, healing: 1 },
+  "Pewter charm": { hp: 3, guard: 1 },
+};
 export const ITEMS = Object.keys(ITEM_BONUS);
+/** Percent chance that a cleared room before the boss drops a Trinket. */
+export const TRINKET_DROP_CHANCE = 50;
+/** Gold a drop gives once every Trinket is owned. */
+export const TRINKET_DROP_GOLD = 20;
 
 /** Names of the two extra Skins of each Companion; Skin 0 is the original. */
 export const SKINS: Record<string, [string, string]> = {

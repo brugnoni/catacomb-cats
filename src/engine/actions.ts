@@ -93,6 +93,8 @@ export function createRun(
     gold: 0,
     xp: 0,
     items: [],
+    owned: [...progress.inventory],
+    dropRng: (seed ^ 0x5bd1e995) >>> 0,
     bonus: 0,
     uses: {},
     roomUses: {},
