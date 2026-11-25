@@ -258,7 +258,7 @@ test("equipping and unequipping the same cat persists an empty slot", async ({
   await expect(worn).toContainText("Empty slot");
   await expect(
     page.getByRole("button", { name: "Undiscovered Trinket" }),
-  ).toHaveCount(9);
+  ).toHaveCount(19);
   await giveToMiso(page, "Iron bell");
   await expect(worn).toContainText("Iron bell");
 });

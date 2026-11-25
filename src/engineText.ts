@@ -99,8 +99,12 @@ export const RULES: [RegExp, string][] = [
     "{1} curses {2}: -{3} to all skill output for 2 turns (active -{4}).",
   ],
   [
-    /^(.+) revives (.+) at 60% HP \((\d+)\/(\d+)\)\. They act next round\.$/,
-    "{1} revives {2} at 60% HP ({3}/{4}). They act next round.",
+    /^(.+) revives (.+) at (\d+)% HP \((\d+)\/(\d+)\)\. They act next round\.$/,
+    "{1} revives {2} at {3}% HP ({4}/{5}). They act next round.",
+  ],
+  [
+    /^(.+) has a snack: \+(\d+) HP \((\d+)\/(\d+) HP\)\.$/,
+    "{1} has a snack: +{2} HP ({3}/{4} HP).",
   ],
   [
     /^(.+) taunts: enemies attack this cat until its next turn\.$/,

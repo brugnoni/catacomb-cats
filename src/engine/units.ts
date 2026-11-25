@@ -4,6 +4,7 @@ import {
   masteryOf,
   hearthBonuses,
   trainingPassives,
+  GUARD_TURNS,
 } from "../progression";
 import { EXPEDITIONS, expeditionById } from "../expeditions";
 import { isDamaging, type Progress, type Unit, type Run } from "./model";
@@ -32,6 +33,11 @@ export function statusFields() {
     reactiveHeal: 0,
     reactiveHealCharges: 0,
     openingAttack: 0,
+    critBonus: 0,
+    lowHpAttack: 0,
+    thorns: 0,
+    healed: 0,
+    roomHeal: 0,
     passives: {
       openingGuard: 0,
       iceArmor: 0,
@@ -70,7 +76,16 @@ export function buildCat(progress: Progress, id: string): Unit {
     else if (isDamaging(a))
       bonus =
         growth.attack + mastery.power + hearth.attack + (gear?.attack ?? 0);
-    return { ...a, power: a.power + bonus };
+    const tweak = gear?.skill?.id === a.id ? gear.skill : undefined;
+    const shields = a.effect === "guard" || a.effect === "taunt";
+    return {
+      ...a,
+      power: a.power + bonus + (tweak?.power ?? 0),
+      ...(tweak?.falloff ? { falloff: tweak.falloff } : {}),
+      ...(shields && gear?.guardTurns
+        ? { duration: GUARD_TURNS + gear.guardTurns }
+        : {}),
+    };
   });
   return {
     id,
@@ -85,8 +100,26 @@ export function buildCat(progress: Progress, id: string): Unit {
     abilities,
     ...statusFields(),
     passives: trainingPassives(id, rank),
+    critBonus: gear?.crit ?? 0,
+    lowHpAttack: gear?.lowHpAttack ?? 0,
+    thorns: gear?.thorns ?? 0,
+    healed: gear?.healed ?? 0,
+    roomHeal: gear?.roomHeal ?? 0,
     color: c.color,
   };
+}
+
+/** True when the Trinket changes a skill this cat does not have (yet). */
+export function trinketIdle(
+  progress: Progress,
+  id: string,
+  item: string,
+): boolean {
+  const { skill, guardTurns } = ITEM_BONUS[item] ?? {};
+  if (!skill && !guardTurns) return false;
+  return !buildCat(progress, id).abilities.some((a) =>
+    skill ? a.id === skill.id : a.effect === "guard" || a.effect === "taunt",
+  );
 }
 
 export function enemy(

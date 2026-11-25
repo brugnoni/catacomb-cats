@@ -107,6 +107,18 @@ export const UI: Record<string, string> = {
   "+{n} HP": "+{n} PV",
   "+{n} INIT": "+{n} INI",
   "+{n} ATK": "+{n} ATQ",
+  "+{n}% CRIT": "+{n}% CRÍT",
+  "Returns {n} damage to attackers": "Devuelve {n} de daño al atacante",
+  "Their shields last {n} more turn": "Sus escudos duran {n} turno más",
+  "Heals {n} HP at each room start": "Cura {n} PV al empezar cada sala",
+  "+{n} ATK below half HP": "+{n} ATQ con menos de la mitad de PV",
+  "+{n} HP from healing skills": "+{n} PV de las habilidades de curación",
+  "Dagger line: {a}% and {b}% behind the target":
+    "Línea de dagas: {a}% y {b}% detrás del objetivo",
+  "Return to the hearth revives at {n}%": "Volver al hogar revive al {n}%",
+  "+{n} shield on Stand behind me": "+{n} de escudo en Tras de mí",
+  "+{n} Flame paw power": "+{n} de potencia en Garra de fuego",
+  "No effect on {name}": "Sin efecto en {name}",
   "Bag · {n}/{max} Trinkets": "Bolsa · {n}/{max} amuletos",
   "Undiscovered Trinket": "Amuleto sin descubrir",
   "Best on {name}": "Ideal para {name}",
@@ -244,8 +256,8 @@ export const UI: Record<string, string> = {
   "Also lifts curses.": "También quita las maldiciones.",
   "Heal all living allies for {power} HP each.":
     "Cura a todos los aliados vivos {power} PV a cada uno.",
-  "Revive a fallen ally at 60% max HP.":
-    "Revive a un aliado caído con el 60% de PV máx.",
+  "Revive a fallen ally at {pct}% max HP.":
+    "Revive a un aliado caído con el {pct}% de PV máx.",
   "They act next round.": "Actúa en la próxima ronda.",
   "Shield 1 ally for {power}. Lasts {turns}.":
     "Protege a 1 aliado con {power} de escudo. Dura {turns}.",

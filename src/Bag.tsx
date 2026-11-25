@@ -1,14 +1,24 @@
 import { useState } from "react";
 import { useT } from "./i18n";
-import { CATS, ITEMS, ITEM_BONUS, equip, type Progress } from "./game";
+import {
+  CATS,
+  ITEMS,
+  ITEM_BONUS,
+  equip,
+  trinketIdle,
+  type Progress,
+} from "./game";
 import { itemBonusText } from "./uiText";
 
 /** The one Companion whose skills a Trinket improves; undefined when anyone gains. */
 function bestOn(item: string): string | undefined {
   const bonus = ITEM_BONUS[item] ?? {};
-  if (bonus.healing) return "Mei";
-  if (bonus.guard) return "Miso";
+  const skill = bonus.skill?.id;
+  if (bonus.healing || skill === "revive") return "Mei";
+  if (bonus.guard || bonus.guardTurns || skill === "taunt") return "Miso";
   if (bonus.fury) return "Luna";
+  if (skill === "line") return "Pursian";
+  if (skill === "slam") return "Tuntun";
   return undefined;
 }
 
@@ -52,6 +62,9 @@ export function Bag({
                 <small>
                   {best ? t("Best on {name}", { name: best }) : t("Anyone")}
                   {on && ` · ${t("Worn by {name}", { name: on.name })}`}
+                  {on &&
+                    trinketIdle(progress, on.id, item) &&
+                    ` · ${t("No effect on {name}", { name: on.name })}`}
                 </small>
               </button>
             </li>
