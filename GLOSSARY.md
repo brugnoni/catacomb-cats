@@ -9,8 +9,16 @@ A playable cat of the camp; three of them make the party of a Run. The five are 
 _Avoid_: Cat (in visible text), hero, character
 
 **Trinket**:
-A single piece of gear a Companion can wear, found as a reward in the Rooms of an Expedition; it adds one small bonus and each one can be worn by only one Companion at a time.
+A single piece of permanent gear a Companion can wear, dropped at random by the Rooms of an Expedition; it adds one small bonus, each Companion wears one, and each one can be worn by only one Companion at a time. You never own the same Trinket twice.
 _Avoid_: Item, equipment
+
+**Bag**:
+The grid in the camp, under the Companions, that shows every Trinket (the ones not found yet appear hidden) and where a Trinket is picked to equip it.
+_Avoid_: Inventory screen, backpack
+
+**Relic**:
+A temporary bonus the player picks, one out of three on offer, at the start of a Run and after each Room before the boss. It lasts only for that Run, some Relics trade a drawback for their bonus, and it never counts toward Power.
+_Avoid_: Trinket, perk, upgrade, buff
 
 **Field Guide**:
 The rules screen opened from FAQ, with a short list of frequently asked questions and one sheet per Companion showing its skills and training ranks.
