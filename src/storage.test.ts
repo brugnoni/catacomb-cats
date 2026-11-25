@@ -89,6 +89,18 @@ describe("backup of a save about to be reset", () => {
 });
 
 describe("save file", () => {
+  it("carries the loot seeds", () => {
+    const progress = { ...initialProgress(), lootSeeds: { catacombs: 7 } };
+    expect(importSave(exportSave(progress))?.progress.lootSeeds).toEqual({
+      catacombs: 7,
+    });
+  });
+  it("leaves the run record alone when the file's record is not a list", () => {
+    for (const runs of ["x", null, 3, {}])
+      expect(
+        importSave(JSON.stringify({ ...initialProgress(), runs }))?.runs,
+      ).toBeNull();
+  });
   it("round-trips progress and rejects anything invalid", () => {
     const progress = { ...initialProgress(), gold: 99 };
     expect(importSave(exportSave(progress))?.progress).toMatchObject({

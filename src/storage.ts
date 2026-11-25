@@ -130,5 +130,6 @@ export function importSave(raw: string) {
   const progress = readProgress(raw);
   if (!progress) return null;
   const { runs } = JSON.parse(raw) as { runs?: unknown };
-  return { progress, runs: runs === undefined ? null : records(runs) };
+  // Only a real list replaces the record: anything else would wipe the history.
+  return { progress, runs: Array.isArray(runs) ? records(runs) : null };
 }

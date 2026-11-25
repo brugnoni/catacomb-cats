@@ -35,8 +35,8 @@ export const GAME: Record<string, string> = {
     "+10% de probabilidad de crítico para tus gatos.",
   "+1 armor for every cat.": "+1 de armadura para cada gato.",
   "Stone den": "Guarida de piedra",
-  "Guard shields cast by your cats are 3 stronger.":
-    "Los escudos de Guardia de tus gatos son 3 más fuertes.",
+  "Guard and Stand behind me shields cast by your cats are 3 stronger.":
+    "Los escudos de Guardia y de Tras de mí de tus gatos son 3 más fuertes.",
   "Reckless torch": "Antorcha temeraria",
   "Your cats deal 3 more damage.": "Tus gatos hacen 3 de daño extra.",
   "Enemies deal 2 more damage.": "Los enemigos hacen 2 de daño extra.",

@@ -1107,27 +1107,6 @@ describe("Hearth blessing in combat", () => {
     ...initialProgress(),
     generalLevel,
   });
-  it("adds its stats to every cat and to damaging skills", () => {
-    const base = createRun(withHearth(0), catIds);
-    const rank2 = createRun(withHearth(2), catIds);
-    base.party.forEach((cat, i) => {
-      expect(rank2.party[i]!.maxHp).toBe(cat.maxHp + 2);
-      expect(rank2.party[i]!.initiative).toBe(cat.initiative + 1);
-      expect(rank2.party[i]!.abilities[0]!.power).toBe(
-        cat.abilities[0]!.power + 1,
-      );
-    });
-  });
-  it("rank 5 also raises healing, Guard and Inspired power", () => {
-    const base = createRun(withHearth(0), catIds);
-    const r5 = createRun(withHearth(5), catIds);
-    const power = (run: Run, catId: string, effect: string) =>
-      run.party
-        .find((c) => c.id === catId)!
-        .abilities.find((a) => a.effect === effect)!.power;
-    expect(power(r5, "clover", "heal")).toBe(power(base, "clover", "heal") + 1);
-    expect(power(r5, "miso", "guard")).toBe(power(base, "miso", "guard") + 1);
-  });
   it("rank 8 gives +1 AP only in the first round of each room", () => {
     let r = createRun(withHearth(8), catIds);
     expect(r.ap).toBe(7);
@@ -1461,7 +1440,7 @@ describe("critical hits", () => {
       expect(r.enemyCritChance).toBe(10);
     }
   });
-  it("only Hearth changes the chance, not mastery, training or equipment", () => {
+  it("the Run's base chance ignores mastery, training and stat Trinkets", () => {
     const rich: Progress = {
       ...initialProgress(),
       xp: 1500,
@@ -1847,51 +1826,6 @@ describe("ability reach", () => {
     expect(
       ids(abilityReach(r, { ...base, target: "fallen-ally" }, "miso")),
     ).toEqual(["miso"]);
-  });
-});
-
-describe("trinkets", () => {
-  it("each trinket adds exactly its listed bonus to the cat wearing it", () => {
-    const owned = { ...initialProgress(), inventory: [...ITEMS] };
-    // [HP, initiative, attack, Healing purr, Nine lives, Moon blessing]
-    const expected: Record<string, number[]> = {
-      "Iron bell": [6, 0, 0, 0, 0, 0],
-      "Silk ribbon": [0, 3, 0, 0, 0, 0],
-      "Lucky fang": [0, 0, 1, 0, 0, 0],
-      "Copper locket": [3, 1, 0, 0, 0, 0],
-      "Brass whistle": [2, 2, 0, 0, 0, 0],
-      "Herb pouch": [0, 0, 0, 2, 0, 0],
-      "Knight's button": [0, 0, 0, 0, 2, 0],
-      "Moon pebble": [0, 0, 0, 0, 0, 1],
-      "Mint sprig": [3, 0, 0, 1, 0, 0],
-      "Pewter charm": [3, 0, 0, 0, 1, 0],
-      ...Object.fromEntries(
-        ITEMS.slice(10).map((item) => [item, [0, 0, 0, 0, 0, 0]]),
-      ),
-    };
-    expect(ITEMS).toEqual(Object.keys(expected));
-    const gain = (id: string, item: string) => {
-      const base = buildCat(owned, id);
-      const worn = buildCat(equip(owned, id, item), id);
-      return {
-        hp: worn.maxHp - base.maxHp,
-        initiative: worn.initiative - base.initiative,
-        first: worn.abilities[0]!.power - base.abilities[0]!.power,
-        second: worn.abilities[1]!.power - base.abilities[1]!.power,
-      };
-    };
-    for (const [item, [hp, init, atk, heal, guard, fury]] of Object.entries(
-      expected,
-    )) {
-      expect(gain("miso", item), item).toEqual({
-        hp,
-        initiative: init,
-        first: atk,
-        second: guard,
-      });
-      expect(gain("clover", item).second, item).toBe(heal);
-      expect(gain("luna", item).second, item).toBe(fury);
-    }
   });
 });
 

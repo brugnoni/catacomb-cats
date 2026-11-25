@@ -243,11 +243,13 @@ function relicAftermath(run: Run, actor: Unit, ability: Ability) {
       );
     }
   }
-  if (has("Shield stance", "miso", "strike") && actor.guard < 3)
+  // Its shield is a Guard shield, so Stone den strengthens it too.
+  const stance = run.relics.includes("Stone den") ? 6 : 3;
+  if (has("Shield stance", "miso", "strike") && actor.guard < stance)
     guard(
       run,
       actor,
-      3,
+      stance,
       actor.abilities.find((a) => a.id === "guard")?.duration,
     );
   if (has("Overheat", "ember", "slam")) {
@@ -287,8 +289,8 @@ export function act(state: Run, abilityId: string, targetId: string): Run {
         ability.cooldownTurns + 1;
     applyAbility(run, a, ability, t);
     if (isDamaging(ability)) a.openingAttack = 0;
-    // The turn ends by itself when no AP remain or nothing usable is left.
-    if (!settleRoom(run) && (run.ap === 0 || !canAct(run, currentUnit(run)!))) {
+    // The turn ends by itself when nothing usable is left (Kindling casts at 0 AP).
+    if (!settleRoom(run) && !canAct(run, currentUnit(run)!)) {
       if (run.ap > 0)
         run.log.push(`${a.name} has no usable skills left and passes.`);
       advance(run);

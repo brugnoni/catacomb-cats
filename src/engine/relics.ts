@@ -45,7 +45,7 @@ export const RELICS: Record<string, Relic> = {
     apply: (run) => each(run, (c) => (c.armor += 1)),
   },
   "Stone den": {
-    text: "Guard shields cast by your cats are 3 stronger.",
+    text: "Guard and Stand behind me shields cast by your cats are 3 stronger.",
     apply: (run) =>
       each(run, (c) => {
         for (const a of c.abilities)
