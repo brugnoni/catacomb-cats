@@ -90,6 +90,8 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   };
   const {
     offer,
+    locked,
+    turnLocked,
     tutorial,
     practice,
     stepIndex,
@@ -225,6 +227,8 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
               key={`${run.id}:${run.room}`}
               run={run}
               practice={practice}
+              locked={locked}
+              turnLocked={turnLocked}
               onRun={setRun}
               onLeave={leave}
               onContinue={() => {
