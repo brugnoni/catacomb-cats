@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm exec --yes --package=pnpm@11.25.0 -- pnpm check)",
+      "Bash(npm exec --yes --package=pnpm@11.25.0 -- pnpm format)",
+      "Bash(npm exec --yes --package=pnpm@11.25.0 -- pnpm test:*)",
+      "Bash(npm exec --yes --package=pnpm@11.25.0 -- pnpm lint)",
+      "Bash(npm exec --yes --package=pnpm@11.25.0 -- pnpm build)",
+      "Bash(npm exec --yes --package=pnpm@11.25.0 -- pnpm exec vitest run:*)",
+      "Bash(npm exec --yes --package=pnpm@11.25.0 -- pnpm exec playwright test:*)",
+      "Bash(npm run dev)",
+      "Bash(npm run test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(rtk:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git commit --no-verify:*)"
+    ]
+  }
+}

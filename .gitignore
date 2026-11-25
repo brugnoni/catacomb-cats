@@ -10,3 +10,4 @@ outputs/transfer/
 coverage/
 *.log
 .claude/settings.local.json
+.scratch/

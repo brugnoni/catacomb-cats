@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { createRun, initialProgress } from "./game";
 import {
   getDifficulty,
+  powerPoints,
+  HEARTH_TRACK,
+  hearthBonuses,
+  nextHearthDescription,
   masteryBonuses,
   masteryLevel,
   nextTrainingDescription,
@@ -11,6 +16,8 @@ import {
   trainingTrack,
 } from "./progression";
 
+/** Every Expedition opened: no Rank cap holds the numbers back. */
+const OPEN = { catacombs: 3, warrens: 5 };
 describe("class progression balance", () => {
   it("unlocks third training rank for exactly 100 gold with increasing later prices", () => {
     expect([0, 1, 2].reduce((sum, rank) => sum + trainingCost(rank), 0)).toBe(
@@ -54,9 +61,9 @@ describe("class progression balance", () => {
   });
   it("slows shared mastery, caps it and extends numeric skill growth to every third level", () => {
     expect(masteryLevel(135)).toBe(0);
-    expect(masteryBonuses(150)).toEqual({ hp: 2, attack: 0, power: 0 });
-    expect(masteryBonuses(450)).toEqual({ hp: 6, attack: 1, power: 1 });
-    expect(masteryBonuses(100000)).toEqual({ hp: 20, attack: 3, power: 3 });
+    expect(masteryBonuses(1)).toEqual({ hp: 2, attack: 0, power: 0 });
+    expect(masteryBonuses(3)).toEqual({ hp: 6, attack: 1, power: 1 });
+    expect(masteryBonuses(10)).toEqual({ hp: 20, attack: 3, power: 3 });
     expect(masteryLevel(-1)).toBe(0);
   });
 });
@@ -130,25 +137,117 @@ describe("explicit training tracks", () => {
 });
 describe("ascension snapshot calculation", () => {
   it("does not punish spending before a first victory and excludes unspent gold", () => {
-    expect(getDifficulty({ wins: 0, spentGold: 1000, xp: 1000 }).tier).toBe(0);
-    expect(getDifficulty({ wins: 1, spentGold: 0, xp: 135 }).tier).toBe(1);
+    const bought = { xp: 1000, generalLevel: 8, catLevels: { miso: 8 } };
+    expect(getDifficulty({ expeditionWins: {}, ...bought }).tier).toBe(0);
+    expect(getDifficulty({ expeditionWins: OPEN, xp: 0 }).tier).toBe(0);
   });
-  it("scales independently with wins, spent gold and mastery and bounds escalation", () => {
-    const baseline = getDifficulty({ wins: 1, spentGold: 0, xp: 135 });
+  it("follows the permanent power bought: top three cats, Hearth and mastery", () => {
+    expect(powerPoints({ expeditionWins: OPEN, xp: 0 })).toBe(0);
     expect(
-      getDifficulty({ wins: 2, spentGold: 0, xp: 135 }).hpMultiplier,
-    ).toBeGreaterThan(baseline.hpMultiplier);
-    expect(getDifficulty({ wins: 1, spentGold: 200, xp: 135 }).tier).toBe(2);
-    expect(getDifficulty({ wins: 1, spentGold: 0, xp: 300 }).tier).toBe(2);
+      powerPoints({
+        expeditionWins: OPEN,
+        xp: 300,
+        generalLevel: 2,
+        catLevels: { a: 5, b: 4, c: 3, d: 2, e: 1 },
+      }),
+    ).toBe(5 + 4 + 3 + 2 + 2);
+    const at = (points: number) =>
+      getDifficulty({ expeditionWins: OPEN, xp: 0, catLevels: { a: points } })
+        .tier;
+    expect(at(2)).toBe(0);
+    expect(at(3)).toBe(1);
+    expect(at(6)).toBe(2);
+    // Gold spent or victories alone never raise the tier.
+    expect(getDifficulty({ expeditionWins: OPEN, xp: 0 }).tier).toBe(0);
+  });
+  it("follows the chosen party, not the best cats owned", () => {
+    const owned = {
+      expeditionWins: OPEN,
+      xp: 0,
+      catLevels: { a: 8, b: 8, c: 8, d: 1, e: 1 },
+    };
+    expect(powerPoints(owned)).toBe(24);
+    expect(powerPoints(owned, ["a", "d", "e"])).toBe(10);
+    expect(powerPoints(owned, ["d", "e", "z"])).toBe(2);
+    expect(getDifficulty(owned, ["a", "d", "e"]).tier).toBe(3);
+    expect(getDifficulty(owned).tier).toBe(8);
+  });
+  it("a run snapshots the tier of the party it enters with", () => {
+    const owned = {
+      ...initialProgress(),
+      expeditionWins: OPEN,
+      catLevels: { miso: 8, luna: 8, clover: 8, pip: 1, ember: 1 },
+    };
+    expect(createRun(owned, ["miso", "pip", "ember"]).difficulty.tier).toBe(3);
+    expect(createRun(owned, ["miso", "luna", "clover"]).difficulty.tier).toBe(
+      8,
+    );
+  });
+  it("bounds escalation at the maximum tier", () => {
     expect(
-      getDifficulty({ wins: 10000, spentGold: 100000, xp: 100000 }),
+      getDifficulty({
+        expeditionWins: OPEN,
+        xp: 99999,
+        generalLevel: 8,
+        catLevels: { a: 8, b: 8, c: 8 },
+      }).hpMultiplier,
+    ).toBeCloseTo(2.82, 5);
+    expect(
+      getDifficulty({
+        expeditionWins: OPEN,
+        xp: 100000,
+        generalLevel: 99,
+        catLevels: { a: 99, b: 99, c: 99 },
+      }),
     ).toMatchObject({
-      tier: 12,
-      hpMultiplier: 1.96,
-      damageBonus: 3,
+      tier: 14,
+      damageBonus: 7,
       initiativeBonus: 3,
-      extraEnemies: 2,
-      armorBonus: 2,
+      extraEnemies: 1,
+      armorBonus: 1,
     });
+  });
+});
+
+describe("Hearth blessing", () => {
+  it("has eight ranks, each with its own described benefit", () => {
+    expect(HEARTH_TRACK).toHaveLength(MAX_TRAINING_RANK);
+    HEARTH_TRACK.forEach((row, index) => {
+      expect(row.rank).toBe(index + 1);
+      expect(row.description.length).toBeGreaterThan(10);
+    });
+  });
+  it("accumulates stats, replaces Second Wind and caps at rank 8", () => {
+    expect(hearthBonuses(0)).toEqual({
+      hp: 0,
+      initiative: 0,
+      attack: 0,
+      support: 0,
+      secondWind: 0,
+      openingAp: 0,
+      crit: 0,
+    });
+    expect(hearthBonuses(1)).toMatchObject({ hp: 2, initiative: 1 });
+    expect(hearthBonuses(2).attack).toBe(1);
+    expect(hearthBonuses(3).secondWind).toBe(40);
+    expect(hearthBonuses(6).secondWind).toBe(40);
+    expect(hearthBonuses(7).secondWind).toBe(60);
+    expect(hearthBonuses(8)).toEqual({
+      hp: 8,
+      initiative: 2,
+      attack: 2,
+      support: 1,
+      secondWind: 60,
+      openingAp: 1,
+      crit: 10,
+    });
+    expect(hearthBonuses(5).crit).toBe(0);
+    expect(hearthBonuses(6).crit).toBe(5);
+    expect(hearthBonuses(99)).toEqual(hearthBonuses(8));
+    expect(hearthBonuses(-3)).toEqual(hearthBonuses(0));
+  });
+  it("describes the next rank and the end of the track", () => {
+    expect(nextHearthDescription(2)).toContain("Next rank 3 · Second Wind");
+    expect(nextHearthDescription(8)).toBe("Maximum Hearth rank reached.");
   });
 });

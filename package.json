@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "check": "pnpm format:check && pnpm lint && tsc --noEmit && pnpm test && pnpm build && pnpm test:e2e",
+    "stack": "node scripts/stack.mjs",
     "prepare": "node scripts/install-hooks.mjs"
   },
   "dependencies": {
@@ -35,9 +36,9 @@
     "eslint": "^10.15.0",
     "eslint-plugin-react-hooks": "^7.0.0",
     "prettier": "^3.6.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.46.0",
-    "vite": "^7.2.0",
-    "vitest": "^4.0.0"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
   }
 }
