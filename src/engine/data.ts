@@ -188,8 +188,8 @@ export const ITEMS = Object.keys(ITEM_BONUS);
 /** Names of the two extra Skins of each Companion; Skin 0 is the original. */
 export const SKINS: Record<string, [string, string]> = {
   miso: ["Iron Warden", "Golden Aegis"],
-  luna: ["Nightshade", "Persian Eclipse"],
-  pip: ["Tuxedo", "Desert Nomad"],
+  luna: ["Nightshade", "Light Moon"],
+  pip: ["Night Owl", "Muad'Dib"],
   clover: ["Frost Healer", "Field Medic"],
   ember: ["Karate Master", "Shaolin Monk"],
 };

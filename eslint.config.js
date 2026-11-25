@@ -2,7 +2,14 @@ import js from "@eslint/js";
 import ts from "typescript-eslint";
 import hooks from "eslint-plugin-react-hooks";
 export default ts.config(
-  { ignores: ["dist/**", "playwright-report/**", "test-results/**"] },
+  {
+    ignores: [
+      "dist/**",
+      "playwright-report/**",
+      "test-results/**",
+      ".claude/worktrees/**",
+    ],
+  },
   js.configs.recommended,
   ...ts.configs.recommended,
   {

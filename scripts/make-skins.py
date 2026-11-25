@@ -134,7 +134,7 @@ def apply(cell, rules, extra=None):
     dark = (own.max(-1) / 255 < 0.3) & near & (alpha > 0)
     out[dark] = (own_lum[dark][:, None] * np.array([1.0, 0.92, 1.08])).clip(0, 255)
     if extra:
-        extra(out)
+        extra(out, own)
     res = np.concatenate([np.clip(out, 0, 255), alpha[..., None]], -1)
     return Image.fromarray(res.astype(np.uint8), "RGBA")
 
@@ -187,7 +187,7 @@ SKINS = {
             rule(BLACK, hue=(270, 350), sat=(0, 0.38), val=(0.5, 1)),
             rule(["#0a0c28", "#1a2064", "#3a44ae", "#8896ff"], hue=(255, 350), sat=(0.3, 1), hf=10),
         ],
-        # Persian Eclipse: white fluffy cat, midnight robe.
+        # Light Moon: white fluffy cat, midnight robe.
         [
             rule(["#7a4010", "#c47a1c", "#f0b840", "#ffe8a0"], val=(0.4, 1), poly=[(205, 126), (223, 126), (224, 152), (221, 155), (212, 152), (206, 146), (203, 138)]),  # left iris
             rule(["#7a4010", "#c47a1c", "#f0b840", "#ffe8a0"], val=(0.4, 1), poly=box(268, 130, 274, 153)),  # right iris
@@ -197,11 +197,11 @@ SKINS = {
     ],
     # Pursian: cream cat in a green hood.
     "pip": [
-        # Tuxedo: black hood, ears, mask and tail; white blaze, muzzle, chest and paws.
+        # Night Owl: black hood, ears, mask and tail; white blaze, muzzle, chest and paws.
         [
             rule(BLACK, poly=box(140, 60, 215, 152), **CREAM),  # left ear
             rule(BLACK, poly=box(240, 80, 300, 150), **CREAM),  # right ear
-            rule(BLACK, poly=box(40, 195, 135, 335), **CREAM),  # tail
+            rule(BLACK, poly=box(40, 195, 135, 335), first=True, **CREAM),  # tail: first, or EYES keeps its pale yellow highlights
             rule(BLACK, poly=[(180, 138), (244, 138), (252, 160), (238, 205), (205, 210), (182, 190)], **CREAM),  # left eye patch
             rule(BLACK, poly=[(270, 138), (300, 138), (300, 205), (284, 210), (268, 190), (264, 160)], **CREAM),  # right eye patch
             rule(["#0c0c14", "#1c1c28", "#30303f", "#52526a"], hue=(62, 120), sat=(0.25, 1)),  # hood
@@ -210,7 +210,7 @@ SKINS = {
             rule(WHITE, poly=box(246, 266, 288, 310), hue=(5, 50), sat=(0.08, 0.6), val=(0.55, 1)),  # right hand
             rule(WHITE, poly=box(110, 335, 300, 395), hue=(5, 50), sat=(0.08, 0.6), val=(0.55, 1)),  # legs
         ],
-        # Desert Nomad: terracotta hood.
+        # Muad'Dib: terracotta hood.
         [
             rule(["#3a1912", "#7a3424", "#b8623a", "#eba06c"], hue=(62, 120), sat=(0.25, 1)),
         ],
@@ -256,7 +256,59 @@ SKINS = {
     ],
 }
 
-EXTRA = {("ember", 0): lambda out: heart(out, 277, 160)}
+def tuxedo_eyes(out, own):
+    """Night Owl fixes: pale tail specks get the tail color; the iris edge is restored and its highlight turns yellow."""
+    h, s, v = to_hsv(own)
+    tail = np.zeros(v.shape, bool)
+    tail[195:335, 40:135] = True
+    out[tail & (out.max(-1) > 140) & (v > 0.9)] = (70, 74, 94)  # pale specks the black rules skip
+    yellow = (h > 35) & (h < 65) & (v > 0.4)
+    for x0, x1, y0, y1, hl in ((220, 232, 168, 196, True), (274, 283, 170, 196, False)):
+        box_ = np.zeros(v.shape, bool)
+        box_[y0:y1, x0:x1] = True
+        box_ &= yellow
+        out[box_ & (s > 0.45)] = own[box_ & (s > 0.45)]
+        if hl:
+            out[box_ & (s <= 0.45)] = (253, 240, 104)
+
+
+def tuntun_face(fur):
+    """The iris's orange lower corner becomes fur (closing the eye) and the right fang turns white like the left one."""
+
+    def fix(out, own):
+        h, s, v = to_hsv(own)
+        corner = np.zeros(v.shape, bool)
+        corner[150:168, 296:312] = True
+        out[corner & (h > 12) & (h < 42) & (s > 0.35) & (v > 0.4)] = fur
+        fang = np.zeros(v.shape, bool)
+        fang[166:179, 283:293] = True
+        out[fang & (s < 0.5) & (v > 0.75)] = (255, 250, 240)
+
+    return fix
+
+
+def karate_extra(out, own):
+    heart(out, 277, 160, px=2)  # a small nose, in line with the other cats
+    tuntun_face(hexrgb("#4e5064"))(out, own)
+
+
+def monk_extra(out, own):
+    tuntun_face(hexrgb("#8e653f"))(out, own)
+    # The original nose is oversized: paint it over with fur, then draw a smaller one.
+    _, _, v = to_hsv(own)
+    nose = np.zeros(v.shape, bool)
+    nose[153:168, 276:296] = True
+    dark = nose & (v < 0.3)
+    for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):  # also the soft ring around it
+        dark |= np.roll(dark, (dy, dx), (0, 1)) & nose & (v < 0.55)
+    out[dark] = hexrgb("#8e653f")
+    for r, row in enumerate(["111111", "011110", "001100"]):
+        for c, on in enumerate(row):
+            if on == "1":
+                out[156 + r * 2 : 158 + r * 2, 280 + c * 2 : 282 + c * 2] = OUTLINE
+
+
+EXTRA = {("ember", 0): karate_extra, ("ember", 1): monk_extra, ("pip", 0): tuxedo_eyes}
 
 
 def build():

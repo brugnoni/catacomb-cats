@@ -86,6 +86,7 @@ const placeholders = (text: string) =>
   [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 /** Terms that are the same in both languages. */
 const SAME = new Set([
+  "Muad'Dib",
   "FAQ",
   "Tutorial",
   "XP",
