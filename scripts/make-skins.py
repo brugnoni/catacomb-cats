@@ -26,9 +26,9 @@ def hexrgb(c):
     return np.array([int(c[i : i + 2], 16) for i in (1, 3, 5)], dtype=float)
 
 
-def rule(ramp, hue=None, sat=(0, 1), val=(0.2, 1), poly=None, hf=14):
+def rule(ramp, hue=None, sat=(0, 1), val=(0.2, 1), poly=None, hf=14, first=False):
     """A rule without ramp keeps its pixels as they are. hue is (from, to) degrees and may wrap, e.g. (340, 15); poly is [(x, y)...] in cell pixels."""
-    return dict(ramp=[hexrgb(c) for c in ramp] if ramp else None, hue=hue, sat=sat, val=val, poly=poly, hf=hf)
+    return dict(ramp=[hexrgb(c) for c in ramp] if ramp else None, hue=hue, sat=sat, val=val, poly=poly, hf=hf, first=first)
 
 
 def box(x0, y0, x1, y1):
@@ -96,7 +96,8 @@ EYES = rule(None, hue=(42, 60), sat=(0.5, 1), val=(0.5, 1), hf=3)
 
 
 def apply(cell, rules, extra=None):
-    rules = [EYES, *rules]
+    # `first` rules (eye fixes) run before EYES protects the yellow irises.
+    rules = [*(r for r in rules if r["first"]), EYES, *(r for r in rules if not r["first"])]
     rgba = np.asarray(cell, dtype=float)
     alpha = rgba[..., 3]
     own = rgba[..., :3]
@@ -126,6 +127,12 @@ def apply(cell, rules, extra=None):
     own_lum = 0.299 * own[..., 0] + 0.587 * own[..., 1] + 0.114 * own[..., 2]
     edge = (alpha < 230) & (alpha > 0)
     out[edge] *= np.clip(own_lum / fill_lum, 0, 1)[edge][:, None]
+    # Dark pixels near the silhouette are outline: drop stray warm tints so no speckles remain.
+    near = alpha < 64
+    for _ in range(6):
+        near = near | np.roll(near, 1, 0) | np.roll(near, -1, 0) | np.roll(near, 1, 1) | np.roll(near, -1, 1)
+    dark = (own.max(-1) / 255 < 0.3) & near & (alpha > 0)
+    out[dark] = (own_lum[dark][:, None] * np.array([1.0, 0.92, 1.08])).clip(0, 255)
     if extra:
         extra(out)
     res = np.concatenate([np.clip(out, 0, 255), alpha[..., None]], -1)
@@ -136,7 +143,7 @@ def apply(cell, rules, extra=None):
 BLACK = ["#101018", "#1c1c28", "#2c2c3c", "#464a5e"]
 WHITE = ["#8f94ae", "#c4c8dc", "#eceef8", "#ffffff"]
 OUTLINE = (24, 12, 16)
-CREAM = dict(hue=(5, 42), sat=(0.1, 1), val=(0.5, 1), hf=6)  # Pursian's fur
+CREAM = dict(hue=(330, 50), sat=(0, 1), val=(0.2, 1), hf=6)  # Pursian's fur
 GRAYFUR = dict(hue=(260, 25), sat=(0.04, 0.45), val=(0.2, 0.78))  # Tuntun's fur
 
 
@@ -174,14 +181,16 @@ SKINS = {
     "luna": [
         # Nightshade: near-black cat, deep indigo robe.
         [
-            rule(["#164c5c", "#2c8ea4", "#62c8dc", "#b8f0fa"], hue=(270, 345), sat=(0.12, 1), val=(0.45, 1), poly=box(201, 120, 230, 154)),  # iris
+            rule(["#164c5c", "#2c8ea4", "#62c8dc", "#b8f0fa"], val=(0.4, 1), poly=[(205, 126), (223, 126), (224, 152), (221, 155), (212, 152), (206, 146), (203, 138)]),  # left iris
+            rule(["#164c5c", "#2c8ea4", "#62c8dc", "#b8f0fa"], val=(0.4, 1), poly=box(268, 130, 274, 153)),  # right iris
             rule(["#403e58", "#6c6a88", "#9a98b4", "#cac8de"], hue=(345, 30), sat=(0.04, 0.4), val=(0.78, 1), hf=8, poly=box(140, 90, 300, 215)),
             rule(BLACK, hue=(270, 350), sat=(0, 0.38), val=(0.5, 1)),
             rule(["#0a0c28", "#1a2064", "#3a44ae", "#8896ff"], hue=(255, 350), sat=(0.3, 1), hf=10),
         ],
         # Persian Eclipse: white fluffy cat, midnight robe.
         [
-            rule(["#7a4010", "#c47a1c", "#f0b840", "#ffe8a0"], hue=(270, 345), sat=(0.12, 1), val=(0.45, 1), poly=box(201, 120, 230, 154)),  # iris
+            rule(["#7a4010", "#c47a1c", "#f0b840", "#ffe8a0"], val=(0.4, 1), poly=[(205, 126), (223, 126), (224, 152), (221, 155), (212, 152), (206, 146), (203, 138)]),  # left iris
+            rule(["#7a4010", "#c47a1c", "#f0b840", "#ffe8a0"], val=(0.4, 1), poly=box(268, 130, 274, 153)),  # right iris
             rule(["#8085a8", "#bcc0dc", "#e8eaf8", "#ffffff"], hue=(270, 350), sat=(0, 0.38), val=(0.5, 1)),
             rule(["#070b26", "#13206a", "#2c46b0", "#7c9ef2"], hue=(255, 350), sat=(0.3, 1), hf=10),
         ],
@@ -192,7 +201,7 @@ SKINS = {
         [
             rule(BLACK, poly=box(140, 60, 215, 152), **CREAM),  # left ear
             rule(BLACK, poly=box(240, 80, 300, 150), **CREAM),  # right ear
-            rule(BLACK, poly=box(50, 220, 130, 320), **CREAM),  # tail
+            rule(BLACK, poly=box(40, 195, 135, 335), **CREAM),  # tail
             rule(BLACK, poly=[(180, 138), (244, 138), (252, 160), (238, 205), (205, 210), (182, 190)], **CREAM),  # left eye patch
             rule(BLACK, poly=[(270, 138), (300, 138), (300, 205), (284, 210), (268, 190), (264, 160)], **CREAM),  # right eye patch
             rule(["#0c0c14", "#1c1c28", "#30303f", "#52526a"], hue=(62, 120), sat=(0.25, 1)),  # hood
@@ -210,6 +219,7 @@ SKINS = {
     "clover": [
         # Frost Healer: ice-blue cloak, silver-gray patches.
         [
+            rule(["#c8ccd8", "#f0f2f8", "#ffffff", "#ffffff"], val=(0.35, 1), poly=box(272, 112, 280, 141), first=True),  # right eye: white, not yellow
             rule(["#1a3260", "#3c76b6", "#84bce8", "#e2f4ff"], hue=(62, 118), sat=(0.25, 1), poly=box(0, 172, 397, 396)),
             rule(["#4c566c", "#8794ac", "#bcc6dc", "#e8eef8"], hue=(8, 40), sat=(0.5, 1), val=(0.45, 1), poly=box(0, 0, 397, 175)),
             rule(["#4c566c", "#8794ac", "#bcc6dc", "#e8eef8"], hue=(8, 40), sat=(0.5, 1), val=(0.45, 1), poly=box(30, 262, 120, 365)),
@@ -218,6 +228,7 @@ SKINS = {
         ],
         # Field Medic: red cloak.
         [
+            rule(["#c8ccd8", "#f0f2f8", "#ffffff", "#ffffff"], val=(0.35, 1), poly=box(272, 112, 280, 141), first=True),  # right eye: white, not yellow
             rule(["#50101a", "#a82434", "#e0525e", "#ffa8a8"], hue=(62, 118), sat=(0.25, 1), poly=box(0, 172, 397, 396)),
         ],
     ],
@@ -225,7 +236,8 @@ SKINS = {
     "ember": [
         # Karate Master: gray cat like Tuna, white muzzle, chest and paws, white gi, black mitts.
         [
-            rule(WHITE, poly=[(236, 150), (300, 148), (300, 192), (258, 196), (238, 172)], **GRAYFUR),
+            # Tuna's face: a blaze from the headband down between the eyes, white muzzle and chin.
+            rule(WHITE, poly=[(268, 114), (292, 114), (297, 134), (301, 152), (302, 176), (294, 194), (252, 198), (236, 178), (238, 154), (262, 152), (266, 132)], **GRAYFUR),
             rule(WHITE, poly=[(188, 198), (246, 196), (252, 236), (236, 256), (200, 256), (186, 230)], sat=(0, 0.6), val=(0.2, 1)),
             rule(WHITE, poly=box(104, 358, 160, 395), **GRAYFUR),
             rule(WHITE, poly=box(264, 358, 330, 395), **GRAYFUR),
