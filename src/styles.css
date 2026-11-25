@@ -11,9 +11,22 @@
   --ink: #101723;
   --line: #53515a;
   --muted: #a3a5a2;
+  --paw: url("./cursors/paw.svg") 20 16, auto;
+  --paw-hover: url("./cursors/paw-hover.svg") 20 16, pointer;
+  --paw-attack: url("./cursors/paw-attack.svg") 20 16, crosshair;
 }
 * {
   box-sizing: border-box;
+}
+html {
+  cursor: var(--paw);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --paw: auto;
+    --paw-hover: pointer;
+    --paw-attack: crosshair;
+  }
 }
 body {
   margin: 0;
@@ -25,7 +38,7 @@ select {
   font: inherit;
 }
 button {
-  cursor: pointer;
+  cursor: var(--paw-hover);
   color: #d9d1ba;
   background: #293039;
   border: 2px solid #69615b;
@@ -822,13 +835,16 @@ hr {
 }
 .unit-target:disabled {
   opacity: 1;
-  cursor: default;
+  cursor: var(--paw);
 }
 .combatant:has(.unit-target[aria-pressed="true"]) {
   border-color: #d2aa64;
 }
 .enemies .unit-target {
   transform: scaleX(-1);
+}
+.enemies .unit-target:not(:disabled) {
+  cursor: var(--paw-attack);
 }
 .enemies .unit-target:hover:not(:disabled) {
   transform: scaleX(-1);
@@ -898,7 +914,7 @@ hr {
   padding: 14px 18px;
 }
 .faq-entries summary {
-  cursor: pointer;
+  cursor: var(--paw-hover);
   color: #e8bb63;
   font-size: 23px;
   line-height: 1.3;
@@ -2165,7 +2181,7 @@ hr {
   color: #ffd2ca;
   background: #2a0d0dd9;
   border: 1px solid #ff6a5c;
-  cursor: pointer;
+  cursor: var(--paw-hover);
 }
 .threats-button:hover,
 .threats-button[aria-pressed="true"] {
