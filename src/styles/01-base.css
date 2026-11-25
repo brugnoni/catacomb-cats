@@ -19,13 +19,6 @@
 html {
   cursor: var(--paw);
 }
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --paw: auto;
-    --paw-hover: pointer;
-    --paw-attack: crosshair;
-  }
-}
 body {
   margin: 0;
   min-width: 960px;
