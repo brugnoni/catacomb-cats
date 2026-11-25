@@ -9,15 +9,9 @@
   --ink: #101723;
   --line: #53515a;
   --muted: #a3a5a2;
-  --paw: url("../cursors/paw.svg") 18 14, auto;
-  --paw-hover: url("../cursors/paw-hover.svg") 18 14, pointer;
-  --paw-attack: url("../cursors/paw-attack.svg") 18 14, crosshair;
 }
 * {
   box-sizing: border-box;
-}
-html {
-  cursor: var(--paw);
 }
 body {
   margin: 0;
@@ -29,7 +23,7 @@ select {
   font: inherit;
 }
 button {
-  cursor: var(--paw-hover);
+  cursor: pointer;
   color: #d9d1ba;
   background: #293039;
   border: 2px solid #69615b;

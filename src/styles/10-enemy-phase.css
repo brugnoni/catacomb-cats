@@ -56,7 +56,7 @@
   color: #ffd2ca;
   background: #2a0d0dd9;
   border: 1px solid #ff6a5c;
-  cursor: var(--paw-hover);
+  cursor: pointer;
 }
 .threats-button:hover,
 .threats-button[aria-pressed="true"] {

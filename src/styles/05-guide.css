@@ -22,7 +22,7 @@
   padding: 14px 18px;
 }
 .faq-entries summary {
-  cursor: var(--paw-hover);
+  cursor: pointer;
   color: #e8bb63;
   font-size: 23px;
   line-height: 1.3;

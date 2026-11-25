@@ -100,16 +100,13 @@
 }
 .unit-target:disabled {
   opacity: 1;
-  cursor: var(--paw);
+  cursor: default;
 }
 .combatant:has(.unit-target[aria-pressed="true"]) {
   border-color: #d2aa64;
 }
 .enemies .unit-target {
   transform: scaleX(-1);
-}
-.enemies .unit-target:not(:disabled) {
-  cursor: var(--paw-attack);
 }
 .enemies .unit-target:hover:not(:disabled) {
   transform: scaleX(-1);
