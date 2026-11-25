@@ -160,7 +160,11 @@ export function Lobby({
             </strong>
             <span>
               {masteryDone
-                ? t("Mastery cap reached")
+                ? heldBack
+                  ? t("Unlock {name} to raise the mastery cap", {
+                      name: t(heldBack.name),
+                    })
+                  : t("Mastery cap reached")
                 : t("{xp} / {max} XP to next level", {
                     xp: progress.xp % XP_PER_MASTERY,
                     max: XP_PER_MASTERY,
@@ -176,7 +180,7 @@ export function Lobby({
             />
             <p>
               {t(
-                "Every 150 banked XP grants +2 max HP to all cats. Every third mastery level adds +1 power to attacks, healing, Guard and blessings. Mastery bonuses stop at level 10.",
+                "Every 150 banked XP grants +2 max HP to all cats. Every third mastery level adds +1 power to attacks, healing, Guard and blessings. Mastery is capped by your highest unlocked Expedition, up to level 10.",
               )}
             </p>
           </div>
