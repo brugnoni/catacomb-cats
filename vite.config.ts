@@ -4,5 +4,5 @@ export default defineConfig({
   // Relative asset paths: the build works from any folder, e.g. GitHub Pages' /catacomb-cats/.
   base: "./",
   plugins: [react()],
-  test: { include: ["src/**/*.test.ts"] },
+  test: { include: ["src/**/*.test.ts", "scripts/**/*.test.mjs"] },
 });
