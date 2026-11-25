@@ -49,6 +49,7 @@ export const CATS: Cat[] = [
         power: 2,
         target: "ally",
         effect: "fury",
+        turnLimit: 1,
       },
     ],
   },
