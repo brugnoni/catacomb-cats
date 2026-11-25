@@ -1988,3 +1988,70 @@ test("retreating or reloading does not re-roll the Relic offer", async ({
   await enter.click();
   await expect(names).toHaveText(offer);
 });
+
+test("a won run picks a Relic before every room and banks its Trinkets", async ({
+  page,
+}) => {
+  test.slow();
+  await page.addInitScript(() => {
+    (
+      window as unknown as { __CATACOMB_RELICS__: boolean }
+    ).__CATACOMB_RELICS__ = true;
+  });
+  await seedLegacySave(page, { generalLevel: 8 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Enter the dungeon" }).click();
+  const cards = page.locator(".relic-cards button");
+  const next = page.getByRole("button", { name: "Continue to next room" });
+  const won = page.getByRole("heading", { name: "The burrow has its heroes." });
+  const end = page.getByTestId("end-turn");
+  let picks = 0;
+  for (let action = 0; action < 150 && !(await won.isVisible()); action++) {
+    await expect(cards.first().or(next).or(won).or(end).first()).toBeVisible();
+    if (await won.isVisible()) break;
+    if (await cards.first().isVisible()) {
+      await expect(cards).toHaveCount(3);
+      await cards.first().click();
+      picks++;
+      continue;
+    }
+    if (await next.isVisible()) {
+      await next.click();
+      continue;
+    }
+    const foe = page.locator(".enemies .combatant:not(.dead) .unit-target");
+    // The last blow can land just before the room screen replaces the field.
+    if (!(await foe.count())) continue;
+    await foe.first().click();
+    const attack = page.getByRole("button", {
+      name: /^(Claw strike|Moon bolt|Valiant slash|Thorn swipe|Cinder jab)/,
+    });
+    await expect(end).toBeEnabled();
+    if (await attack.isEnabled()) await attack.click();
+    else await end.click();
+  }
+  await expect(won).toBeVisible();
+  expect(picks).toBe(3);
+  const saved = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key)!),
+    saveKey,
+  );
+  // The boss always drops one, and the won Run frees the loot seed.
+  expect(saved.inventory.length).toBeGreaterThan(1);
+  expect(saved.lootSeeds).toEqual({});
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Undiscovered Trinket" }),
+  ).toHaveCount(20 - saved.inventory.length);
+});
+
+test("a Trinket given to another Companion leaves the first one", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await giveToMiso(page, "Iron bell");
+  await page.getByRole("button", { name: /^Iron bell/ }).click();
+  await page.getByRole("button", { name: "Give to Luna" }).click();
+  await expect(page.locator('[data-worn="luna"]')).toContainText("Iron bell");
+  await expect(page.locator('[data-worn="miso"]')).toContainText("Empty slot");
+});

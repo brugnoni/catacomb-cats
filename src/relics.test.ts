@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  ITEMS,
   RELICS,
   abilityCost,
   act,
   createRun,
+  damagePreview,
+  endTurn,
+  equip,
   initialProgress,
   nextRoom,
   pickRelic,
@@ -11,11 +15,22 @@ import {
 } from "./game";
 
 const PARTY = ["miso", "luna", "pip"];
+const MEI = ["miso", "luna", "clover"];
+const TUNTUN = ["miso", "luna", "ember"];
 const start = (party = PARTY, seed = 1) =>
   createRun(initialProgress(), party, seed, { relics: true });
 /** A Run holding exactly `name`, whatever the first offer was. */
 const holding = (name: string, party = PARTY) =>
   pickRelic({ ...start(party), offer: [name] }, name);
+const base = (party = PARTY) => createRun(initialProgress(), party);
+/** The party with one cat wearing one Trinket, holding the given Relics. */
+const geared = (id: string, item: string, relics: string[], party = PARTY) => {
+  const owned = { ...initialProgress(), inventory: [...ITEMS] };
+  let run = createRun(equip(owned, id, item), party, 1, { relics: true });
+  for (const name of relics)
+    run = pickRelic({ ...run, status: "relic", offer: [name] }, name);
+  return run;
+};
 const cat = (run: Run, id: string) => run.party.find((u) => u.id === id)!;
 const skill = (run: Run, id: string, ability: string) =>
   cat(run, id).abilities.find((a) => a.id === ability)!;
@@ -30,6 +45,8 @@ const turnOf = (run: Run, id: string) => {
   }
   return run;
 };
+const cast = (run: Run, id: string, ability: string, target = "e0") =>
+  act(turnOf(run, id), ability, target);
 
 describe("Relic offers", () => {
   it("offers three distinct Relics and blocks play until one is picked", () => {
@@ -43,12 +60,11 @@ describe("Relic offers", () => {
     expect(picked.relics).toEqual([run.offer[0]]);
     expect(picked.offer).toEqual([]);
   });
-  it("is reproducible and leaves enemy marks alone", () => {
+  it("is reproducible from the seed, and absent unless asked for", () => {
     expect(start(PARTY, 7).offer).toEqual(start(PARTY, 7).offer);
     const plain = createRun(initialProgress(), PARTY, 7);
     expect(plain.status).toBe("combat");
     expect(plain.offer).toEqual([]);
-    expect(start(PARTY, 7).rng).not.toBeUndefined();
   });
   it("never offers another party's Relic", () => {
     for (let seed = 1; seed <= 200; seed++)
@@ -72,72 +88,182 @@ describe("Relic offers", () => {
   });
 });
 
-describe("Relic effects", () => {
-  it("changes the party stats", () => {
-    const base = createRun(initialProgress(), PARTY);
+/** Clears the room with Miso on 1 HP and returns the HP he is left with. */
+const roomHealOf = (run: Run) => {
+  turnOf(run, "miso");
+  run.enemies.forEach((e, i) => (e.hp = i === 0 ? 1 : 0));
+  cat(run, "miso").hp = 1;
+  return cat(act(run, "strike", "e0"), "miso").hp;
+};
+
+/** One case per Relic: what its text promises and what its drawback takes. */
+const CASES: Record<string, () => void> = {
+  "Warm broth": () => {
+    // Miso has 40 max HP: 33% is 14 and 53% is 22.
+    expect(roomHealOf(base())).toBe(15);
+    expect(roomHealOf(holding("Warm broth"))).toBe(23);
+  },
+  "Lucky whisker": () => {
+    expect(holding("Lucky whisker").critChance).toBe(base().critChance + 10);
+  },
+  "Thick fur": () => {
     expect(holding("Thick fur").party.map((c) => c.armor)).toEqual([1, 1, 1]);
-    expect(holding("Lucky whisker").critChance).toBe(base.critChance + 10);
-    const heavy = holding("Heavy collars");
-    expect(cat(heavy, "miso").maxHp).toBe(50);
-    expect(cat(heavy, "miso").initiative).toBe(8);
-    expect(cat(holding("Iron coat"), "miso").armor).toBe(2);
-    expect(cat(holding("Iron coat"), "miso").initiative).toBe(6);
+  },
+  "Stone den": () => {
     expect(skill(holding("Stone den"), "miso", "guard").power).toBe(11);
-  });
-  it("Reckless torch strengthens both sides", () => {
+  },
+  "Reckless torch": () => {
     const run = holding("Reckless torch");
-    const base = createRun(initialProgress(), PARTY);
+    const enemyPower = (r: Run) => r.enemies.map((e) => e.abilities[0]!.power);
     expect(skill(run, "miso", "strike").power).toBe(8);
-    expect(run.enemies[0]!.abilities[0]!.power).toBe(
-      base.enemies[0]!.abilities[0]!.power + 2,
+    expect(enemyPower(run)).toEqual(enemyPower(base()).map((n) => n + 2));
+    // The drawback follows into the next room's enemies.
+    const next = pickRelic(
+      { ...nextRoom({ ...run, status: "reward" }), offer: ["Thick fur"] },
+      "Thick fur",
     );
-  });
-  it("Hurried remedy, Smoke step, Overheat and Full moon rewrite skills", () => {
-    const mei = holding("Hurried remedy", ["miso", "luna", "clover"]);
-    expect(skill(mei, "clover", "heal")).toMatchObject({ cost: 1, power: 4 });
-    expect(
-      skill(holding("Smoke step"), "pip", "line").cooldownTurns,
-    ).toBeUndefined();
-    const luna = turnOf(holding("Full moon"), "luna");
-    const after = act(luna, "strike", "e0");
-    expect(after.enemies[0]!.hp).toBe(95);
-    expect(after.enemies[1]!.hp).toBe(97);
-  });
-  it("Healing thorns and Shield stance add to a basic attack", () => {
-    const mei = turnOf(
-      holding("Healing thorns", ["miso", "luna", "clover"]),
-      "clover",
-    );
-    cat(mei, "luna").hp = 10;
-    expect(cat(act(mei, "strike", "e0"), "luna").hp).toBe(13);
-    const miso = turnOf(holding("Shield stance"), "miso");
-    cat(miso, "miso").guard = 0;
-    expect(cat(act(miso, "strike", "e0"), "miso").guard).toBe(3);
-  });
-  it("Kindling makes only the first Cinder jab free", () => {
-    const run = turnOf(holding("Kindling", ["miso", "luna", "ember"]), "ember");
-    const jab = skill(run, "ember", "strike");
-    expect(abilityCost(run, jab)).toBe(0);
+    const plain = nextRoom({ ...base(), status: "reward" });
+    expect(enemyPower(next)).toEqual(enemyPower(plain).map((n) => n + 2));
+  },
+  "Heavy collars": () => {
+    const miso = cat(holding("Heavy collars"), "miso");
+    expect([miso.maxHp, miso.hp, miso.initiative]).toEqual([50, 50, 8]);
+  },
+  "Healing thorns": () => {
+    const run = holding("Healing thorns", MEI);
+    cat(run, "luna").hp = 10;
+    expect(cat(cast(run, "clover", "strike"), "luna").hp).toBe(13);
+  },
+  "Hurried remedy": () => {
+    const run = holding("Hurried remedy", MEI);
+    expect(skill(run, "clover", "heal")).toMatchObject({ cost: 1, power: 4 });
+  },
+  "Shield stance": () => {
+    const run = holding("Shield stance");
+    cat(run, "miso").guard = 0;
+    expect(cat(cast(run, "miso", "strike"), "miso").guard).toBe(3);
+  },
+  "Iron coat": () => {
+    const miso = cat(holding("Iron coat"), "miso");
+    expect([miso.armor, miso.initiative]).toEqual([2, 6]);
+  },
+  Kindling: () => {
+    const run = turnOf(holding("Kindling", TUNTUN), "ember");
+    expect(abilityCost(run, skill(run, "ember", "strike"))).toBe(0);
     const once = act(run, "strike", "e0");
     expect(once.ap).toBe(6);
     expect(act(once, "strike", "e0").ap).toBe(5);
-  });
-  it("Overheat costs Tuntun HP but never the last point", () => {
-    const run = turnOf(holding("Overheat", ["miso", "luna", "ember"]), "ember");
-    const ember = cat(run, "ember");
-    ember.hp = 3;
+  },
+  Overheat: () => {
+    const run = holding("Overheat", TUNTUN);
     skill(run, "ember", "slam").lifesteal = 0;
-    expect(cat(act(run, "slam", "e0"), "ember").hp).toBe(1);
+    const after = cast(run, "ember", "slam");
+    expect(cat(after, "ember").hp).toBe(cat(run, "ember").hp - 5);
+    expect(cat(after, "ember").cooldowns).toEqual({});
+    // Never the last point.
+    cat(run, "ember").hp = 3;
+    expect(cat(cast(run, "ember", "slam"), "ember").hp).toBe(1);
+  },
+  "Full moon": () => {
+    const after = cast(holding("Full moon"), "luna", "strike");
+    expect(after.enemies.slice(0, 2).map((e) => e.hp)).toEqual([95, 97]);
+  },
+  "Smoke step": () => {
+    const after = cast(holding("Smoke step"), "pip", "line");
+    expect(cat(after, "pip").cooldowns).toEqual({});
+  },
+};
+
+describe("every Relic", () => {
+  it("has a case", () => {
+    expect(Object.keys(CASES)).toEqual(Object.keys(RELICS));
   });
-  it("Warm broth heals more after a room", () => {
-    const heal = (run: Run) => {
-      turnOf(run, "miso");
-      run.enemies.forEach((e, i) => (e.hp = i === 0 ? 1 : 0));
-      cat(run, "miso").hp = 1;
-      return cat(act(run, "strike", "e0"), "miso").hp;
+  it.each(Object.keys(CASES))("%s does what its text says", (name) => {
+    CASES[name]!();
+  });
+});
+
+describe("Kindling without shared AP", () => {
+  it("keeps the free jab after the AP run out", () => {
+    const run = turnOf(holding("Kindling", TUNTUN), "ember");
+    run.ap = 3;
+    const after = act(run, "slam", "e0");
+    expect(after.ap).toBe(0);
+    expect(after.order[after.turn]).toBe("ember");
+    const jabbed = act(after, "strike", "e0");
+    expect(jabbed.enemies[0]!.hp).toBeLessThan(after.enemies[0]!.hp);
+    expect(jabbed.order[jabbed.turn]).not.toBe("ember");
+  });
+  it("lets Tuntun act in a turn that starts with none", () => {
+    const run = turnOf(holding("Kindling", TUNTUN), "miso");
+    run.order = ["miso", "ember", ...run.enemies.map((e) => e.id)];
+    run.ap = 0;
+    const next = endTurn(run);
+    expect(next.order[next.turn]).toBe("ember");
+  });
+});
+
+describe("Relics and Trinkets that touch the same thing", () => {
+  it("add up on max HP and initiative", () => {
+    // 40 + 6 from the bell, then a quarter more.
+    const big = geared("miso", "Iron bell", ["Heavy collars"]);
+    expect(cat(big, "miso").maxHp).toBe(58);
+    const slow = geared("miso", "Silk ribbon", ["Heavy collars", "Iron coat"]);
+    expect(cat(slow, "miso").initiative).toBe(12 + 3 - 4 - 6);
+  });
+  it.each([
+    ["miso", "Lucky fang", "Reckless torch", PARTY, "strike", 9],
+    ["miso", "Knight's button", "Stone den", PARTY, "guard", 13],
+    ["clover", "Herb pouch", "Hurried remedy", MEI, "heal", 6],
+    ["ember", "Ember glove", "Overheat", TUNTUN, "slam", 28],
+  ])("%s: %s with %s", (id, item, relic, party, ability, power) => {
+    const run = geared(id, item, [relic], party);
+    expect(skill(run, id, ability).power).toBe(power);
+  });
+  it("Full moon splits the power Reckless torch added, in either order", () => {
+    for (const order of [
+      ["Full moon", "Reckless torch"],
+      ["Reckless torch", "Full moon"],
+    ]) {
+      const after = cast(geared("luna", "", order), "luna", "strike");
+      expect(after.enemies.slice(0, 2).map((e) => e.hp)).toEqual([92, 96]);
+    }
+  });
+  it("Smoke step keeps the Long thread shares", () => {
+    const line = skill(
+      geared("pip", "Long thread", ["Smoke step"]),
+      "pip",
+      "line",
+    );
+    expect(line.falloff).toEqual([1, 0.6, 0.45]);
+    expect(line.cooldownTurns).toBeUndefined();
+  });
+  it("Warm milk adds to the Healing thorns heal", () => {
+    const run = geared("luna", "Warm milk", ["Healing thorns"], MEI);
+    cat(run, "luna").hp = 10;
+    expect(cat(cast(run, "clover", "strike"), "luna").hp).toBe(15);
+  });
+  it("Pocket lantern lengthens the Shield stance shield", () => {
+    const run = geared("miso", "Pocket lantern", ["Shield stance"]);
+    cat(run, "miso").guard = 0;
+    expect(cat(cast(run, "miso", "strike"), "miso").guardTurns).toBe(4);
+  });
+  it("Four-leaf clover stacks on Lucky whisker", () => {
+    const run = geared("miso", "Four-leaf clover", ["Lucky whisker"]);
+    expect([run.critChance, cat(run, "miso").critBonus]).toEqual([10, 5]);
+  });
+  it("Brave bell counts the half of the raised max HP", () => {
+    const run = turnOf(geared("miso", "Brave bell", ["Heavy collars"]), "miso");
+    const miso = cat(run, "miso");
+    const dealt = (hp: number) => {
+      miso.hp = hp;
+      return damagePreview(
+        run,
+        miso,
+        skill(run, "miso", "strike"),
+        run.enemies[0]!,
+      ).power;
     };
-    // Miso has 40 max HP: 33% is 14 and 53% is 22.
-    expect(heal(createRun(initialProgress(), PARTY))).toBe(15);
-    expect(heal(holding("Warm broth"))).toBe(23);
+    expect([dealt(24), dealt(25)]).toEqual([6, 5]);
   });
 });

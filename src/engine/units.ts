@@ -109,17 +109,20 @@ export function buildCat(progress: Progress, id: string): Unit {
   };
 }
 
-/** True when the Trinket changes a skill this cat does not have (yet). */
+/** True when wearing the Trinket would leave this cat exactly as it is. */
 export function trinketIdle(
   progress: Progress,
   id: string,
   item: string,
 ): boolean {
-  const { skill, guardTurns } = ITEM_BONUS[item] ?? {};
-  if (!skill && !guardTurns) return false;
-  return !buildCat(progress, id).abilities.some((a) =>
-    skill ? a.id === skill.id : a.effect === "guard" || a.effect === "taunt",
-  );
+  const built = (worn: string) =>
+    JSON.stringify(
+      buildCat(
+        { ...progress, equipment: { ...progress.equipment, [id]: worn } },
+        id,
+      ),
+    );
+  return built(item) === built("");
 }
 
 export function enemy(

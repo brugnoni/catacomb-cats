@@ -121,7 +121,7 @@ export function resolveEnemies(run: Run) {
       continue;
     }
     const isCat = run.party.some((u) => u.id === actor.id);
-    if (isCat && run.ap > 0 && canAct(run, actor)) return;
+    if (isCat && canAct(run, actor)) return;
     if (isCat)
       run.log.push(
         run.ap > 0
