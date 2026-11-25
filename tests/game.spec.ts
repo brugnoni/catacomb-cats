@@ -164,6 +164,10 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
   await expect(
     page.getByText("All companions are fully healed", { exact: false }),
   ).toBeVisible();
+  // Banked when the boss falls: closing the tab here loses nothing.
+  await expect(page.locator(".currency")).toContainText("210 gold");
+  const stored = await page.evaluate((k) => localStorage.getItem(k), saveKey);
+  expect(JSON.parse(stored!).gold).toBe(210);
   for (const health of await page.locator(".allies .health-value").all()) {
     const values = (await health.innerText()).match(/(\d+) \/ (\d+) HP/)!;
     expect(values[1]).toBe(values[2]);

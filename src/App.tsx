@@ -124,6 +124,12 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
       );
     }
   };
+  // Rewards are banked the moment the boss falls, not when the player leaves.
+  const updateRun = (next: Run) => {
+    setRun(next);
+    if (next.status === "victory" && !practice)
+      storeProgress(claimRewards(progress, next));
+  };
   const choose = (id: string) =>
     setParty((previous) =>
       previous.includes(id)
@@ -143,7 +149,8 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
           "Expedition complete. Your treasures and experience are safely home.",
         ),
       );
-      storeProgress(claimRewards(progress, run));
+      // Stored again so a failed save at victory is retried and reported.
+      storeProgress(progress);
     } else
       setNotice(t("The expedition is over. Your permanent upgrades are safe."));
     setRun(null);
@@ -236,7 +243,7 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
               practice={practice}
               locked={locked}
               turnLocked={turnLocked}
-              onRun={setRun}
+              onRun={updateRun}
               onLeave={leave}
               onContinue={() => {
                 if (practice) endTutorial("done");

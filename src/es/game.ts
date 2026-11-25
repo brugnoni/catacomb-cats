@@ -177,8 +177,8 @@ export const GAME: Record<string, string> = {
     "+1 PA en la primera ronda de cada sala y +5% de probabilidad de crítico para cada gato.",
   // Engine log lines
   "The descent begins. {1}.": "El descenso comienza. {1}.",
-  "Room rewards: +{1} gold, +{2} XP and {3}. Spoils are banked only after defeating the boss and returning to the lobby.":
-    "Recompensas de sala: +{1} de oro, +{2} XP y {3}. El botín solo se guarda tras derrotar al jefe y volver a la Madriguera.",
+  "Room rewards: +{1} gold, +{2} XP and {3}. Spoils are banked when the boss is defeated.":
+    "Recompensas de sala: +{1} de oro, +{2} XP y {3}. El botín se guarda al derrotar al jefe.",
   "Expedition Strength +1: all damage is now +{1} for the rest of this run.":
     "Fuerza de expedición +1: todo el daño es ahora +{1} durante el resto de esta partida.",
   "{1} fully recovers after expedition victory ({2}/{3} HP).":

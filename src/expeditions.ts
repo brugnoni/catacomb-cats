@@ -137,7 +137,7 @@ export const rankCap = (progress: Wins) => highestUnlocked(progress).rankCap;
 export const masteryCap = (progress: Wins) =>
   highestUnlocked(progress).masteryCap;
 
-/** Loot for clearing a room (0-2). Banked only after the boss falls and the player returns to the lobby. */
+/** Loot for clearing a room (0-2). Banked when the boss falls. */
 export const ROOM_REWARD = { gold: [40, 60, 80], xp: [30, 45, 60] } as const;
 /** Room loot of an Expedition (the first one by default). */
 export const roomReward = (room: number, expedition = EXPEDITIONS[0]!.id) => {
