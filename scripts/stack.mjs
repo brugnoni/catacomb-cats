@@ -315,7 +315,11 @@ async function land(f) {
       lanes[c].base = sha(ROOT);
       save(lanes);
     }
-    git("push", "origin", "--delete", b);
+    try {
+      git("push", "origin", "--delete", b);
+    } catch {
+      out(`${b}: remote branch already gone`); // GitHub can delete it on merge
+    }
     try {
       git("worktree", "remove", wt); // refuses a dirty worktree: that is the safeguard
     } catch {
