@@ -38,6 +38,8 @@ import {
   nextRoom,
   pickRelic,
   claimRewards,
+  holdLootSeed,
+  releaseLootSeed,
   type Run,
   type Progress,
 } from "./game";
@@ -133,7 +135,8 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
     setRun(next);
     if (practice) return;
     recordRun(next);
-    if (next.status === "victory") storeProgress(claimRewards(progress, next));
+    if (next.status === "victory" || next.status === "defeat")
+      storeProgress(releaseLootSeed(claimRewards(progress, next), next));
   };
   const choose = (id: string) =>
     setParty((previous) =>
@@ -230,11 +233,15 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
             onNotice={setNotice}
             onEnter={() => {
               setNotice("");
+              // Saved before any offer is seen, so leaving cannot re-roll it.
+              const held = holdLootSeed(progress, open, runSeed());
+              storeProgress(held);
               void startRun(() =>
-                createRun(progress, party, runSeed(), {
+                createRun(held, party, runSeed(), {
                   crit: runCrit(),
                   relics: runRelics(),
                   expedition: open,
+                  lootSeed: held.lootSeeds![open],
                 }),
               );
             }}
@@ -262,7 +269,8 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
                 if (practice) endTutorial("done");
                 else {
                   keptScroll.current = window.scrollY;
-                  setRun(nextRoom(run));
+                  // Enemies that act first can already end the Run here.
+                  updateRun(nextRoom(run));
                 }
               }}
             />

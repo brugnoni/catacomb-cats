@@ -92,7 +92,7 @@ export function createRun(
     xp: 0,
     items: [],
     owned: [...progress.inventory],
-    dropRng: (seed ^ 0x5bd1e995) >>> 0,
+    dropRng: ((options.lootSeed ?? seed) ^ 0x5bd1e995) >>> 0,
     bonus: 0,
     uses: {},
     roomUses: {},
@@ -102,7 +102,7 @@ export function createRun(
     relics: [],
     offer: [],
     useRelics: options.relics ?? false,
-    relicRng: (seed ^ 0x2545f491) >>> 0,
+    relicRng: ((options.lootSeed ?? seed) ^ 0x2545f491) >>> 0,
   };
   offerOrEnter(run);
   return run;

@@ -136,16 +136,21 @@ export const RELICS: Record<string, Relic> = {
 
 /** Draws up to three Relics the Run does not hold and the party can use. */
 export function rollOffer(run: Run, bossNext: boolean): string[] {
-  const pool = Object.entries(RELICS)
-    .filter(
-      ([name, r]) =>
+  // The whole table is shuffled before filtering, so the order never depends on
+  // the party or on earlier picks: a locked seed cannot be re-rolled by them.
+  const order = Object.keys(RELICS);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(relicRandom(run) * (i + 1));
+    [order[i], order[j]] = [order[j]!, order[i]!];
+  }
+  return order
+    .filter((name) => {
+      const r = RELICS[name]!;
+      return (
         !run.relics.includes(name) &&
         !(r.early && bossNext) &&
-        (!r.companion || run.party.some((u) => u.id === r.companion)),
-    )
-    .map(([name]) => name);
-  const offer: string[] = [];
-  while (offer.length < 3 && pool.length)
-    offer.push(...pool.splice(Math.floor(relicRandom(run) * pool.length), 1));
-  return offer;
+        (!r.companion || run.party.some((u) => u.id === r.companion))
+      );
+    })
+    .slice(0, 3);
 }

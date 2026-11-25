@@ -210,6 +210,13 @@ test("defeat resets the expedition while preserving permanent upgrades", async (
   await expect(
     page.getByRole("heading", { name: "Even brave cats need another try." }),
   ).toBeVisible();
+  // The lost Run freed its Expedition's loot seed.
+  expect(
+    await page.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)!).lootSeeds,
+      saveKey,
+    ),
+  ).toEqual({});
   await page
     .getByRole("button", { name: "Return to lobby", exact: true })
     .click();
@@ -1952,4 +1959,32 @@ test("a run opens by picking one of three Relics", async ({ page }) => {
   await cards.first().press("Enter");
   await expect(page.locator(".command-deck")).toBeVisible();
   await expect(page.locator(".held-relics")).toContainText(name);
+});
+
+test("retreating or reloading does not re-roll the Relic offer", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as {
+      __CATACOMB_RELICS__: boolean;
+      __CATACOMB_SEED__?: number;
+    };
+    w.__CATACOMB_RELICS__ = true;
+    // A fresh random combat seed on every entry, as in the real game.
+    delete w.__CATACOMB_SEED__;
+  });
+  await page.goto("/");
+  const enter = page.getByRole("button", { name: "Enter the dungeon" });
+  const names = page.locator(".relic-cards button strong");
+  await enter.click();
+  await expect(names).toHaveCount(3);
+  const offer = await names.allInnerTexts();
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole("button", { name: "Retreat to lobby" }).click();
+    await enter.click();
+    await expect(names).toHaveText(offer);
+  }
+  await page.reload();
+  await enter.click();
+  await expect(names).toHaveText(offer);
 });
