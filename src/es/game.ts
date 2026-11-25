@@ -45,10 +45,10 @@ export const GAME: Record<string, string> = {
   "-4 initiative for every cat.": "-4 de iniciativa para cada gato.",
   "Healing thorns": "Espinas curativas",
   "Thorn swipe also heals the most wounded ally for 3.":
-    "Zarpazo espinoso también cura 3 al aliado más herido.",
+    "Zarpazo de espina también cura 3 al aliado más herido.",
   "Hurried remedy": "Remedio apurado",
-  "Healing purr costs 1 AP.": "Ronroneo curativo cuesta 1 PA.",
-  "Healing purr heals 3 less.": "Ronroneo curativo cura 3 menos.",
+  "Healing purr costs 1 AP.": "Ronroneo sanador cuesta 1 PA.",
+  "Healing purr heals 3 less.": "Ronroneo sanador cura 3 menos.",
   "Shield stance": "Postura de escudo",
   "Valiant slash also gives Miso a 3 shield.":
     "Tajo valiente también le da a Miso un escudo de 3.",
@@ -57,11 +57,11 @@ export const GAME: Record<string, string> = {
   "-6 initiative for Miso.": "-6 de iniciativa para Miso.",
   Kindling: "Yesca",
   "The first Cinder jab of each turn costs no AP.":
-    "El primer Golpe de brasa de cada turno no cuesta PA.",
+    "El primer Jab de brasa de cada turno no cuesta PA.",
   Overheat: "Sobrecalentamiento",
-  "Flame paw has no cooldown.": "Pata en llamas no tiene enfriamiento.",
+  "Flame paw has no cooldown.": "Garra de fuego no tiene enfriamiento.",
   "Each Flame paw costs Tuntun 5 HP, never the last one.":
-    "Cada Pata en llamas le cuesta 5 PV a Tuntun, nunca el último.",
+    "Cada Garra de fuego le cuesta 5 PV a Tuntun, nunca el último.",
   "Full moon": "Luna llena",
   "Moon bolt also hits the next foe for half.":
     "Rayo lunar también golpea al siguiente enemigo con la mitad.",

@@ -199,7 +199,7 @@ export const UI: Record<string, string> = {
   "Added to expedition loot. Gold, XP and items are banked when the boss is defeated.":
     "Añadido al botín de la expedición. El oro, el XP y los objetos se guardan al derrotar al jefe.",
   "Applied now: surviving cats recovered {pct}% of their max HP (at least {flat}). Fallen cats returned at 25% max HP, rounded up, without extra recovery. Expedition Strength increased by +1 to +{n} damage.":
-    '"Aplicado ahora: los gatos supervivientes recuperaron el {pct}% de sus PV máx. (al menos {flat}). Los gatos caídos volvieron con el 25% de PV máx., redondeado hacia arriba, sin recuperación extra. La Fuerza de expedición subió +1, hasta +{n} de daño.',
+    "Aplicado ahora: los gatos supervivientes recuperaron el {pct}% de sus PV máx. (al menos {flat}). Los gatos caídos volvieron con el 25% de PV máx., redondeado hacia arriba, sin recuperación extra. La Fuerza de expedición subió +1, hasta +{n} de daño.",
   "Continue to next room →": "Continuar a la siguiente sala →",
   "THE CROWN HAS FALLEN": "LA CORONA HA CAÍDO",
   "THE DARK TAKES ITS DUE": "LA OSCURIDAD COBRA SU PRECIO",
