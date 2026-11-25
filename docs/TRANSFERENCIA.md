@@ -4,9 +4,9 @@ Todo el código, assets seleccionados, borrador de personajes, configuración, t
 
 ## Qué copiar
 
-La opción recomendada es copiar y descomprimir el ZIP completo. Si haces una copia manual, incluye todos los archivos de contenido y las carpetas ocultas, pero omite `node_modules` y las cachés: deben regenerarse para el nuevo equipo. Conserva `.agents`, `.github`, `.githooks`, `.nvmrc` y los archivos de configuración. Abre **catacomb-cats como proyecto independiente** en Codex y comienza por `AGENTS.md`, `README.md` y `docs/HANDOFF.md`.
+La opción recomendada es copiar y descomprimir el ZIP completo. Si haces una copia manual, incluye todos los archivos de contenido y las carpetas ocultas, pero omite `node_modules` y las cachés: deben regenerarse para el nuevo equipo. Conserva `.agents`, `.github`, `.githooks`, `.nvmrc` y los archivos de configuración. Abre **catacomb-cats como proyecto independiente** en Codex y comienza por `CLAUDE.md`, `README.md` y `docs/HANDOFF.md`.
 
-El ZIP excluye `node_modules`, cachés, resultados transitorios de tests y `.git`. Las dependencias incluyen programas nativos: deben reinstalarse para el sistema operativo de destino. El repositorio actual no tiene commits ni remotos; no hay historial de commits que perder en este paquete. La carpeta original y su `.git` no se borran ni modifican por el empaquetado.
+El ZIP excluye `node_modules`, cachés, resultados transitorios de tests y `.git`. Las dependencias incluyen programas nativos: deben reinstalarse para el sistema operativo de destino. El historial está en el repositorio público de GitHub. La carpeta original y su `.git` no se borran ni modifican por el empaquetado.
 
 ## Preparación en la computadora personal
 
@@ -42,7 +42,7 @@ node scripts/install-hooks.mjs
 git config core.hooksPath
 ```
 
-El último comando debe imprimir `.githooks`. El hook ejecuta la suite completa mediante npm y el pnpm fijado, por lo que también funciona sin pnpm global. En macOS/Linux, si el programa usado para descomprimir perdió los permisos ejecutables, ejecuta `chmod +x .githooks/pre-commit`. El único remoto es el repo público `https://github.com/brugnoni/catacomb-cats` (`origin`); no hay publicación ni despliegue configurados. Para continuar desde otro equipo puedes clonar ese repo en lugar de usar el paquete portable. Git puede requerir tu identidad de autor local antes del primer commit; no contiene credenciales incluidas en el paquete.
+El último comando debe imprimir `.githooks`. El hook ejecuta la suite completa mediante npm y el pnpm fijado, por lo que también funciona sin pnpm global. En macOS/Linux, si el programa usado para descomprimir perdió los permisos ejecutables, ejecuta `chmod +x .githooks/pre-commit`. El único remoto es el repo público `https://github.com/brugnoni/catacomb-cats` (`origin`); cada merge a `main` despliega a GitHub Pages. Para continuar desde otro equipo puedes clonar ese repo en lugar de usar el paquete portable. Git puede requerir tu identidad de autor local antes del primer commit; no contiene credenciales incluidas en el paquete.
 
 ## Probar la build incluida
 
