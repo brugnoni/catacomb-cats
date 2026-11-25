@@ -273,10 +273,13 @@ async function land(f) {
     git("push", "origin", "--delete", b);
     try {
       git("worktree", "remove", wt); // refuses a dirty worktree: that is the safeguard
-      git("branch", "-D", b);
     } catch {
-      out(`kept ${wt}: it has uncommitted changes. Remove it by hand.`);
+      out(
+        `could not remove ${wt} (uncommitted changes, or Windows kept a file locked; see git above).`,
+      );
     }
+    // On Windows git can drop the worktree and still fail deleting its folder: the branch is free then.
+    if (!Object.values(worktrees()).includes(wt)) git("branch", "-D", b);
     delete lanes[b];
     save(lanes);
     out(`${b}: landed`);
