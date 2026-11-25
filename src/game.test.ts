@@ -1814,11 +1814,13 @@ describe("ability reach", () => {
       ),
     ).toEqual(["e0", "e2"]);
   });
-  it("a single-foe skill reaches only the chosen foe, or all of them without a choice", () => {
+  it("a single-foe skill reaches only the chosen foe, or the first living foe without a choice", () => {
     const { r } = setup();
     const strike = skill("strike", r);
     expect(ids(abilityReach(r, strike, "e2"))).toEqual(["e2"]);
-    expect(ids(abilityReach(r, strike, ""))).toEqual(["e0", "e1", "e2"]);
+    expect(ids(abilityReach(r, strike, ""))).toEqual(["e0"]);
+    r.enemies[0]!.hp = 0;
+    expect(ids(abilityReach(r, strike, ""))).toEqual(["e1"]);
   });
   it("an ally skill reaches the chosen living cat, or the caster without a choice", () => {
     const { r } = setup();
