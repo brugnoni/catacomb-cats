@@ -87,6 +87,16 @@ export const GAME: Record<string, string> = {
   "Moon pebble": "Guijarro lunar",
   "Mint sprig": "Ramita de menta",
   "Pewter charm": "Dije de peltre",
+  "Four-leaf clover": "Trébol de cuatro hojas",
+  "Thorn ring": "Anillo de espinas",
+  "Pocket lantern": "Farol de bolsillo",
+  "Snack bag": "Bolsa de bocados",
+  "Brave bell": "Cascabel valiente",
+  "Warm milk": "Leche tibia",
+  "Long thread": "Hilo largo",
+  Hearthstone: "Piedra del hogar",
+  "Beacon stone": "Piedra faro",
+  "Ember glove": "Guante de brasas",
   // Enemies
   "Crypt rat": "Rata de cripta",
   "Moss slime": "Limo musgoso",
@@ -270,8 +280,10 @@ export const GAME: Record<string, string> = {
     "{1} alza esporas espejo: refleja {2} de daño durante 2 turnos (no se acumula).",
   "{1} curses {2}: -{3} to all skill output for 2 turns (active -{4}).":
     "{1} maldice a {2}: -{3} a todo el efecto de sus habilidades durante 2 turnos (activo -{4}).",
-  "{1} revives {2} at 60% HP ({3}/{4}). They act next round.":
-    "{1} revive a {2} con el 60% de PV ({3}/{4}). Actúa en la próxima ronda.",
+  "{1} has a snack: +{2} HP ({3}/{4} HP).":
+    "{1} come un bocado: +{2} PV ({3}/{4} PV).",
+  "{1} revives {2} at {3}% HP ({4}/{5}). They act next round.":
+    "{1} revive a {2} con el {3}% de PV ({4}/{5}). Actúa en la próxima ronda.",
   "{1} taunts: enemies attack this cat until its next turn.":
     "{1} provoca: los enemigos atacan a este gato hasta su próximo turno.",
   "{1} expands the reservoir: +2 current and maximum shared AP for this room ({2}/{3} AP after the 1 AP cost).":

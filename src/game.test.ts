@@ -1865,6 +1865,9 @@ describe("trinkets", () => {
       "Moon pebble": [0, 0, 0, 0, 0, 1],
       "Mint sprig": [3, 0, 0, 1, 0, 0],
       "Pewter charm": [3, 0, 0, 0, 1, 0],
+      ...Object.fromEntries(
+        ITEMS.slice(10).map((item) => [item, [0, 0, 0, 0, 0, 0]]),
+      ),
     };
     expect(ITEMS).toEqual(Object.keys(expected));
     const gain = (id: string, item: string) => {

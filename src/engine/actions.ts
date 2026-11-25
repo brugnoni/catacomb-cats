@@ -1,9 +1,4 @@
-import {
-  hearthBonuses,
-  getDifficulty,
-  BASE_CRIT_CHANCE,
-  GUARD_TURNS,
-} from "../progression";
+import { hearthBonuses, getDifficulty, BASE_CRIT_CHANCE } from "../progression";
 import {
   EXPEDITIONS,
   expeditionById,
@@ -30,6 +25,7 @@ import {
   currentUnit,
   clearEffects,
   prepareRoom,
+  roomSnack,
   beginTurn,
   advance,
   guard,
@@ -134,7 +130,10 @@ export function pickRelic(state: Run, name: string): Run {
 
 /** Starts the room already set up in `run`: fresh cats, turn order, marks, then the enemies that act first. */
 function enterRoom(run: Run) {
-  for (const cat of run.party) prepareRoom(cat);
+  for (const cat of run.party) {
+    prepareRoom(cat);
+    roomSnack(run, cat);
+  }
   if (run.relics.includes("Reckless torch"))
     for (const e of run.enemies) e.abilities[0]!.power += 2;
   setOrder(run);
@@ -164,7 +163,7 @@ export function applyAbility(
   const power = abilityPower(run, actor, ability);
   run.log.push(`${actor.name} uses ${ability.name}.`);
   if (ability.effect === "revive") {
-    target.hp = Math.max(1, Math.ceil(target.maxHp * 0.6));
+    target.hp = Math.max(1, Math.ceil((target.maxHp * power) / 100));
     clearEffects(target);
     if (run.tauntId === target.id) delete run.tauntId;
     // A revived ally joins the initiative queue at the next round only.
@@ -173,7 +172,7 @@ export function applyAbility(
     );
     run.events.push({ type: "heal", targetId: target.id, amount: target.hp });
     run.log.push(
-      `${actor.name} revives ${target.name} at 60% HP (${target.hp}/${target.maxHp}). They act next round.`,
+      `${actor.name} revives ${target.name} at ${power}% HP (${target.hp}/${target.maxHp}). They act next round.`,
     );
   } else if (ability.effect === "heal" || ability.effect === "heal-all") {
     for (const t of abilityReach(run, ability, target.id)) {
@@ -188,12 +187,13 @@ export function applyAbility(
         run.log.push(`${actor.name} lifts the curse on ${t.name}.`);
       }
     }
-  } else if (ability.effect === "guard") guard(run, target, power, GUARD_TURNS);
+  } else if (ability.effect === "guard")
+    guard(run, target, power, ability.duration);
   else if (ability.effect === "fury") fury(run, target, power);
   else if (ability.effect === "taunt") {
     run.tauntId = actor.id;
     for (const enemy of run.enemies) if (enemy.hp > 0) enemy.mark = actor.id;
-    if (power > 0) guard(run, actor, power, GUARD_TURNS);
+    if (power > 0) guard(run, actor, power, ability.duration);
     run.log.push(
       `${actor.name} taunts: enemies attack this cat until its next turn.`,
     );
@@ -206,15 +206,22 @@ export function applyAbility(
   } else if (ability.effect === "cleave") {
     for (const t of abilityReach(run, ability, target.id)) {
       if (actor.hp <= 0) break;
-      hurt(run, actor, t, ability);
+      hurt(run, actor, t, ability, 1, power);
     }
   } else if (ability.effect === "line") {
     // The target takes the full hit; the enemies behind it (to its right) take less.
     abilityReach(run, ability, target.id).forEach((t, index) => {
       if (actor.hp > 0)
-        hurt(run, actor, t, ability, (ability.falloff ?? LINE_FALLOFF)[index]);
+        hurt(
+          run,
+          actor,
+          t,
+          ability,
+          (ability.falloff ?? LINE_FALLOFF)[index],
+          power,
+        );
     });
-  } else hurt(run, actor, target, ability);
+  } else hurt(run, actor, target, ability, 1, power);
   relicAftermath(run, actor, ability);
 }
 
@@ -237,7 +244,12 @@ function relicAftermath(run: Run, actor: Unit, ability: Ability) {
     }
   }
   if (has("Shield stance", "miso", "strike") && actor.guard < 3)
-    guard(run, actor, 3, GUARD_TURNS);
+    guard(
+      run,
+      actor,
+      3,
+      actor.abilities.find((a) => a.id === "guard")?.duration,
+    );
   if (has("Overheat", "ember", "slam")) {
     const lost = Math.min(5, actor.hp - 1);
     actor.hp -= lost;

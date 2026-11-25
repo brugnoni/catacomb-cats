@@ -22,7 +22,8 @@ export {
   SKINS,
   initialProgress,
 } from "./engine/data";
-export { buildCat } from "./engine/units";
+export type { TrinketBonus } from "./engine/data";
+export { buildCat, trinketIdle } from "./engine/units";
 export { currentUnit } from "./engine/state";
 export {
   abilityLimit,

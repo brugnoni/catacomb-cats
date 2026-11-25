@@ -14,8 +14,8 @@ export function damagePreview(
   target: Unit,
   scale = 1,
   crit = false,
+  base = abilityPower(run, actor, ability),
 ): DamagePreview {
-  const base = abilityPower(run, actor, ability);
   const scaled = scale === 1 ? base : Math.round(base * scale);
   const power = crit ? Math.ceil(scaled * CRIT_MULTIPLIER) : scaled;
   const pierce = ability.effect === "pierce";
@@ -66,6 +66,7 @@ export function hurt(
   target: Unit,
   ability: Ability,
   scale = 1,
+  base?: number,
 ) {
   const avoided = rollAvoid(run, target);
   if (avoided) {
@@ -86,7 +87,7 @@ export function hurt(
     reactiveHealing,
     damage: dealt,
     remainingHp,
-  } = damagePreview(run, actor, ability, target, scale, crit);
+  } = damagePreview(run, actor, ability, target, scale, crit, base);
   if (ability.effect !== "pierce" && target.iceCharges > 0 && power - armor > 0)
     target.iceCharges--;
   target.guard -= blocked;
@@ -125,13 +126,11 @@ export function hurt(
     );
   }
   rescue(run, target);
-  if (
-    dealt > 0 &&
-    target.reflect > 0 &&
-    target.reflectTurns > 0 &&
-    actor.hp > 0
-  ) {
-    const reflected = Math.min(actor.hp, target.reflect);
+  const returned =
+    target.thorns + (target.reflectTurns > 0 ? target.reflect : 0);
+  // Returned damage is applied directly, so it can never be returned again.
+  if (dealt > 0 && returned > 0 && actor.hp > 0) {
+    const reflected = Math.min(actor.hp, returned);
     actor.hp -= reflected;
     run.events.push({
       type: "hit",

@@ -114,14 +114,16 @@ function textOf(
       };
     case "revive":
       return {
-        text: t("Revive a fallen ally at 60% max HP."),
+        text: t("Revive a fallen ally at {pct}% max HP.", {
+          pct: ability.power,
+        }),
         note: t("They act next round."),
       };
     case "guard":
       return {
         text: t("Shield 1 ally for {power}. Lasts {turns}.", {
           power,
-          turns: plural(t, GUARD_TURNS, "turn"),
+          turns: plural(t, ability.duration ?? GUARD_TURNS, "turn"),
         }),
         note: t(
           "Refreshing this ability restores full shield and duration (does not stack).",
@@ -142,7 +144,7 @@ function textOf(
         text: t("Enemies attack this cat until its next turn."),
         note: t("Also gives it a {power} shield. Lasts {turns}.", {
           power,
-          turns: plural(t, GUARD_TURNS, "turn"),
+          turns: plural(t, ability.duration ?? GUARD_TURNS, "turn"),
         }),
       };
     case "ap":

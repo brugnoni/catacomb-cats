@@ -7,6 +7,7 @@ import {
   setSkin,
   SKINS,
   upgradeCost,
+  trinketIdle,
   type Cat,
   type Progress,
 } from "./game";
@@ -100,6 +101,11 @@ export function CatCard({
                 ? t(progress.equipment[cat.id]!)
                 : t("Empty slot")}
             </strong>
+            {trinketIdle(
+              progress,
+              cat.id,
+              progress.equipment[cat.id] ?? "",
+            ) && <small>{t("No effect on {name}", { name: cat.name })}</small>}
           </div>
           <label className="equipment-label">
             <span>{t("SKIN")}</span>

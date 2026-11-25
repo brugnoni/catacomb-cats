@@ -24,6 +24,8 @@ export interface Ability {
   cooldownGroup?: string;
   /** Damage shares of a line, when it is not Dagger line's. */
   falloff?: readonly number[];
+  /** Turns a shield lasts, when it is not the usual. */
+  duration?: number;
   /** Percent of the HP damage this skill deals that heals the caster. */
   lifesteal?: number;
 }
@@ -89,6 +91,12 @@ export interface Unit {
   reactiveHeal: number;
   reactiveHealCharges: number;
   openingAttack: number;
+  /** From the Trinket worn; 0 without one (see TrinketBonus). */
+  critBonus: number;
+  lowHpAttack: number;
+  thorns: number;
+  healed: number;
+  roomHeal: number;
   passives: ReturnType<typeof trainingPassives>;
   /** Enemy only: the cat this enemy has marked for its next hostile action. */
   mark?: string;

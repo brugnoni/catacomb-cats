@@ -186,6 +186,20 @@ export interface TrinketBonus {
   healing?: number;
   guard?: number;
   fury?: number;
+  /** Percent critical chance. */
+  crit?: number;
+  /** Attack while below half HP. */
+  lowHpAttack?: number;
+  /** Damage returned to an attacker. */
+  thorns?: number;
+  /** Added to the healing skills give the wearer. */
+  healed?: number;
+  /** HP restored at the start of each room. */
+  roomHeal?: number;
+  /** Extra turns on the shields the wearer casts. */
+  guardTurns?: number;
+  /** Changes one skill of the wearer. */
+  skill?: { id: string; power?: number; falloff?: readonly number[] };
 }
 /** Every Trinket. Saves hold these names, so never rename or remove one. */
 export const ITEM_BONUS: Record<string, TrinketBonus> = {
@@ -199,6 +213,16 @@ export const ITEM_BONUS: Record<string, TrinketBonus> = {
   "Moon pebble": { fury: 1 },
   "Mint sprig": { hp: 3, healing: 1 },
   "Pewter charm": { hp: 3, guard: 1 },
+  "Four-leaf clover": { crit: 5 },
+  "Thorn ring": { thorns: 1 },
+  "Pocket lantern": { guardTurns: 1 },
+  "Snack bag": { roomHeal: 4 },
+  "Brave bell": { lowHpAttack: 1 },
+  "Warm milk": { healed: 2 },
+  "Long thread": { skill: { id: "line", falloff: [1, 0.6, 0.45] } },
+  Hearthstone: { skill: { id: "revive", power: 15 } },
+  "Beacon stone": { skill: { id: "taunt", power: 3 } },
+  "Ember glove": { skill: { id: "slam", power: 4 } },
 };
 export const ITEMS = Object.keys(ITEM_BONUS);
 /** Percent chance that a cleared room before the boss drops a Trinket. */

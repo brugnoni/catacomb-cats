@@ -50,8 +50,9 @@ export function critRandom(run: Run): number {
 }
 
 export function rollCrit(run: Run, actor: Unit): boolean {
+  // A Trinket only adds to a chance that exists: crits off stays off.
   const chance = run.party.some((u) => u.id === actor.id)
-    ? run.critChance
+    ? run.critChance && run.critChance + actor.critBonus
     : run.enemyCritChance;
   return chance > 0 && critRandom(run) * 100 < chance;
 }
@@ -127,6 +128,17 @@ export function prepareRoom(unit: Unit) {
   unit.reactiveHeal = p.reactiveHeal;
   unit.reactiveHealCharges = p.reactiveHealCharges;
   unit.openingAttack = p.openingAttack;
+}
+
+/** Snack bag: heals as the room opens. */
+export function roomSnack(run: Run, unit: Unit) {
+  const amount = Math.min(unit.roomHeal, unit.maxHp - unit.hp);
+  if (unit.hp <= 0 || amount <= 0) return;
+  unit.hp += amount;
+  run.events.push({ type: "heal", targetId: unit.id, amount });
+  run.log.push(
+    `${unit.name} has a snack: +${amount} HP (${unit.hp}/${unit.maxHp} HP).`,
+  );
 }
 
 export function beginTurn(run: Run) {
@@ -211,7 +223,9 @@ export function healUnit(run: Run, actor: Unit, target: Unit, power: number) {
   const crit = rollCrit(run, actor);
   const amount = Math.max(
     0,
-    (crit ? Math.ceil(power * CRIT_MULTIPLIER) : power) - target.curse,
+    (crit ? Math.ceil(power * CRIT_MULTIPLIER) : power) +
+      target.healed -
+      target.curse,
   );
   const healed = Math.min(target.maxHp - target.hp, amount);
   target.hp += healed;

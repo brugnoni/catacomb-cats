@@ -71,6 +71,7 @@ export function abilityPower(run: Run, actor: Unit, ability: Ability): number {
   const inspired = ability.effect === "fury" ? 0 : actor.fury;
   const bonus =
     inspired +
+    (damaging && actor.hp * 2 < actor.maxHp ? actor.lowHpAttack : 0) +
     (damaging ? actor.openingAttack : 0) +
     (damaging && run.party.some((u) => u.id === actor.id) ? run.bonus : 0);
   return Math.max(0, ability.power + bonus - actor.curse);
@@ -111,7 +112,7 @@ export function abilityTargetUnavailableReason(
   if (
     ability.effect === "guard" &&
     target.guard > 0 &&
-    target.guardTurns >= GUARD_TURNS &&
+    target.guardTurns >= (ability.duration ?? GUARD_TURNS) &&
     // A stronger shield can still replace a weaker one at full duration.
     Math.max(0, abilityPower(run, actor, ability) - target.curse) <=
       target.guard
