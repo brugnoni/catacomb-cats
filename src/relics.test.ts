@@ -229,6 +229,22 @@ describe("Relics and Trinkets that touch the same thing", () => {
       expect(after.enemies.slice(0, 2).map((e) => e.hp)).toEqual([92, 96]);
     }
   });
+  it("Stone den strengthens the Shield stance shield, in either order", () => {
+    for (const order of [
+      ["Shield stance", "Stone den"],
+      ["Stone den", "Shield stance"],
+    ]) {
+      const run = geared("miso", "", order);
+      // A weaker shield is replaced.
+      Object.assign(cat(run, "miso"), { guard: 4, guardTurns: 1 });
+      expect(cat(cast(run, "miso", "strike"), "miso").guard).toBe(6);
+    }
+  });
+  it("Stone den names every shield it strengthens", () => {
+    expect(RELICS["Stone den"]!.text).toBe(
+      "Guard and Stand behind me shields cast by your cats are 3 stronger.",
+    );
+  });
   it("Smoke step keeps the Long thread shares", () => {
     const line = skill(
       geared("pip", "Long thread", ["Smoke step"]),

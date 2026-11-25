@@ -243,11 +243,13 @@ function relicAftermath(run: Run, actor: Unit, ability: Ability) {
       );
     }
   }
-  if (has("Shield stance", "miso", "strike") && actor.guard < 3)
+  // Its shield is a Guard shield, so Stone den strengthens it too.
+  const stance = run.relics.includes("Stone den") ? 6 : 3;
+  if (has("Shield stance", "miso", "strike") && actor.guard < stance)
     guard(
       run,
       actor,
-      3,
+      stance,
       actor.abilities.find((a) => a.id === "guard")?.duration,
     );
   if (has("Overheat", "ember", "slam")) {
