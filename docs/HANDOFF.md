@@ -181,6 +181,18 @@ Resultado de la auditoría (`docs/AUDIT.md`) y de las mediciones de `outputs/bal
 - **Cómo medir:** el azar apagado y el bot voraz exageran el desequilibrio entre equipos. Para comparar equipos usar críticos y fallos activados, 12 o más semillas y un planificador de anchura 3 (`optimalPlan(run, 3)`). Los bots ganan casi siempre; la dificultad absoluta se calibra con partidas humanas.
 - **Rondas por sala** (ronda = un ciclo de la cola de iniciativa, con 6 AP repuestos): sala 1 ≈ 21% de las rondas, sala 2 ≈ 34%, jefe ≈ 44%. Grupo en nivel 1 sin Ascension: ~15–16 rondas en total (3,3 / 5,2 / 6,9 con jugador competente); grupo al tope con Ascension 10: ~22 (5,2 / 7,4 / 9,7).
 
+## Runs roguelite (25 de noviembre de 2026)
+
+Reemplaza lo que arriba diga sobre objetos, guardado o cobro del botín.
+
+- **Reliquias** (`src/engine/relics.ts`): 14, 5 con coste. Antes de cada sala se ofrecen 3 y hay que elegir una (`Run.status === "relic"`, `pickRelic`); duran la run, no suman Poder. Las de un compañero solo salen si está en el equipo y Warm broth nunca sale antes del jefe. En el motor y las pruebas están apagadas por defecto (`createRun(..., { relics: true })`); en navegador se apagan con `window.__CATACOMB_RELICS__ = false`. Generador propio (`Run.relicRng`).
+- **Amuletos:** 10. Caen al azar (50% por sala antes del jefe, el jefe siempre), sin repetidos; con todos, 20 de oro. Se equipan desde la Bolsa (`Bag.tsx`). Nunca renombrar uno: un nombre desconocido invalida el guardado.
+- **Guardado:** el progreso ilegible se copia a `catacomb-cats.progress.backup`; se puede exportar e importar; el botín se guarda al caer el jefe.
+- **Registro local de runs** en `catacomb-cats.runs` (viaja en el export; sin pantalla todavía; nada se envía).
+- **Moon blessing** (Luna) se usa una vez por turno; el umbral de sala 1 en `balance.test.ts` pasó de 99 a 100.
+- **Sin medir:** el balance con Reliquias y amuletos nuevos. El simulador no elige Reliquias.
+- **Pendiente:** los 10 amuletos con mecánica nueva y la recalibración (bots, enemigos, jefe y `outputs/balance-report.md`).
+
 ## Siguiente trabajo
 
 1. Probar balance con partidas humanas (los bots ganan casi siempre) y ajustar la dificultad absoluta por pasos. Mei sigue pasando ~50% de sus turnos sin acción con el bot competente.
