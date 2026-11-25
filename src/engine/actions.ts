@@ -26,6 +26,7 @@ import {
   healUnit,
   markAll,
   setOrder,
+  dropFallenEnemies,
   currentUnit,
   clearEffects,
   prepareRoom,
@@ -110,6 +111,7 @@ function enterRoom(run: Run) {
   markAll(run);
   beginTurn(run);
   resolveEnemies(run);
+  dropFallenEnemies(run);
 }
 
 /** Runs one public action on a copy of `state`: events restart and the log stays bounded. */
@@ -118,6 +120,7 @@ function transition(state: Run, apply: (run: Run) => void): Run {
   run.events = [];
   run.eventId++;
   apply(run);
+  dropFallenEnemies(run);
   run.log = run.log.slice(-60);
   return run;
 }

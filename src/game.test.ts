@@ -33,6 +33,7 @@ import {
 } from "./game";
 import { GUARD_TURNS, ROOM_HEAL, evadeChance } from "./progression";
 import { EXPEDITION_REWARD } from "./expeditions";
+import { dropFallenEnemies } from "./engine/state";
 /** Healing a surviving cat gets when a room is cleared. */
 const roomHeal = (maxHp: number) =>
   Math.max(ROOM_HEAL.flat, Math.ceil((maxHp * ROOM_HEAL.percent) / 100));
@@ -613,6 +614,24 @@ describe("revival, inspiration and safe targeting regressions", () => {
     expect(r.log.at(-1)).toContain(
       "1 damage (6 attack power, 2 armor, 0 Guard blocked, 0 Ice Ward blocked; 0/37 HP)",
     );
+  });
+  it("a fallen enemy leaves the initiative queue at once and the turn pointer follows", () => {
+    const r = turn(start(), "pip");
+    const foe = r.enemies[0]!;
+    foe.hp = 1;
+    foe.armor = foe.guard = 0;
+    const next = act(r, "strike", "e0");
+    expect(next.enemies[0]!.hp).toBe(0);
+    expect(next.order).not.toContain("e0");
+    expect(next.order[next.turn]).toBe("pip");
+    // A fallen enemy earlier in the queue shifts the pointer back onto the same unit.
+    const late = turn(start(), "pip");
+    late.order = ["e0", "pip", "miso", "clover", "e1"];
+    late.turn = 1;
+    late.enemies[0]!.hp = 0;
+    dropFallenEnemies(late);
+    expect(late.order).toEqual(["pip", "miso", "clover", "e1"]);
+    expect(late.order[late.turn]).toBe("pip");
   });
   it("correctly displays a surviving1HP enemy when Guard absorbs the spell after armor", () => {
     let r = start();

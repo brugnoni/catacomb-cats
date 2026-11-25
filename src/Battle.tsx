@@ -56,6 +56,9 @@ export function Battle({
     setAim,
     threatsButton,
   } = useThreatPreview(run, target, view, phasing);
+  // The run already holds the final state, so while enemy turns play the
+  // highlight follows the acting enemy and the next cat waits for them.
+  const turnId = phasing ? actingId : currentId;
   const feedback = useCombatFeedback(run, phase);
   // A short pause after each action so its animations can be followed.
   const [busy, setBusy] = useState(false);
@@ -157,7 +160,7 @@ export function Battle({
                   units={units}
                   taunting={run.tauntId === unit.id}
                   sprite={unit.id}
-                  turn={unit.id === currentId ? "active" : ""}
+                  turn={unit.id === turnId ? "active" : ""}
                   targeted={unit.id === target}
                   marked={markedIds.has(unit.id)}
                   aimed={aimedIds.has(unit.id)}
@@ -208,7 +211,7 @@ export function Battle({
             <span className="queue-label">{t("TURN ORDER")}</span>
             {run.order.map((id) => (
               <span
-                className={`${id === currentId ? "current" : ""} ${units.find((unit) => unit.id === id)?.hp === 0 ? "fallen" : ""}`}
+                className={`${id === turnId ? "current" : ""} ${units.find((unit) => unit.id === id)?.hp === 0 ? "fallen" : ""}`}
                 key={id}
               >
                 {t(units.find((unit) => unit.id === id)?.name ?? id)}

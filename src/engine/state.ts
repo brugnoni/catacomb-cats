@@ -78,6 +78,14 @@ export function setOrder(run: Run) {
   run.turn = 0;
 }
 
+/** Fallen enemies leave the initiative queue at once; cats stay so they can be revived. */
+export function dropFallenEnemies(run: Run) {
+  const fallen = new Set(run.enemies.filter((u) => u.hp <= 0).map((u) => u.id));
+  const before = run.turn;
+  run.turn -= run.order.filter((id, i) => i < before && fallen.has(id)).length;
+  run.order = run.order.filter((id) => !fallen.has(id));
+}
+
 export function currentUnit(run: Run) {
   return units(run).find((u) => u.id === run.order[run.turn]);
 }

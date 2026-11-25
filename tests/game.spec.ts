@@ -1236,6 +1236,21 @@ test("hovering is locked during the enemy phase and works after it", async ({
   await expect(page.getByTestId("intent-note")).toContainText("Crypt rat");
 });
 
+test("the next cat's turn border waits for the enemy turns to finish", async ({
+  page,
+}) => {
+  await realTiming(page);
+  await page.goto("/");
+  await enterDungeon(page);
+  await expect(page.locator(".battlefield")).toHaveAttribute(
+    "data-previewing",
+    "true",
+  );
+  await expect(page.locator(".allies .combatant.active")).toHaveCount(0);
+  await previewDone(page);
+  await expect(page.locator(".allies .combatant.active")).toHaveCount(1);
+});
+
 async function chooseParty(page: Page, add: string[], remove: string[]) {
   const card = (name: string) =>
     page
