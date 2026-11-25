@@ -95,8 +95,18 @@ export function useTutorial({
     found[0]?.scrollIntoView({ block: "center", behavior: "smooth" });
     return () => found.forEach((el) => el.classList.remove("tutorial-spot"));
   }, [spot, run?.status, run?.room, stepIndex]);
+  // Skills only work on the steps that ask for them, so the room cannot be won
+  // before the last step; the turn button also works on the "pass" step.
+  const inBattleStep = !!run && tutorialStep?.phase === "battle";
+  const locked =
+    inBattleStep &&
+    tutorialStep?.gate !== "attack" &&
+    tutorialStep?.gate !== "reward";
+  const turnLocked = inBattleStep && !tutorialStep?.gate;
   return {
     offer,
+    locked,
+    turnLocked,
     tutorial,
     practice,
     stepIndex,

@@ -126,8 +126,17 @@ test("the practice battle teaches by doing and never touches real progress", asy
   await expect(
     page.locator('[data-testid="end-turn"].tutorial-spot'),
   ).toBeVisible();
+  // Only the turn button works here, so the room cannot be won early.
+  await expect(
+    page.getByRole("button", { name: /^Claw strike/ }),
+  ).toBeDisabled();
   await page.getByTestId("end-turn").click();
   await expect(coach(page)).toContainText("Enemy threats");
+  // Explaining steps freeze the fight so it cannot be finished behind the coach.
+  await expect(page.getByTestId("end-turn")).toBeDisabled();
+  await expect(
+    page.locator(".ability-grid:not(.ghost) button").first(),
+  ).toBeDisabled();
   await next(page).click();
   await expect(coach(page)).toContainText("Defeat the enemies");
   for (let i = 0; i < 80; i++) {

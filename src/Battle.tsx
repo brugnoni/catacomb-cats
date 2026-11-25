@@ -25,12 +25,17 @@ const ACTION_MS = 700;
 export function Battle({
   run,
   practice,
+  locked,
+  turnLocked,
   onRun,
   onLeave,
   onContinue,
 }: {
   run: Run;
   practice: boolean;
+  /** The tutorial is explaining something: no actions until it moves on. */
+  locked: boolean;
+  turnLocked: boolean;
   onRun: (next: Run) => void;
   onLeave: () => void;
   onContinue: () => void;
@@ -281,7 +286,7 @@ export function Battle({
                   <button
                     className="quiet end-turn"
                     data-testid="end-turn"
-                    disabled={phasing || busy}
+                    disabled={phasing || busy || turnLocked}
                     onClick={() => applyCombatAction(endTurn(run))}
                   >
                     {nextCat
@@ -314,7 +319,7 @@ export function Battle({
                             current={unit}
                             ability={ability}
                             target={target}
-                            locked={phasing || busy}
+                            locked={phasing || busy || locked}
                             onAim={setAim}
                             onAct={applyCombatAction}
                           />
