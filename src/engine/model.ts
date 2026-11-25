@@ -66,6 +66,8 @@ export interface Progress {
   skins: Record<string, number>;
   /** Times the Burrow lantern easter egg has paid out. */
   lampBoosts: number;
+  /** Per Expedition, what fixes its Relic offers and drops until a Run is won or lost. */
+  lootSeeds?: Record<string, number>;
 }
 
 export interface Unit {
@@ -186,6 +188,8 @@ export interface Run {
 export interface RunOptions {
   /** Offers a Relic before every room; off by default. */
   relics?: boolean;
+  /** Seeds Relic offers and drops apart from the combat seed. */
+  lootSeed?: number;
   /** "off" (default) disables critical hits; "on" uses the base chance plus Hearth; a number fixes the chance. */
   crit?: "off" | "on" | number;
   /** Expedition id; defaults to the first one. */

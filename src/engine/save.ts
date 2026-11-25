@@ -19,6 +19,44 @@ export function claimRewards(progress: Progress, run: Run): Progress {
   };
 }
 
+/** Keeps the Expedition's loot seed, taking `fresh` when it has none. */
+export function holdLootSeed(
+  progress: Progress,
+  expedition: string,
+  fresh: number,
+): Progress {
+  if (progress.lootSeeds?.[expedition] !== undefined) return progress;
+  return {
+    ...progress,
+    lootSeeds: { ...progress.lootSeeds, [expedition]: fresh },
+  };
+}
+
+/** A won or lost Run frees its Expedition's loot seed; anything else keeps it. */
+export function releaseLootSeed(progress: Progress, run: Run): Progress {
+  if (run.status !== "victory" && run.status !== "defeat") return progress;
+  if (progress.lootSeeds?.[run.expedition] === undefined) return progress;
+  const lootSeeds = { ...progress.lootSeeds };
+  delete lootSeeds[run.expedition];
+  return { ...progress, lootSeeds };
+}
+
+/** The usable loot seeds of a save; bad entries are dropped, never a reset. */
+function readLootSeeds(raw: unknown): Pick<Progress, "lootSeeds"> {
+  const entries = Object.entries(
+    raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {},
+  ).filter(
+    ([id, n]) =>
+      EXPEDITIONS.some((e) => e.id === id) &&
+      Number.isInteger(n) &&
+      (n as number) >= 0 &&
+      (n as number) < 2 ** 32,
+  );
+  return entries.length
+    ? { lootSeeds: Object.fromEntries(entries) as Record<string, number> }
+    : {};
+}
+
 export const LAMP_BOOST_MAX = 5;
 const LAMP_BOOST = 1000;
 
@@ -164,6 +202,7 @@ export function readProgress(raw: string | null): Progress | null {
       ),
       spentGold: x.spentGold ?? Math.min(1000000, legacySpend),
       lampBoosts: Math.min(LAMP_BOOST_MAX, x.lampBoosts ?? 0),
+      ...readLootSeeds(x.lootSeeds),
       // Older saves have no Skins; bad entries are dropped instead of resetting the save.
       skins: Object.fromEntries(
         Object.entries(

@@ -20,6 +20,14 @@ _Avoid_: Inventory screen, backpack
 A temporary bonus the player picks, one out of three on offer, at the start of a Run and after each Room before the boss. It lasts only for that Run, some Relics trade a drawback for their bonus, and it never counts toward Power.
 _Avoid_: Trinket, perk, upgrade, buff
 
+**Blessing**:
+A Companion skill that gives the team a bonus, such as Moon blessing, Nine lives, Stand behind me or Moonwell. Healing and reviving skills are not Blessings.
+_Avoid_: Buff, spell
+
+**Hearth blessing**:
+The permanent upgrade for the whole team, bought at the camp before entering an Expedition.
+_Avoid_: Global blessing, Blessing (alone, for this)
+
 **Field Guide**:
 The rules screen opened from FAQ, with a short list of frequently asked questions and one sheet per Companion showing its skills and training ranks.
 _Avoid_: Help, manual, wiki

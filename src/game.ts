@@ -41,6 +41,8 @@ export { createRun, act, endTurn, nextRoom, pickRelic } from "./engine/actions";
 export { RELICS, type Relic } from "./engine/relics";
 export {
   claimRewards,
+  holdLootSeed,
+  releaseLootSeed,
   upgradeCost,
   buyUpgrade,
   equip,
