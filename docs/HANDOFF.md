@@ -121,7 +121,7 @@ HP enemigo × `(1 + 0.13 × tier)`; potencia +`ceil(tier / 2)`; iniciativa +`flo
 ## Recompensas, recuperación y guardado
 
 - Sala 1: 40 oro/30 XP; sala 2: 60 oro/45 XP; jefe: 80 oro/60 XP (`ROOM_REWARD`). Total completo: 180 oro y 135 XP, más objetos descubiertos.
-- Oro, XP y objetos de salas son **Expedition Loot provisional**. Solo se bancan tras vencer al jefe **y pulsar Return to lobby**. No se equipan objetos encontrados a mitad de run.
+- Oro, XP y objetos de salas son **Expedition Loot provisional**. Se bancan en cuanto cae el jefe. No se equipan objetos encontrados a mitad de run.
 - Tras las primeras dos salas, los supervivientes recuperan el 33% de su HP máximo (mínimo 8, `ROOM_HEAL`) y todos ganan +1 de daño para el resto de la run. Los caídos reviven al 25% de HP máximo, redondeado arriba, sin recibir además la curación de sala.
 - Vencer al jefe cura y revive a todo el grupo al máximo y limpia efectos temporales. La siguiente expedición comienza sana.
 - Derrota total, retirada o recarga pierden loot provisional. Una derrota total no activa resurrección.
@@ -186,12 +186,14 @@ Resultado de la auditoría (`docs/AUDIT.md`) y de las mediciones de `outputs/bal
 Reemplaza lo que arriba diga sobre objetos, guardado o cobro del botín.
 
 - **Reliquias** (`src/engine/relics.ts`): 14, 5 con coste. Antes de cada sala se ofrecen 3 y hay que elegir una (`Run.status === "relic"`, `pickRelic`); duran la run, no suman Poder. Las de un compañero solo salen si está en el equipo y Warm broth nunca sale antes del jefe. En el motor y las pruebas están apagadas por defecto (`createRun(..., { relics: true })`); en navegador se apagan con `window.__CATACOMB_RELICS__ = false`. Generador propio (`Run.relicRng`).
-- **Amuletos:** 10. Caen al azar (50% por sala antes del jefe, el jefe siempre), sin repetidos; con todos, 20 de oro. Se equipan desde la Bolsa (`Bag.tsx`). Nunca renombrar uno: un nombre desconocido invalida el guardado.
+- **Amuletos:** 20. Caen al azar (50% por sala antes del jefe, el jefe siempre), sin repetidos; con todos, 20 de oro. Se equipan desde la Bolsa (`Bag.tsx`). Nunca renombrar uno: un nombre desconocido invalida el guardado.
 - **Guardado:** el progreso ilegible se copia a `catacomb-cats.progress.backup`; se puede exportar e importar; el botín se guarda al caer el jefe.
 - **Registro local de runs** en `catacomb-cats.runs` (viaja en el export; sin pantalla todavía; nada se envía).
 - **Moon blessing** (Luna) se usa una vez por turno; el umbral de sala 1 en `balance.test.ts` pasó de 99 a 100.
 - **Sin medir:** el balance con Reliquias y amuletos nuevos. El simulador no elige Reliquias.
-- **Pendiente:** los 10 amuletos con mecánica nueva y la recalibración (bots, enemigos, jefe y `outputs/balance-report.md`).
+- **Amuletos con regla propia** (campos de `TrinketBonus` en `src/engine/data.ts`; los cambios de habilidad se aplican en `buildCat`): Brave bell actúa con estrictamente menos de la mitad de HP; Thorn ring solo si el golpe quita HP; Warm milk suma a la curación de habilidades, no al robo de vida ni a la curación entre salas. La potencia de un ataque se fija al lanzarlo. `trinketIdle` marca en el campamento un amuleto sin efecto en quien lo lleva.
+- **Accesibilidad** (`tests/a11y.spec.ts`): controles con nombre y contraste 4.5 en campamento, oferta y combate (no mide imágenes de fondo); cada objetivo describe su HP; la última línea del registro se anuncia; el foco pasa a la oferta de Reliquias y al resultado.
+- **Pendiente:** la recalibración (bots, enemigos, jefe y `outputs/balance-report.md`). En el simulador, Long thread, Warm milk y Four-leaf clover se ven flojos.
 
 ## Siguiente trabajo
 

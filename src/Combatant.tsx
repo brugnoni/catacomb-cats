@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { Sprite } from "./Sprite";
 import { UnitEffects } from "./UnitEffects";
 import { useT } from "./i18n";
@@ -40,6 +40,7 @@ export function Combatant({
 }) {
   const { t } = useT();
   const hp = feedback.shownHp(unit);
+  const healthId = useId();
   return (
     <article
       data-unit={unit.id}
@@ -53,6 +54,7 @@ export function Combatant({
       <button
         className="unit-target"
         aria-label={t("Target {name}", { name: t(unit.name) })}
+        aria-describedby={healthId}
         aria-pressed={targeted}
         onClick={onTarget}
         disabled={disabled}
@@ -63,7 +65,7 @@ export function Combatant({
       <div className="health">
         <span style={{ width: `${(hp / unit.maxHp) * 100}%` }} />
       </div>
-      <span className="health-value">
+      <span className="health-value" id={healthId}>
         {hp} / {unit.maxHp} {t("HP")}
       </span>
     </article>
