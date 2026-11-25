@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { initialProgress } from "./game";
-import { PARTY_KEY, SAVE_KEY, loadParty, loadProgress } from "./storage";
+import {
+  BACKUP_KEY,
+  PARTY_KEY,
+  SAVE_KEY,
+  loadParty,
+  loadProgress,
+} from "./storage";
 
 const memory = new Map<string, string>();
 beforeEach(() => {
@@ -58,5 +64,21 @@ describe("saved progress", () => {
       gold: 77,
       expeditionWins: { catacombs: 2 },
     });
+  });
+});
+
+describe("backup of a save about to be reset", () => {
+  it("keeps the latest unreadable save unchanged", () => {
+    for (const bad of ["{broken", '{"version":1,"gold":-5}']) {
+      memory.set(SAVE_KEY, bad);
+      expect(loadProgress()).toEqual(initialProgress());
+      expect(memory.get(BACKUP_KEY)).toBe(bad);
+    }
+  });
+  it("backs up nothing for a valid save or an empty store", () => {
+    loadProgress();
+    memory.set(SAVE_KEY, JSON.stringify(initialProgress()));
+    loadProgress();
+    expect(memory.has(BACKUP_KEY)).toBe(false);
   });
 });
