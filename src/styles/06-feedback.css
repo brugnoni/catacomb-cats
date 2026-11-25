@@ -1,0 +1,197 @@
+/* Ability tags and short descriptions */
+.ability-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 3px;
+}
+.ability-tag {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border: 1px solid #5b6672;
+  color: #b9c2ca;
+  background: #151c27;
+}
+.ability-tag.kind-damage {
+  color: #ffb4a8;
+  border-color: #9a4a43;
+}
+.ability-tag.kind-heal {
+  color: #b5e3a8;
+  border-color: #5c8b52;
+}
+.ability-tag.kind-shield {
+  color: #dfe6ee;
+  border-color: #8d9aa8;
+}
+.ability-tag.kind-buff {
+  color: #f0d58a;
+  border-color: #957d3d;
+}
+.ability-tag.kind-utility {
+  color: #cdb7ef;
+  border-color: #7b64a8;
+}
+.ability-note {
+  color: #d5c9a3;
+}
+
+/* Enemy intent: marked cat, arrows and note */
+.battlefield {
+  position: relative;
+}
+.intent-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 30;
+  overflow: visible;
+}
+.intent-line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: intent-draw 0.3s ease-out both;
+}
+.intent-line.hostile {
+  stroke: #ff4a3d;
+  filter: drop-shadow(0 0 3px #ff4a3d99);
+}
+.intent-line.friendly {
+  stroke: #8fd67f;
+  filter: drop-shadow(0 0 3px #8fd67f99);
+}
+.intent-dot.hostile {
+  fill: #ff4a3d;
+}
+.intent-dot.friendly {
+  fill: #8fd67f;
+}
+@keyframes intent-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intent-line {
+    animation: none;
+  }
+}
+.combatant.marked:after {
+  content: "MARKED";
+  position: absolute;
+  top: -9px;
+  right: 3px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 0 5px 0 19px;
+  color: #1b0d0c;
+  /* A dark crosshair reads on the red tag. */
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%231b0d0c' stroke-width='1.6'%3E%3Ccircle cx='8' cy='8' r='4.6'/%3E%3Cpath d='M8 .5v4M8 11.5v4M.5 8h4M11.5 8h4' stroke-width='2'/%3E%3Ccircle cx='8' cy='8' r='.9' fill='%231b0d0c' stroke='none'/%3E%3C/svg%3E")
+    no-repeat 4px 50% / 11px #ff6a5c;
+}
+.intent-note {
+  margin: 6px 0 0;
+  font-size: 17px;
+  color: #ffb4a8;
+}
+.intent-note strong {
+  color: #ffd2ca;
+}
+
+/* Hit feedback: the card border, name, HP bar and HP numbers flash red for 1s */
+.combatant.hit-0 {
+  animation:
+    hit-card 1s ease-out var(--flash-delay, 0s),
+    hit-shake 0.4s ease-out var(--flash-delay, 0s);
+}
+.combatant.hit-1 {
+  animation:
+    hit-card-alt 1s ease-out var(--flash-delay, 0s),
+    hit-shake 0.4s ease-out var(--flash-delay, 0s);
+}
+.combatant.hit-0 h3,
+.combatant.hit-0 .health-value {
+  animation: hit-text 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.hit-1 h3,
+.combatant.hit-1 .health-value {
+  animation: hit-text-alt 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.hit-0 .health {
+  animation: hit-bar 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.hit-1 .health {
+  animation: hit-bar-alt 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.hit-0 .health span {
+  animation: hit-fill 1s ease-out var(--flash-delay, 0s);
+}
+.combatant.hit-1 .health span {
+  animation: hit-fill-alt 1s ease-out var(--flash-delay, 0s);
+}
+@keyframes hit-card {
+  0%,
+  55% {
+    box-shadow:
+      inset 0 0 0 3px #ff4a3d,
+      0 0 16px #ff3b30cc;
+    background-color: #5a1a1a99;
+  }
+}
+@keyframes hit-card-alt {
+  0%,
+  55% {
+    box-shadow:
+      inset 0 0 0 3px #ff4a3d,
+      0 0 16px #ff3b30cc;
+    background-color: #5a1a1a99;
+  }
+}
+@keyframes hit-text {
+  0%,
+  55% {
+    color: #ff6a5c;
+    text-shadow: 0 0 8px #ff3b30;
+  }
+}
+@keyframes hit-text-alt {
+  0%,
+  55% {
+    color: #ff6a5c;
+    text-shadow: 0 0 8px #ff3b30;
+  }
+}
+@keyframes hit-bar {
+  0%,
+  55% {
+    border-color: #ff4a3d;
+    box-shadow: 0 0 10px #ff3b30;
+  }
+}
+@keyframes hit-bar-alt {
+  0%,
+  55% {
+    border-color: #ff4a3d;
+    box-shadow: 0 0 10px #ff3b30;
+  }
+}
+@keyframes hit-fill {
+  0%,
+  55% {
+    background: #ff4a3d;
+  }
+}
+@keyframes hit-fill-alt {
+  0%,
+  55% {
+    background: #ff4a3d;
+  }
+}

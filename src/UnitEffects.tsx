@@ -1,5 +1,8 @@
 import { useId, useState } from "react";
 import type { Unit } from "./game";
+import { cooldownText } from "./abilityText";
+import { cooldownRemaining } from "./game";
+import { plural, useT } from "./i18n";
 type EffectKind =
   | "armor"
   | "guard"
@@ -9,7 +12,8 @@ type EffectKind =
   | "taunt"
   | "ice"
   | "recovery"
-  | "ambush";
+  | "ambush"
+  | "cooldown";
 function EffectIcon({ kind }: { kind: EffectKind }) {
   const paths: Record<EffectKind, string> = {
     armor: "M4 1H7V4H9V1H12V3H14V7H12V14H4V7H2V3H4Z M6 7V12H10V7Z",
@@ -22,6 +26,7 @@ function EffectIcon({ kind }: { kind: EffectKind }) {
     ice: "M7 0H9V5L12 2L14 4L10 8L14 12L12 14L9 11V16H7V11L4 14L2 12L6 8L2 4L4 2L7 5Z",
     recovery: "M6 1H10V6H15V10H10V15H6V10H1V6H6Z",
     ambush: "M11 0H15L11 6H14L4 16L6 9H2Z",
+    cooldown: "M3 1H13V4L10 8L13 12V15H3V12L6 8L3 4Z M5 3V4L8 7L11 4V3Z",
   };
   return (
     <svg
@@ -86,6 +91,7 @@ export function UnitEffects({
   taunting?: boolean;
   units?: Unit[];
 }) {
+  const { t } = useT();
   const effects: {
     kind: EffectKind;
     label: string;
@@ -96,71 +102,113 @@ export function UnitEffects({
   if (unit.armor > 0)
     effects.push({
       kind: "armor",
-      label: "Armor",
+      label: t("Armor"),
       value: String(unit.armor),
-      description: `Reduces each incoming attack by ${unit.armor} before Guard. Armor-piercing attacks bypass this reduction. Lasts for this room.`,
+      description: t("Reduces each hit by {n}. Piercing attacks ignore it.", {
+        n: unit.armor,
+      }),
     });
   if (unit.guard > 0)
     effects.push({
       kind: "guard",
-      label: "Guard",
+      label: t("Guard"),
       value: String(unit.guard),
-      description: `Absorbs ${unit.guard} more damage. Expires after ${unit.guardTurns} more ${unit.name} turn starts. Other units ending their turns do not reduce it. An eligible refresh restores the full shield and duration without stacking.`,
+      description: t("Absorbs {n} more damage. Lasts {turns}.", {
+        n: unit.guard,
+        turns: plural(t, unit.guardTurns, "turn"),
+      }),
     });
   if (unit.fury > 0)
     effects.push({
       kind: "inspired",
-      label: "Inspired",
+      label: t("Inspired"),
       value: `+${unit.fury}`,
-      description: `Adds ${unit.fury} power to damage, healing and Guard. Expires after ${unit.furyTurns} more ${unit.name} turn starts. Does not increase AP, taunt or blessing potency. Does not stack.`,
+      description: t("+{n} to damage, healing and shields. Lasts {turns}.", {
+        n: unit.fury,
+        turns: plural(t, unit.furyTurns, "turn"),
+      }),
     });
   if (unit.curse > 0)
     effects.push({
       kind: "curse",
-      label: "Curse",
+      label: t("Curse"),
       value: `−${unit.curse}`,
-      description: `Reduces damage, healing and protection output by ${unit.curse}, down to zero. Expires after ${unit.curseTurns} more ${unit.name} turn starts.`,
+      description: t(
+        "Its damage, healing and shields, and the healing and shields it receives, are {n} lower. Lasts {turns}.",
+        { n: unit.curse, turns: plural(t, unit.curseTurns, "turn") },
+      ),
     });
   if (unit.reflect > 0)
     effects.push({
       kind: "reflect",
-      label: "Reflect",
+      label: t("Reflect"),
       value: String(unit.reflect),
-      description: `Returns ${unit.reflect} damage when an attack damages this unit's HP. Return damage bypasses armor and Guard and cannot reflect again. Expires after ${unit.reflectTurns} more ${unit.name} turn starts.`,
+      description: t(
+        "Sends {n} damage back to whoever hurts this unit. Lasts {turns}.",
+        { n: unit.reflect, turns: plural(t, unit.reflectTurns, "turn") },
+      ),
     });
   if (unit.iceCharges > 0)
     effects.push({
       kind: "ice",
-      label: "Ice Ward",
+      label: t("Ice Ward"),
       value: String(unit.iceCharges),
-      description: `Reduces incoming attack damage by ${unit.iceArmor} for the next ${unit.iceCharges} attacks. Charges reset at the start of each room. Return damage is not an attack.`,
+      description: t("Reduces the next {hits} by {n}.", {
+        hits: plural(t, unit.iceCharges, "hit"),
+        n: unit.iceArmor,
+      }),
     });
   if (unit.reactiveHealCharges > 0)
     effects.push({
       kind: "recovery",
-      label: "Healing response",
+      label: t("Healing response"),
       value: String(unit.reactiveHealCharges),
-      description: `When an enemy attack removes HP and ${unit.name} survives, recover ${unit.reactiveHeal} HP, up to maximum HP. ${unit.reactiveHealCharges} responses remain this room. Does not revive or trigger from reflected damage.`,
+      description: t(
+        "Recovers {n} HP when {name} is hurt and survives. {uses} left this room.",
+        {
+          n: unit.reactiveHeal,
+          name: unit.name,
+          uses: plural(t, unit.reactiveHealCharges, "use"),
+        },
+      ),
     });
   if (unit.openingAttack > 0)
     effects.push({
       kind: "ambush",
-      label: "Ambush",
+      label: t("Ambush"),
       value: `+${unit.openingAttack}`,
-      description: `The first damaging skill used this room gains ${unit.openingAttack} power. This bonus is consumed once and resets next room.`,
+      description: t("The first damaging skill this room gets +{n} damage.", {
+        n: unit.openingAttack,
+      }),
     });
   if (taunting)
     effects.push({
       kind: "taunt",
-      label: "Taunt",
-      value: "active",
-      description: `Enemy attacks target ${unit.name} while alive. Ends at the start of ${unit.name}'s next turn. Does not redirect enemy support skills or curses.`,
+      label: t("Taunt"),
+      value: t("active"),
+      description: t("Enemy attacks target {name} until {name}'s next turn.", {
+        name: unit.name,
+      }),
     });
+  // One badge per skill that is cooling down, with the turns still to wait.
+  for (const ability of unit.abilities) {
+    const left = cooldownRemaining(unit, ability);
+    if (left > 0 && ability.cooldownTurns)
+      effects.push({
+        kind: "cooldown",
+        label: t("Cooldown · {name}", { name: t(ability.name) }),
+        value: String(left),
+        description: cooldownText(ability.cooldownTurns, left, t),
+      });
+  }
   if (!effects.length) return null;
   return (
-    <div className="unit-effects" aria-label={`Active effects on ${unit.name}`}>
+    <div
+      className="unit-effects"
+      aria-label={t("Active effects on {name}", { name: unit.name })}
+    >
       {effects.map((effect) => (
-        <Badge key={effect.kind} {...effect} />
+        <Badge key={`${effect.kind}-${effect.label}`} {...effect} />
       ))}
     </div>
   );

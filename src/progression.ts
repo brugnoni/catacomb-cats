@@ -1,7 +1,11 @@
+import { masteryCap, totalWins } from "./expeditions";
 /** Shared balance rules. Keep UI explanations and engine calculations on these values. */
 export const MAX_TRAINING_RANK = 8;
 export const MAX_MASTERY_LEVEL = 10;
 export const XP_PER_MASTERY = 150;
+/** Critical hits: base chance in percent for every skill, and the damage and healing multiplier. */
+export const BASE_CRIT_CHANCE = 10;
+export const CRIT_MULTIPLIER = 1.5;
 export interface TrainingBonuses {
   hp: number;
   attack: number;
@@ -33,13 +37,6 @@ export interface TrainingRank {
   /** Absolute passive values unlocked at this rank, replacing earlier values. */
   passives?: Partial<TrainingPassives>;
 }
-export const SIGNATURE_NAMES: Record<string, string> = {
-  miso: "Stand behind me",
-  luna: "Moonwell",
-  clover: "Circle of renewal",
-  pip: "Needle strike",
-  ember: "Sweeping embers",
-};
 export const TRAINING_TRACKS: Record<string, TrainingRank[]> = {
   miso: [
     {
@@ -359,15 +356,119 @@ export function trainingPassives(
   }
   return passive;
 }
+/** Global Hearth blessing: shared by every cat, one distinct benefit per rank. */
+export interface HearthBonuses {
+  hp: number;
+  initiative: number;
+  /** Extra power for damaging skills (attacks, Needle strike, Sweeping embers). */
+  attack: number;
+  /** Extra power for healing, Guard and Inspired blessings. */
+  support: number;
+  /** Percent of max HP restored by Second Wind; 0 = not unlocked. */
+  secondWind: number;
+  /** Extra shared AP in the first round of every room. */
+  openingAp: number;
+  /** Extra critical chance, in percent, for every skill of every cat. */
+  crit: number;
+}
+export interface HearthRank {
+  rank: number;
+  title: string;
+  description: string;
+  bonuses: Partial<HearthBonuses>;
+}
+export const HEARTH_TRACK: HearthRank[] = [
+  {
+    rank: 1,
+    title: "Warm embers",
+    description: "+2 max HP and +1 initiative for every cat.",
+    bonuses: { hp: 2, initiative: 1 },
+  },
+  {
+    rank: 2,
+    title: "Sharpened claws",
+    description: "+1 attack power for every cat.",
+    bonuses: { attack: 1 },
+  },
+  {
+    rank: 3,
+    title: "Second Wind",
+    description:
+      "Once per expedition, the first cat to fall rises at once with 40% HP.",
+    bonuses: { secondWind: 40 },
+  },
+  {
+    rank: 4,
+    title: "Thick fur",
+    description: "+3 max HP and +1 initiative for every cat.",
+    bonuses: { hp: 3, initiative: 1 },
+  },
+  {
+    rank: 5,
+    title: "Soothing light",
+    description: "+1 healing, Guard and Inspired power for every cat.",
+    bonuses: { support: 1 },
+  },
+  {
+    rank: 6,
+    title: "Hunter's focus",
+    description: "+1 attack power and +5% critical chance for every cat.",
+    bonuses: { attack: 1, crit: 5 },
+  },
+  {
+    rank: 7,
+    title: "Stronger flame",
+    description: "Second Wind restores 60% HP. +3 max HP for every cat.",
+    bonuses: { hp: 3, secondWind: 60 },
+  },
+  {
+    rank: 8,
+    title: "Hearthlight",
+    description:
+      "+1 AP in the first round of every room and +5% critical chance for every cat.",
+    bonuses: { openingAp: 1, crit: 5 },
+  },
+];
+export function hearthBonuses(rank: number): HearthBonuses {
+  const total: HearthBonuses = {
+    hp: 0,
+    initiative: 0,
+    attack: 0,
+    support: 0,
+    secondWind: 0,
+    openingAp: 0,
+    crit: 0,
+  };
+  const capped = Math.min(MAX_TRAINING_RANK, whole(rank));
+  for (const row of HEARTH_TRACK) {
+    if (row.rank > capped) break;
+    for (const key of Object.keys(row.bonuses) as (keyof HearthBonuses)[]) {
+      // Second Wind is an absolute percentage that later ranks replace.
+      if (key === "secondWind") total[key] = row.bonuses[key] ?? total[key];
+      else total[key] += row.bonuses[key] ?? 0;
+    }
+  }
+  return total;
+}
+export function nextHearthDescription(rank: number): string {
+  const r = whole(rank);
+  if (r >= MAX_TRAINING_RANK) return "Maximum Hearth rank reached.";
+  const next = HEARTH_TRACK[r]!;
+  return `Next rank ${next.rank} · ${next.title}: ${next.description}`;
+}
 export function masteryLevel(xp: number): number {
   return Math.min(MAX_MASTERY_LEVEL, Math.floor(whole(xp) / XP_PER_MASTERY));
 }
-export function masteryBonuses(xp: number): {
+/** The mastery level in effect: the XP level, held down by the Rank cap. */
+export const masteryOf = (progress: {
+  xp: number;
+  expeditionWins: Record<string, number>;
+}) => Math.min(masteryLevel(progress.xp), masteryCap(progress));
+export function masteryBonuses(level: number): {
   hp: number;
   power: number;
   attack: number;
 } {
-  const level = masteryLevel(xp);
   const power = Math.floor(level / 3);
   // `attack` remains an alias for existing callers; never add it to `power`.
   return { hp: level * 2, power, attack: power };
@@ -377,13 +478,37 @@ export function nextTrainingDescription(catId: string, rank: number): string {
   if (r >= MAX_TRAINING_RANK) return "Maximum training rank reached.";
   const next = trainingTrack(catId)[r];
   return next
-    ? `Rank ${next.rank} · ${next.title}: ${next.description}`
+    ? `Next rank ${next.rank} · ${next.title}: ${next.description}`
     : "No training available.";
 }
 export interface DifficultyProgress {
-  wins: number;
-  spentGold: number;
+  expeditionWins: Record<string, number>;
   xp: number;
+  generalLevel?: number;
+  catLevels?: Record<string, number>;
+}
+/**
+ * How much permanent power a player brings: the ranks of the party's cats (the
+ * three best owned when no party is given), the Hearth and the mastery level.
+ * Difficulty follows this, not gold.
+ */
+export function powerPoints(
+  progress: DifficultyProgress,
+  party?: readonly string[],
+): number {
+  const ranks = party
+    ? party.map((id) => progress.catLevels?.[id] ?? 0)
+    : Object.values(progress.catLevels ?? {});
+  const top3 = ranks
+    .map(whole)
+    .sort((a, b) => b - a)
+    .slice(0, 3)
+    .reduce((a, b) => a + Math.min(b, MAX_TRAINING_RANK), 0);
+  return (
+    top3 +
+    Math.min(MAX_TRAINING_RANK, whole(progress.generalLevel ?? 0)) +
+    masteryOf(progress)
+  );
 }
 export interface Difficulty {
   tier: number;
@@ -395,29 +520,67 @@ export interface Difficulty {
   label: string;
   description: string;
 }
+/** Difficulty tuning: one place to rebalance how fast Ascension grows. */
+export const DIFFICULTY_TUNING = {
+  maxTier: 14,
+  /** Power points (see powerPoints) for one tier. */
+  pointsPerTier: 3,
+  hpPerTier: 0.13,
+  powerEveryTiers: 2,
+  initiativeEveryTiers: 4,
+  /** Tiers that add a reinforcement to every room (first and second). */
+  reinforcementTiers: [10] as const,
+  armorEveryTiers: 8,
+};
+/** Chance in percent that any hit misses; only when luck is on. */
+export const MISS_CHANCE = 5;
+/** Fast units dodge: one percent per initiative point above 12, at most 12. */
+export const evadeChance = (initiative: number) =>
+  Math.max(0, Math.min(12, Math.floor(initiative) - 12));
+/** Turns a Guard shield lasts. */
+export const GUARD_TURNS = 3;
+/** Healing a surviving cat gets when a room is cleared: the larger of a flat amount and a share of max HP. */
+export const ROOM_HEAL = { flat: 8, percent: 33 };
+/** The numbers a tier adds to every enemy; shared by the engine, lobby text and FAQ. */
+export function tierFacts(tier: number) {
+  return {
+    hpPercent: Math.round(tier * DIFFICULTY_TUNING.hpPerTier * 100),
+    power: Math.ceil(tier / DIFFICULTY_TUNING.powerEveryTiers),
+    initiative: Math.floor(tier / DIFFICULTY_TUNING.initiativeEveryTiers),
+    reinforcements: DIFFICULTY_TUNING.reinforcementTiers.filter(
+      (t) => tier >= t,
+    ).length,
+    armor: Math.min(2, Math.floor(tier / DIFFICULTY_TUNING.armorEveryTiers)),
+  };
+}
 /** No hidden scaling from unspent gold. Snapshot this once when a run begins. */
-export function getDifficulty(progress: DifficultyProgress): Difficulty {
-  const wins = whole(progress.wins);
+export function getDifficulty(
+  progress: DifficultyProgress,
+  party?: readonly string[],
+): Difficulty {
   const tier =
-    wins === 0
+    totalWins(progress) === 0
       ? 0
       : Math.min(
-          12,
-          wins +
-            Math.floor(whole(progress.spentGold) / 200) +
-            Math.floor(masteryLevel(progress.xp) / 2),
+          DIFFICULTY_TUNING.maxTier,
+          Math.floor(
+            powerPoints(progress, party) / DIFFICULTY_TUNING.pointsPerTier,
+          ),
         );
   return {
     tier,
-    hpMultiplier: 1 + tier * 0.08,
-    damageBonus: Math.ceil(tier / 4),
-    initiativeBonus: Math.floor(tier / 4),
-    extraEnemies: tier >= 10 ? 2 : tier >= 5 ? 1 : 0,
-    armorBonus: Math.min(2, Math.floor(tier / 6)),
+    hpMultiplier: 1 + tier * DIFFICULTY_TUNING.hpPerTier,
+    damageBonus: tierFacts(tier).power,
+    initiativeBonus: tierFacts(tier).initiative,
+    extraEnemies: tierFacts(tier).reinforcements,
+    armorBonus: tierFacts(tier).armor,
     label: tier === 0 ? "First descent" : `Ascension ${tier}`,
     description:
       tier === 0
         ? "Base encounters. Ascension begins after your first boss victory."
-        : `Enemies have +${tier * 8}% HP, +${Math.ceil(tier / 4)} power and +${Math.floor(tier / 4)} initiative. ${tier >= 5 ? `${tier >= 10 ? 2 : 1} extra reinforcement${tier >= 10 ? "s" : ""} per room; ` : ""}${Math.floor(tier / 6) > 0 ? `armored foes gain +${Math.min(2, Math.floor(tier / 6))} armor. ` : ""}Based on victories, gold spent and mastery; fixed for this expedition.`,
+        : (({ hpPercent, power, initiative, reinforcements, armor }) =>
+            `Enemies have +${hpPercent}% HP, +${power} power and +${initiative} initiative. ${reinforcements > 0 ? `${reinforcements} extra reinforcement${reinforcements > 1 ? "s" : ""} per room; ` : ""}${armor > 0 ? `armored foes gain +${armor} armor. ` : ""}Based on victories, gold spent and mastery; fixed for this expedition.`)(
+            tierFacts(tier),
+          ),
   };
 }

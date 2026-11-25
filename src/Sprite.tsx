@@ -1,4 +1,6 @@
-import type { CSSProperties } from "react";
+import { createContext, useContext, type CSSProperties } from "react";
+/** The Skin each Companion wears (see `Progress.skins`); the App provides it so every Sprite reads it. */
+export const SkinsContext = createContext<Record<string, number>>({});
 const indices: Record<string, number> = {
   miso: 0,
   luna: 1,
@@ -24,12 +26,13 @@ export function Sprite({
   className?: string;
 }) {
   const i = indices[id] ?? 0;
+  const skin = useContext(SkinsContext)[id];
   return (
     <span
       role={name ? "img" : undefined}
       aria-label={name}
       aria-hidden={name ? undefined : true}
-      className={`sprite ${className}`}
+      className={`sprite ${skin ? `skin-${skin}` : ""} ${className}`}
       style={
         {
           "--sprite-x": `${(i % 5) * 25}%`,

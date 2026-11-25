@@ -1,0 +1,314 @@
+.chapter {
+  color: var(--gold);
+  font-size: 20px;
+}
+.room-path {
+  display: flex;
+  gap: 18px;
+  margin: 14px 0;
+  color: #858f9b;
+  font-size: 17px;
+}
+.room-path span {
+  padding-bottom: 5px;
+  border-bottom: 2px solid #303944;
+}
+.room-path .current {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+.battle-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 20px;
+}
+.battlefield {
+  min-height: 365px;
+  display: flex;
+  align-items: end;
+  justify-content: space-around;
+  gap: 15px;
+  padding: 85px 18px 25px;
+  background: #182130 url("/art/burrow.png") center/cover;
+  image-rendering: pixelated;
+  border: 3px solid #55505a;
+  box-shadow:
+    inset 0 0 0 1000px #080d1844,
+    0 5px #080c13;
+}
+.battle-team {
+  display: flex;
+  gap: 10px;
+  align-items: end;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.combatant {
+  text-align: center;
+  box-sizing: border-box;
+  /* Cards share one size and shrink together when a side holds four fighters. */
+  flex: 0 1 140px;
+  min-width: 0;
+  position: relative;
+  padding: 5px;
+  background: #101723bb;
+  border-bottom: 3px solid #4c5960;
+}
+.combatant.active {
+  border-color: var(--gold);
+  background: #3b3526cc;
+}
+.combatant.active {
+  box-shadow:
+    inset 0 0 0 2px #ffd84a,
+    0 0 14px #ffd84acc;
+}
+.combatant.active:before {
+  content: "▼";
+  color: #ffd84a;
+  font-size: 30px;
+  line-height: 1;
+  text-shadow: 0 0 8px #ffd84a;
+  position: absolute;
+  top: -34px;
+  left: 0;
+  right: 0;
+}
+.turn-banner {
+  position: absolute;
+  top: -58px;
+  left: 0;
+  right: 0;
+  z-index: 25;
+  color: #ffd84a;
+  font-weight: 700;
+  text-shadow: 0 0 6px #000;
+  pointer-events: none;
+  animation: turn-fade 1.6s ease-out forwards;
+}
+@keyframes turn-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  15% {
+    opacity: 1;
+    transform: none;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hit-shake {
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+.combatant.dead {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+.combatant h3 {
+  font-size: 18px;
+}
+.combatant .sprite {
+  display: block;
+  width: 100%;
+  max-width: 105px;
+  height: auto;
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+.combatant .muted {
+  font-size: 15px;
+}
+.health {
+  height: 6px;
+  border: 1px solid #08101c;
+  background: #472c34;
+  margin: 7px 0 4px;
+}
+.health span {
+  display: block;
+  height: 100%;
+  background: #9aaf76;
+}
+.versus {
+  color: #d2b582;
+  align-self: center;
+}
+.initiative {
+  display: flex;
+  gap: 4px;
+  margin: 14px 0;
+  flex-wrap: wrap;
+}
+.initiative span {
+  padding: 5px 9px;
+  background: #1c2531;
+  border: 1px solid #444d58;
+  font-size: 16px;
+  color: #9ca8b2;
+}
+.initiative .current {
+  color: #f4d797;
+  border-color: #c1a36b;
+  background: #3b3329;
+}
+.command-deck,
+.panel {
+  background: #1b232f;
+  border: 2px solid #4b505a;
+  padding: 17px;
+  box-shadow: 4px 4px #080c13;
+}
+.actions {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  margin-top: 12px;
+}
+/* Shared AP and the turn button stay in one column, whichever cat is acting. */
+.turn-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.turn-side .end-turn {
+  width: 100%;
+}
+/* All party grids overlap in one cell; only the acting cat's is visible. */
+.ability-stack {
+  display: grid;
+}
+.ability-stack > .ability-grid {
+  grid-area: 1 / 1;
+}
+.ability-grid.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+.ability-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (max-width: 900px) {
+  .ability-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.actions button,
+.actions select {
+  font-size: 18px;
+}
+.journal {
+  background: #181f29;
+  border: 2px solid #3b424e;
+  padding: 17px;
+  align-self: start;
+}
+.journal h2 {
+  font-size: 11px;
+}
+.journal p {
+  font-size: 17px;
+}
+.journal button {
+  width: 100%;
+  font-size: 17px;
+}
+.log {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  max-height: 380px;
+  overflow: auto;
+}
+.log li {
+  font-size: 17px;
+  line-height: 1.2;
+  padding: 9px 0;
+  border-bottom: 1px solid #353c46;
+  color: #b4b8b4;
+}
+.result {
+  padding: 25px;
+  text-align: center;
+  background: #272a2b;
+  border: 2px solid #b28c54;
+  margin-top: 20px;
+  box-shadow: 4px 4px #080c13;
+}
+.result h2 {
+  font-size: 15px;
+}
+.result button {
+  margin-top: 12px;
+}
+.result p {
+  font-size: 20px;
+}
+@media (min-width: 1450px) {
+  .burrow-scene {
+    height: 450px;
+  }
+  .portrait-stage {
+    height: 135px;
+  }
+  .portrait-stage .sprite {
+    width: 128px;
+    height: 128px;
+  }
+}
+@media (max-width: 1150px) {
+  .app {
+    padding: 0 20px 20px;
+  }
+  .camp-desk {
+    grid-template-columns: minmax(0, 1fr) 200px;
+    gap: 12px;
+  }
+  .cat-info {
+    padding: 6px;
+  }
+  .card-actions button,
+  .card-actions select {
+    font-size: 14px;
+  }
+  .scene-party {
+    left: 25%;
+  }
+  .scene-party .sprite {
+    width: 85px;
+    height: 85px;
+  }
+  .expedition-gate {
+    max-width: 250px;
+  }
+  .battle-layout {
+    grid-template-columns: minmax(0, 1fr) 200px;
+  }
+  .combatant .sprite {
+    max-width: 80px;
+  }
+  .battle-team {
+    gap: 5px;
+  }
+  .combatant {
+    flex-basis: 100px;
+  }
+  .top-meta {
+    gap: 14px;
+  }
+}

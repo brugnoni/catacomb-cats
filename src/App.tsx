@@ -1,72 +1,139 @@
-import { useState } from "react";
-import { Sprite } from "./Sprite";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+
 import { Faq } from "./Faq";
-import { UnitEffects } from "./UnitEffects";
+
+import { LanguageScreen } from "./LanguageScreen";
+import { Lobby } from "./Lobby";
+import { SkinsContext } from "./Sprite";
+import { Battle } from "./Battle";
+import { RelicPick } from "./RelicPick";
+import { useTutorial } from "./useTutorial";
 import {
-  CATS,
-  cooldownRemaining,
-  buildCat,
-  abilityUnavailableReason,
-  abilityTargetUnavailableReason,
-  damagePreview,
-  abilityLimit,
-  abilityUses,
-  abilityPower,
-  initialProgress,
+  EXPEDITION_KEY,
+  PARTY_KEY,
+  SAVE_KEY,
+  loadExpedition,
+  loadParty,
+  loadProgress,
+  recordRun,
+  runCrit,
+  runRelics,
+  runSeed,
+} from "./storage";
+import { TutorialCoach, TutorialOffer } from "./Tutorial";
+import { preloadArt } from "./preload";
+
+import { playableExpedition } from "./expeditions";
+
+import {
+  LangContext,
+  loadLang,
+  makeT,
+  saveLang,
+  useT,
+  type Lang,
+} from "./i18n";
+import {
   createRun,
-  act,
-  endTurn,
   nextRoom,
+  pickRelic,
   claimRewards,
-  buyUpgrade,
-  upgradeCost,
-  equip,
-  parseProgress,
   type Run,
   type Progress,
-  type Ability,
 } from "./game";
 
-import {
-  getDifficulty,
-  masteryLevel,
-  nextTrainingDescription,
-  MAX_TRAINING_RANK,
-  MAX_MASTERY_LEVEL,
-  XP_PER_MASTERY,
-} from "./progression";
-
-const SAVE_KEY = "catacomb-cats.progress.v1";
-function loadProgress(): Progress {
-  try {
-    return parseProgress(localStorage.getItem(SAVE_KEY));
-  } catch {
-    return initialProgress();
-  }
-}
-const roomNames = [
-  "Whispering entrance",
-  "The forgotten hall",
-  "The king beneath",
-];
 export default function App() {
-  const [progress, setProgress] = useState(loadProgress);
-  const [party, setParty] = useState<string[]>(
-    CATS.slice(0, 3).map((cat) => cat.id),
+  const [lang, setLang] = useState<Lang | null>(loadLang);
+  const pick = (next: Lang) => {
+    saveLang(next);
+    setLang(next);
+  };
+  useEffect(() => {
+    document.documentElement.lang = lang ?? "en";
+  }, [lang]);
+  if (lang === null) return <LanguageScreen onPick={pick} />;
+  return (
+    <LangContext.Provider value={{ lang, t: makeT(lang) }}>
+      <Game onLanguage={pick} />
+    </LangContext.Provider>
   );
+}
+function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
+  const { lang, t } = useT();
+  const [progress, setProgress] = useState(loadProgress);
+  const [party, setParty] = useState<string[]>(loadParty);
+  useEffect(() => {
+    try {
+      localStorage.setItem(PARTY_KEY, JSON.stringify(party));
+    } catch {
+      /* The party simply is not remembered. */
+    }
+  }, [party]);
+  const [expedition, setExpedition] = useState(loadExpedition);
+  useEffect(() => {
+    try {
+      localStorage.setItem(EXPEDITION_KEY, expedition);
+    } catch {
+      /* The Expedition simply is not remembered. */
+    }
+  }, [expedition]);
+  // A saved choice that is locked (for example after a save reset) falls back to the first Expedition.
+  const open = playableExpedition(progress, expedition).id;
   const [run, setRun] = useState<Run | null>(null);
-  const [target, setTarget] = useState("");
+  // Battle remounts for every room; its scroll position is put back before paint.
+  const keptScroll = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (keptScroll.current === null) return;
+    window.scrollTo(0, keptScroll.current);
+    keptScroll.current = null;
+  }, [run?.room]);
   const [notice, setNotice] = useState("");
   const [showFaq, setShowFaq] = useState(false);
+  // True while the battle art loads before a run begins.
+  const [entering, setEntering] = useState(false);
+  const startRun = async (make: () => Run, after?: () => void) => {
+    if (entering) return;
+    setEntering(true);
+    await preloadArt();
+    setEntering(false);
+    setRun(make());
+    after?.();
+  };
+  const {
+    offer,
+    locked,
+    turnLocked,
+    tutorial,
+    practice,
+    stepIndex,
+    startTutorial,
+    endTutorial,
+    nextTutorialStep,
+  } = useTutorial({
+    run,
+    showFaq,
+    onCloseFaq: () => setShowFaq(false),
+    startRun,
+    onLeavePractice: () => setRun(null),
+  });
   const storeProgress = (next: Progress) => {
     setProgress(next);
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(next));
     } catch {
       setNotice(
-        "Your browser could not save progress. Keep this tab open to continue.",
+        t(
+          "Your browser could not save progress. Keep this tab open to continue.",
+        ),
       );
     }
+  };
+  // Rewards are banked the moment the boss falls, not when the player leaves.
+  const updateRun = (next: Run) => {
+    setRun(next);
+    if (practice) return;
+    recordRun(next);
+    if (next.status === "victory") storeProgress(claimRewards(progress, next));
   };
   const choose = (id: string) =>
     setParty((previous) =>
@@ -77,696 +144,159 @@ export default function App() {
           : previous,
     );
   const leave = () => {
+    if (practice) {
+      endTutorial("skipped");
+      return;
+    }
     if (run?.status === "victory") {
       setNotice(
-        "Expedition complete. Your treasures and experience are safely home.",
+        t(
+          "Expedition complete. Your treasures and experience are safely home.",
+        ),
       );
-      storeProgress(claimRewards(progress, run));
+      // Stored again so a failed save at victory is retried and reported.
+      storeProgress(progress);
     } else
-      setNotice("The expedition is over. Your permanent upgrades are safe.");
+      setNotice(t("The expedition is over. Your permanent upgrades are safe."));
     setRun(null);
-    setTarget("");
   };
-  const applyCombatAction = (next: Run, ability?: Ability) => {
-    if (next === run) return;
-    const attacking =
-      ability &&
-      (!ability.effect ||
-        ability.effect === "pierce" ||
-        ability.effect === "cleave");
-    const sameTurn =
-      run &&
-      next.status === "combat" &&
-      next.room === run.room &&
-      next.round === run.round &&
-      next.turn === run.turn &&
-      next.order[next.turn] === run.order[run.turn];
-    const keepTarget =
-      attacking &&
-      sameTurn &&
-      next.enemies.some((unit) => unit.id === target && unit.hp > 0);
-    setRun(next);
-    if (!keepTarget) setTarget("");
-  };
-  const currentId = run?.order[run.turn];
-  const current = run?.party.find((unit) => unit.id === currentId);
-  const difficulty = getDifficulty(progress);
-  const units = run ? [...run.party, ...run.enemies] : [];
-  const canSelectFallen =
-    current?.abilities.some((ability) => ability.target === "fallen-ally") ??
-    false;
   return (
-    <div className={`app ${run ? "battle-mode" : "lobby-mode"}`}>
-      <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            ✣
-          </span>{" "}
-          CATACOMB CATS <small>THE HOLLOW BELOW</small>
-        </div>
-        <div className="top-meta">
-          <span className="location-tag">
-            {run ? `DEPTH 0${run.room + 1}` : "CAMP / THE BURROW"}
-          </span>
-          <span className="currency">{progress.gold} gold</span>
-          <span>{progress.xp} XP</span>
-          <button
-            className="faq-nav quiet"
-            aria-expanded={showFaq}
-            onClick={() => setShowFaq(!showFaq)}
-          >
-            FAQ
-          </button>
-        </div>
-      </header>
-      {notice && (
-        <div className="notice" role="status">
-          {notice}
-        </div>
-      )}
-      {showFaq ? (
-        <Faq onClose={() => setShowFaq(false)} />
-      ) : !run ? (
-        <>
-          <section
-            className="burrow-scene"
-            aria-label="The Burrow, your underground camp"
-          >
-            <div className="scene-caption">
-              <span className="eyebrow">A fire worth coming home to</span>
-              <h1>The Burrow</h1>
-              <p>Pack light. Stay together.</p>
-            </div>
-            <div
-              className="scene-party"
-              aria-label="Selected expedition companions"
-            >
-              {party.map((id) => (
-                <div className="scene-companion" key={id}>
-                  <Sprite id={id} />
-                  <span>{CATS.find((cat) => cat.id === id)?.name}</span>
-                </div>
-              ))}
-            </div>
-            <div className="expedition-gate">
-              <span className="eyebrow">EXPEDITION 01</span>
-              <h2>The Hollow Below</h2>
-              <p>3 chambers · 1 crown</p>
-              <p className="difficulty-preview">
-                {difficulty.label} · Threat {difficulty.tier}
-              </p>
-              <button
-                className="primary"
-                disabled={party.length !== 3}
-                onClick={() => {
-                  setRun(createRun(progress, party));
-                  setNotice("");
-                }}
+    <SkinsContext.Provider value={progress.skins}>
+      <div className={`app ${run ? "battle-mode" : "lobby-mode"}`}>
+        <header className="topbar">
+          <div className="brand">
+            <span className="brand-mark" aria-hidden="true">
+              ✣
+            </span>{" "}
+            CATACOMB CATS <small>{t("THE HOLLOW BELOW")}</small>
+          </div>
+          <div className="top-meta">
+            <span className="location-tag">
+              {run
+                ? t("DEPTH 0{n}", { n: run.room + 1 })
+                : t("CAMP / THE BURROW")}
+            </span>
+            <span className="currency">
+              {progress.gold} {t("gold")}
+            </span>
+            <span>{progress.xp} XP</span>
+            <label className="lang-switch">
+              <span>{t("Language")}</span>
+              <select
+                aria-label={t("Language")}
+                value={lang}
+                onChange={(event) => onLanguage(event.target.value as Lang)}
               >
-                Enter the dungeon →
-              </button>
-              <span className="gate-note">
-                {party.length === 3
-                  ? "Your party is ready."
-                  : `Choose ${3 - party.length} more companion${party.length === 2 ? "" : "s"}.`}
-              </span>
-            </div>
-            <div className="scene-coordinate" aria-hidden="true">
-              SAFE HAVEN · NO ENEMIES DETECTED
-            </div>
-          </section>
-          <div className="camp-desk">
-            <section
-              className="roster-dock"
-              aria-labelledby="companions-heading"
+                <option value="en">English</option>
+                <option value="es">Español</option>
+              </select>
+            </label>
+            <button
+              className="faq-nav quiet"
+              disabled={Boolean(run) && !practice}
+              title={
+                run && !practice
+                  ? t("Finish or retreat from the expedition first.")
+                  : undefined
+              }
+              onClick={startTutorial}
             >
-              <div className="section-heading">
-                <div>
-                  <span className="eyebrow">Prepare your expedition</span>
-                  <h2 id="companions-heading">The company</h2>
-                </div>
-                <span className="party-count">
-                  {party.length}
-                  <span> / 3 READY</span>
-                </span>
-              </div>
-              <div className="xp-summary">
-                <strong>
-                  Company mastery · Rank {masteryLevel(progress.xp)}
-                </strong>
-                <span>
-                  {masteryLevel(progress.xp) >= MAX_MASTERY_LEVEL
-                    ? "Mastery cap reached"
-                    : `${progress.xp % XP_PER_MASTERY} / ${XP_PER_MASTERY} XP to next level`}
-                </span>
-                <progress
-                  className="xp-progress"
-                  aria-label="Experience toward next level"
-                  max={150}
-                  value={
-                    masteryLevel(progress.xp) >= MAX_MASTERY_LEVEL
-                      ? XP_PER_MASTERY
-                      : progress.xp % XP_PER_MASTERY
-                  }
-                />
-                <p>
-                  Every 150 banked XP grants +2 max HP to all cats. Every third
-                  mastery level adds +1 power to attacks, healing, Guard and
-                  blessings. Mastery bonuses stop at level 10.
-                </p>
-              </div>
-              <div className="roster">
-                {CATS.map((cat) => {
-                  const rank = progress.catLevels[cat.id] ?? 0;
-                  const unit = buildCat(progress, cat.id);
-                  const nextTraining = nextTrainingDescription(cat.id, rank);
-                  return (
-                    <article
-                      className={`cat-card ${party.includes(cat.id) ? "selected" : "reserve"}`}
-                      key={cat.id}
-                    >
-                      <div className="portrait-stage">
-                        <Sprite id={cat.id} />
-                        <span className="selected-badge">
-                          {party.includes(cat.id)
-                            ? `0${party.indexOf(cat.id) + 1}`
-                            : "—"}
-                        </span>
-                      </div>
-                      <div className="cat-info">
-                        <div className="cat-name-line">
-                          <h3>{cat.name}</h3>
-                          <span className="cat-level">RANK {rank}</span>
-                        </div>
-                        <div className="role">{cat.role}</div>
-                        <div className="stats">
-                          <span>
-                            {unit.maxHp} <small>HP</small>
-                          </span>
-                          <span>
-                            {unit.initiative} <small>INIT</small>
-                          </span>
-                        </div>
-                        <div
-                          className="milestone-progress"
-                          aria-label={`${cat.name} skill unlock`}
-                        >
-                          {rank >= 3
-                            ? `Third skill unlocked: ${unit.abilities[2]?.name}`
-                            : `Third skill: ${rank}/3 training ranks · first 3 cost 100 gold total`}
-                        </div>
-                        <div className="card-actions">
-                          <button
-                            className={
-                              party.includes(cat.id)
-                                ? "party-toggle enrolled"
-                                : "party-toggle"
-                            }
-                            aria-pressed={party.includes(cat.id)}
-                            onClick={() => choose(cat.id)}
-                            disabled={
-                              !party.includes(cat.id) && party.length === 3
-                            }
-                          >
-                            {party.includes(cat.id)
-                              ? "Remove from party"
-                              : "Add to party"}
-                          </button>
-                          <label className="equipment-label">
-                            <span>TRINKET</span>
-                            <select
-                              aria-label={`Equipment for ${cat.name}`}
-                              value={progress.equipment[cat.id] ?? ""}
-                              onChange={(event) =>
-                                storeProgress(
-                                  equip(progress, cat.id, event.target.value),
-                                )
-                              }
-                            >
-                              <option value="">Empty slot</option>
-                              {progress.inventory.map((item) => (
-                                <option value={item} key={item}>
-                                  {item}{" "}
-                                  {item === "Iron bell"
-                                    ? "(+6 HP)"
-                                    : item === "Silk ribbon"
-                                      ? "(+3 INIT)"
-                                      : "(+1 ATK)"}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <p
-                            className="training-description"
-                            id={`training-${cat.id}`}
-                          >
-                            {nextTraining}
-                          </p>
-                          <button
-                            aria-describedby={`training-${cat.id}`}
-                            className="train-button quiet"
-                            onClick={() => {
-                              setNotice(
-                                `${cat.name} trained. ${nextTraining} Ready for the next expedition.`,
-                              );
-                              storeProgress(buyUpgrade(progress, cat.id));
-                            }}
-                            disabled={
-                              rank >= MAX_TRAINING_RANK ||
-                              progress.gold < upgradeCost(progress, cat.id)
-                            }
-                          >
-                            Train {cat.name} · {upgradeCost(progress, cat.id)}{" "}
-                            gold
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-            <aside className="camp-upgrades">
-              <span className="eyebrow">At the hearth</span>
-              <h2>Leave a light on.</h2>
-              <div className="hearth-symbol" aria-hidden="true">
-                ♜
-              </div>
-              <p className="blessing-rank">
-                Hearth blessing · Rank {progress.generalLevel}
-              </p>
-              <p>+2 max HP to every companion per rank (maximum 8 ranks).</p>
-              <div
-                className="difficulty-details"
-                aria-label="Expedition difficulty"
-              >
-                <h3>
-                  {difficulty.label} · Threat {difficulty.tier}
-                </h3>
-                <p>{difficulty.description}</p>
-                <p>
-                  {progress.wins} victories · {progress.spentGold} gold invested
-                  · Mastery {masteryLevel(progress.xp)}
-                </p>
-                <p>
-                  Difficulty is fixed when you enter. Future victories and
-                  permanent investment strengthen the next expedition.
-                </p>
-              </div>
-              <button
-                onClick={() => storeProgress(buyUpgrade(progress))}
-                disabled={
-                  progress.generalLevel >= MAX_TRAINING_RANK ||
-                  progress.gold < upgradeCost(progress)
+              {t("Tutorial")}
+            </button>
+            <button
+              className="faq-nav quiet"
+              aria-expanded={showFaq}
+              onClick={() => setShowFaq(!showFaq)}
+            >
+              FAQ
+            </button>
+          </div>
+        </header>
+        {notice && (
+          <div className="notice" role="status">
+            {notice}
+          </div>
+        )}
+        {showFaq && <Faq onClose={() => setShowFaq(false)} />}
+        {!showFaq && !run && (
+          <Lobby
+            progress={progress}
+            party={party}
+            expedition={open}
+            onExpedition={setExpedition}
+            entering={entering}
+            onChoose={choose}
+            onStore={storeProgress}
+            onNotice={setNotice}
+            onEnter={() => {
+              setNotice("");
+              void startRun(() =>
+                createRun(progress, party, runSeed(), {
+                  crit: runCrit(),
+                  relics: runRelics(),
+                  expedition: open,
+                }),
+              );
+            }}
+          />
+        )}
+        {run?.status === "relic" && !showFaq && (
+          <RelicPick
+            run={run}
+            onPick={(name) => updateRun(pickRelic(run, name))}
+            onLeave={leave}
+          />
+        )}
+        {run && run.status !== "relic" && (
+          // Kept mounted behind the field guide so the selection and previews survive.
+          <div style={{ display: showFaq ? "none" : "contents" }}>
+            <Battle
+              key={`${run.id}:${run.room}`}
+              run={run}
+              practice={practice}
+              locked={locked}
+              turnLocked={turnLocked}
+              onRun={updateRun}
+              onLeave={leave}
+              onContinue={() => {
+                if (practice) endTutorial("done");
+                else {
+                  keptScroll.current = window.scrollY;
+                  setRun(nextRoom(run));
                 }
-              >
-                Improve blessing · {upgradeCost(progress)} gold
-              </button>
-              <div className="camp-rule">
-                Upgrades stay.
-                <br />
-                Dungeon spoils must make it home.
-              </div>
-            </aside>
+              }}
+            />
           </div>
-        </>
-      ) : (
-        <>
-          <header className="battle-header">
-            <div>
-              <span className="eyebrow">
-                THE HOLLOW BELOW / CHAMBER 0{run.room + 1}
-              </span>
-              <h1>{roomNames[run.room]}</h1>
-            </div>
-            <div className="round-counter">
-              <span>ROUND {run.round}</span>
-              <strong>
-                {run.ap}
-                <small> / {run.maxAp} AP</small>
-              </strong>
-            </div>
-          </header>
-          <div
-            className="difficulty-banner"
-            aria-label="Active expedition difficulty"
-          >
-            {run.difficulty.label} · Threat {run.difficulty.tier} · Fixed for
-            this expedition
-          </div>
-          <nav className="room-path" aria-label="Expedition progress">
-            {["Entrance", "Forgotten hall", "Boss chamber"].map(
-              (room, index) => (
-                <span
-                  key={room}
-                  className={
-                    index === run.room
-                      ? "current"
-                      : index < run.room
-                        ? "cleared"
-                        : ""
-                  }
-                >
-                  {index < run.room ? "×" : `0${index + 1}`} {room}
-                </span>
-              ),
-            )}
-          </nav>
-          <div className="battle-layout">
-            <main>
-              <div className="battlefield">
-                <div className="battle-team allies">
-                  {run.party.map((unit) => (
-                    <article
-                      key={unit.id}
-                      className={`combatant ${unit.id === currentId ? "active" : ""} ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""}`}
-                    >
-                      <UnitEffects
-                        unit={unit}
-                        units={units}
-                        taunting={run.tauntId === unit.id}
-                      />
-                      <button
-                        className="unit-target"
-                        aria-label={`Target ${unit.name}`}
-                        aria-pressed={target === unit.id}
-                        onClick={() => setTarget(unit.id)}
-                        disabled={unit.hp <= 0 && !canSelectFallen}
-                      >
-                        <Sprite id={unit.id} />
-                      </button>
-                      <h3>{unit.name}</h3>
-                      <div className="health">
-                        <span
-                          style={{ width: `${(unit.hp / unit.maxHp) * 100}%` }}
-                        />
-                      </div>
-                      <span className="health-value">
-                        {unit.hp} / {unit.maxHp} HP
-                      </span>
-                    </article>
-                  ))}
-                </div>
-                <div className="battle-team enemies">
-                  {run.enemies.map((unit) => (
-                    <article
-                      key={unit.id}
-                      className={`combatant ${unit.hp <= 0 ? "dead" : ""} ${unit.id === target ? "targeted" : ""}`}
-                    >
-                      <UnitEffects
-                        unit={unit}
-                        units={units}
-                        taunting={run.tauntId === unit.id}
-                      />
-                      <button
-                        className="unit-target"
-                        aria-label={`Target ${unit.name}`}
-                        aria-pressed={target === unit.id}
-                        onClick={() => setTarget(unit.id)}
-                        disabled={unit.hp <= 0}
-                      >
-                        <Sprite id={unit.name} />
-                      </button>
-                      <h3>{unit.name}</h3>
-                      <div className="health">
-                        <span
-                          style={{ width: `${(unit.hp / unit.maxHp) * 100}%` }}
-                        />
-                      </div>
-                      <span className="health-value">
-                        {unit.hp} / {unit.maxHp} HP
-                      </span>
-                    </article>
-                  ))}
-                </div>
-              </div>
-              <div
-                className="expedition-effects"
-                aria-label="Expedition effects"
-              >
-                <strong>Expedition Strength +{run.bonus}</strong>
-                <span>
-                  +{run.bonus} damage to all cat attacks for this expedition.
-                </span>
-              </div>
-              <div className="initiative" aria-label="Initiative order">
-                <span className="queue-label">TURN ORDER</span>
-                {run.order.map((id) => (
-                  <span
-                    className={`${id === currentId ? "current" : ""} ${units.find((unit) => unit.id === id)?.hp === 0 ? "fallen" : ""}`}
-                    key={id}
-                  >
-                    {units.find((unit) => unit.id === id)?.name ?? id}
-                  </span>
-                ))}
-              </div>
-              {run.status === "combat" && (
-                <section className="command-deck">
-                  <div className="command-heading">
-                    <span className="eyebrow">YOUR MOVE</span>
-                    <h2>{current?.name ?? "Enemy"}</h2>
-                    <p>
-                      {canSelectFallen
-                        ? "Heal your team or select a fallen ally to revive."
-                        : "Choose a target, then an action."}
-                    </p>
-                  </div>
-                  <div className="actions">
-                    <select
-                      aria-label="Ability target"
-                      value={target}
-                      onChange={(event) => setTarget(event.target.value)}
-                    >
-                      <option value="">Choose target</option>
-                      {units
-                        .filter(
-                          (unit) =>
-                            unit.hp > 0 ||
-                            (canSelectFallen &&
-                              run.party.some((cat) => cat.id === unit.id)),
-                        )
-                        .map((unit) => (
-                          <option key={unit.id} value={unit.id}>
-                            {unit.name} (
-                            {unit.hp > 0
-                              ? `${unit.hp} HP`
-                              : "Fallen · revive target"}
-                            )
-                          </option>
-                        ))}
-                    </select>
-                    {current?.abilities.map((ability) => {
-                      const limit = ability.roomLimit ?? abilityLimit(ability);
-                      const uses = ability.roomLimit
-                        ? (run.roomUses[`${current.id}:${ability.id}`] ?? 0)
-                        : abilityUses(run, ability.id);
-                      const power = abilityPower(run, current, ability);
-                      const cooldown = cooldownRemaining(current, ability);
-                      const actionTarget =
-                        ability.target === "enemy" ||
-                        ability.target === "ally" ||
-                        ability.target === "fallen-ally"
-                          ? target
-                          : current.id;
-                      const reason =
-                        abilityUnavailableReason(run, ability) ??
-                        abilityTargetUnavailableReason(
-                          run,
-                          ability,
-                          actionTarget,
-                        );
-                      const selectedEnemy = run.enemies.find(
-                        (unit) => unit.id === actionTarget && unit.hp > 0,
-                      );
-                      const preview =
-                        selectedEnemy && ability.target === "enemy"
-                          ? damagePreview(run, current, ability, selectedEnemy)
-                          : undefined;
-                      const effect =
-                        ability.effect === "revive"
-                          ? "Revive one fallen ally at 60% max HP"
-                          : ability.effect === "heal"
-                            ? "healing"
-                            : ability.effect === "heal-all"
-                              ? "healing to each living ally"
-                              : ability.effect === "guard"
-                                ? "Guard · refresh restores full shield"
-                                : ability.effect === "fury"
-                                  ? "Inspired power · refresh only after duration decreases"
-                                  : ability.effect === "taunt"
-                                    ? "Taunt all attacks until your next turn"
-                                    : ability.effect === "ap"
-                                      ? "+2 AP and round capacity for this room"
-                                      : ability.effect === "pierce"
-                                        ? "damage · ignores armor"
-                                        : ability.effect === "cleave"
-                                          ? "damage to every enemy"
-                                          : "damage";
-                      const usageLabel = ability.roomLimit
-                        ? "this room"
-                        : "this turn";
-                      return (
-                        <button
-                          data-testid="ability"
-                          title={
-                            reason ??
-                            `${power} ${effect}. Target: ${ability.target}. ${Number.isFinite(limit) ? `${Math.max(0, limit - uses)} uses left ${usageLabel}.` : "Limited by shared AP."}`
-                          }
-                          key={ability.id}
-                          disabled={Boolean(reason)}
-                          onClick={() =>
-                            applyCombatAction(
-                              act(run, ability.id, actionTarget),
-                              ability,
-                            )
-                          }
-                        >
-                          <span>
-                            {ability.name} · {ability.cost} AP
-                          </span>
-                          <span className="ability-detail">
-                            {ability.effect === "taunt" ||
-                            ability.effect === "ap" ||
-                            ability.effect === "revive"
-                              ? ""
-                              : power}{" "}
-                            {effect}
-                          </span>
-                          {preview && (
-                            <span className="ability-detail damage-preview">
-                              {preview.damage} HP damage · {preview.armor} armor
-                              · {preview.blocked} Guard blocked ·{" "}
-                              {preview.iceBlocked > 0
-                                ? `${preview.iceBlocked} Ice Ward blocked · `
-                                : ""}
-                              {preview.remainingHp} HP left
-                            </span>
-                          )}
-                          {reason && (target || cooldown > 0) && (
-                            <span className="ability-detail ability-blocked">
-                              {reason}
-                            </span>
-                          )}
-                          {ability.cooldownTurns ? (
-                            <span className="ability-cooldown">
-                              {cooldown > 0
-                                ? `Ready in ${cooldown} ${current.name} turn starts`
-                                : `Ready · skips next ${ability.cooldownTurns} ${current.name} turn${ability.cooldownTurns === 1 ? "" : "s"} after use`}
-                            </span>
-                          ) : null}
-                          <span className="ability-usage">
-                            {Number.isFinite(limit)
-                              ? `${Math.max(0, limit - uses)}/${limit} uses left ${usageLabel}`
-                              : "AP limited"}
-                          </span>
-                        </button>
-                      );
-                    })}
-                    <button
-                      className="quiet end-turn"
-                      onClick={() => applyCombatAction(endTurn(run))}
-                    >
-                      End turn
-                    </button>
-                  </div>
-                </section>
-              )}
-              {run.status === "reward" && (
-                <section className="result">
-                  <span className="eyebrow">CHAMBER CLEARED</span>
-                  <h2>The way opens.</h2>
-                  <div className="reward-details">
-                    <p>
-                      Room reward: +{20 + run.room * 10} gold, +
-                      {30 + run.room * 15} XP and{" "}
-                      {run.items[run.items.length - 1]}.
-                    </p>
-                    <p>
-                      Added to expedition loot. Gold, XP and items are banked
-                      after defeating the boss and returning to the lobby.
-                    </p>
-                    <p>
-                      Applied now: surviving cats recovered up to 8 HP (capped
-                      at max HP). Fallen cats returned at 25% max HP, rounded
-                      up, without extra recovery. Expedition Strength increased
-                      by +1 to +{run.bonus} damage.
-                    </p>
-                    <p>
-                      {run.party
-                        .map((cat) => `${cat.name}: ${cat.hp}/${cat.maxHp} HP`)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      setRun(nextRoom(run));
-                      setTarget("");
-                    }}
-                  >
-                    Continue to next room →
-                  </button>
-                </section>
-              )}
-              {(run.status === "victory" || run.status === "defeat") && (
-                <section className="result">
-                  <span className="eyebrow">
-                    {run.status === "victory"
-                      ? "THE CROWN HAS FALLEN"
-                      : "THE DARK TAKES ITS DUE"}
-                  </span>
-                  <h2>
-                    {run.status === "victory"
-                      ? "The burrow has its heroes."
-                      : "Even brave cats need another try."}
-                  </h2>
-                  <p>
-                    {run.status === "victory"
-                      ? `Bring home ${run.gold} gold, ${run.xp} XP and your discoveries.`
-                      : "Your permanent upgrades remain. Return home and choose a new team."}
-                  </p>
-                  {run.status === "victory" && (
-                    <p>
-                      All companions are fully healed and combat effects are
-                      cleared. Your next expedition starts at full HP.
-                    </p>
-                  )}
-                  <button className="primary" onClick={leave}>
-                    Return to lobby
-                  </button>
-                </section>
-              )}
-            </main>
-            <aside className="journal">
-              <span className="eyebrow">FIELD NOTES</span>
-              <h2>The descent</h2>
-              <div className="run-loot">
-                {run.gold} gold <span>/</span> {run.xp} XP
-                <p>Unbanked expedition loot · secured after boss victory.</p>
-                <p>Items: {run.items.join(", ") || "None yet"}</p>
-              </div>
-              <ol className="log" aria-label="Combat log">
-                {run.log.slice(-12).map((line, index) => (
-                  <li key={`${index}-${line}`}>{line}</li>
-                ))}
-              </ol>
-              <button className="quiet" onClick={leave}>
-                Retreat to lobby
-              </button>
-              <p className="muted">Leave the expedition's spoils behind.</p>
-            </aside>
-          </div>
-        </>
+        )}
+        <footer className="footer">
+          <span>
+            CATACOMB CATS <span className="footer-dot">·</span> {t("CHAPTER I")}
+          </span>
+          <span>
+            {run ? t("NO WAY OUT BUT THROUGH") : t("THE FIRE IS STILL BURNING")}
+          </span>
+          <span>{t("LOCAL SAVE")}</span>
+        </footer>
+      </div>
+      {entering && (
+        <div className="entering-overlay" role="status">
+          {t("Entering the dungeon…")}
+        </div>
       )}
-      <footer className="footer">
-        <span>
-          CATACOMB CATS <span className="footer-dot">·</span> CHAPTER I
-        </span>
-        <span>
-          {run ? "NO WAY OUT BUT THROUGH" : "THE FIRE IS STILL BURNING"}
-        </span>
-        <span>LOCAL SAVE</span>
-      </footer>
-    </div>
+      {offer && !run && !showFaq && !tutorial && (
+        <TutorialOffer
+          onStart={startTutorial}
+          onLater={() => endTutorial("skipped")}
+        />
+      )}
+      {tutorial && !showFaq && (
+        <TutorialCoach
+          index={stepIndex}
+          waiting={false}
+          onNext={nextTutorialStep}
+          onSkip={() => endTutorial("skipped")}
+        />
+      )}
+    </SkinsContext.Provider>
   );
 }

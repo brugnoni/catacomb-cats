@@ -1,0 +1,278 @@
+import {
+  type Ability,
+  type Cat,
+  type EnemyPlanKind,
+  type Progress,
+} from "./model";
+
+export const strike: Ability = {
+  id: "strike",
+  name: "Claw strike",
+  cost: 1,
+  power: 4,
+  target: "enemy",
+};
+
+export const CATS: Cat[] = [
+  {
+    id: "miso",
+    name: "Miso",
+    role: "Vanguard",
+    color: "#f4ae68",
+    hp: 40,
+    initiative: 12,
+    abilities: [
+      { ...strike, name: "Valiant slash", power: 5 },
+      {
+        id: "guard",
+        name: "Nine lives",
+        cost: 1,
+        power: 8,
+        target: "ally",
+        effect: "guard",
+      },
+    ],
+  },
+  {
+    id: "luna",
+    name: "Luna",
+    role: "Mystic",
+    color: "#a99bea",
+    hp: 30,
+    initiative: 15,
+    abilities: [
+      { ...strike, name: "Moon bolt", power: 5 },
+      {
+        id: "fury",
+        name: "Moon blessing",
+        cost: 2,
+        power: 2,
+        target: "ally",
+        effect: "fury",
+        turnLimit: 1,
+      },
+    ],
+  },
+  {
+    id: "pip",
+    name: "Pursian",
+    role: "Scout",
+    color: "#88ceb3",
+    hp: 40,
+    initiative: 20,
+    abilities: [
+      strike,
+      {
+        id: "line",
+        name: "Dagger line",
+        cost: 1,
+        power: 5,
+        target: "enemy",
+        effect: "line",
+        turnLimit: 1,
+        cooldownTurns: 1,
+        lifesteal: 30,
+      },
+    ],
+  },
+  {
+    id: "clover",
+    name: "Mei",
+    role: "Healer",
+    color: "#d2d98d",
+    hp: 36,
+    initiative: 10,
+    abilities: [
+      { ...strike, name: "Thorn swipe" },
+      {
+        id: "heal",
+        name: "Healing purr",
+        cost: 2,
+        power: 7,
+        target: "ally",
+        effect: "heal",
+      },
+    ],
+  },
+  {
+    id: "ember",
+    name: "Tuntun",
+    role: "Brawler",
+    color: "#e98e91",
+    hp: 42,
+    initiative: 12,
+    abilities: [
+      { ...strike, name: "Cinder jab", power: 5 },
+      {
+        id: "slam",
+        name: "Flame paw",
+        cost: 3,
+        power: 24,
+        target: "enemy",
+        cooldownTurns: 1,
+        lifesteal: 30,
+      },
+    ],
+  },
+];
+
+export const SIGNATURE_ABILITIES: Record<string, Ability> = {
+  miso: {
+    id: "taunt",
+    name: "Stand behind me",
+    cost: 2,
+    power: 5,
+    target: "self",
+    effect: "taunt",
+    turnLimit: 1,
+  },
+  luna: {
+    id: "surge",
+    name: "Moonwell",
+    cost: 1,
+    power: 2,
+    target: "self",
+    effect: "ap",
+    roomLimit: 1,
+    turnLimit: 1,
+  },
+  clover: {
+    id: "renewal",
+    name: "Circle of renewal",
+    cost: 3,
+    power: 5,
+    target: "all-allies",
+    effect: "heal-all",
+    turnLimit: 1,
+  },
+  pip: {
+    id: "pierce",
+    name: "Needle strike",
+    cost: 2,
+    power: 8,
+    target: "enemy",
+    effect: "pierce",
+    turnLimit: 1,
+  },
+  ember: {
+    id: "cleave",
+    name: "Sweeping embers",
+    cost: 3,
+    power: 8,
+    target: "all-enemies",
+    effect: "cleave",
+    turnLimit: 1,
+    cooldownTurns: 1,
+    lifesteal: 30,
+  },
+};
+
+export const REVIVE_ABILITY: Ability = {
+  id: "revive",
+  name: "Return to the hearth",
+  cost: 3,
+  power: 60,
+  target: "fallen-ally",
+  effect: "revive",
+  turnLimit: 1,
+  cooldownTurns: 2,
+};
+
+/** What a Trinket adds to the cat wearing it; a missing field adds nothing. */
+export interface TrinketBonus {
+  hp?: number;
+  initiative?: number;
+  attack?: number;
+  healing?: number;
+  guard?: number;
+  fury?: number;
+  /** Percent critical chance. */
+  crit?: number;
+  /** Attack while below half HP. */
+  lowHpAttack?: number;
+  /** Damage returned to an attacker. */
+  thorns?: number;
+  /** Added to the healing skills give the wearer. */
+  healed?: number;
+  /** HP restored at the start of each room. */
+  roomHeal?: number;
+  /** Extra turns on the shields the wearer casts. */
+  guardTurns?: number;
+  /** Changes one skill of the wearer. */
+  skill?: { id: string; power?: number; falloff?: readonly number[] };
+}
+/** Every Trinket. Saves hold these names, so never rename or remove one. */
+export const ITEM_BONUS: Record<string, TrinketBonus> = {
+  "Iron bell": { hp: 6 },
+  "Silk ribbon": { initiative: 3 },
+  "Lucky fang": { attack: 1 },
+  "Copper locket": { hp: 3, initiative: 1 },
+  "Brass whistle": { hp: 2, initiative: 2 },
+  "Herb pouch": { healing: 2 },
+  "Knight's button": { guard: 2 },
+  "Moon pebble": { fury: 1 },
+  "Mint sprig": { hp: 3, healing: 1 },
+  "Pewter charm": { hp: 3, guard: 1 },
+  "Four-leaf clover": { crit: 5 },
+  "Thorn ring": { thorns: 1 },
+  "Pocket lantern": { guardTurns: 1 },
+  "Snack bag": { roomHeal: 4 },
+  "Brave bell": { lowHpAttack: 1 },
+  "Warm milk": { healed: 2 },
+  "Long thread": { skill: { id: "line", falloff: [1, 0.6, 0.45] } },
+  Hearthstone: { skill: { id: "revive", power: 15 } },
+  "Beacon stone": { skill: { id: "taunt", power: 3 } },
+  "Ember glove": { skill: { id: "slam", power: 4 } },
+};
+export const ITEMS = Object.keys(ITEM_BONUS);
+/** Percent chance that a cleared room before the boss drops a Trinket. */
+export const TRINKET_DROP_CHANCE = 50;
+/** Gold a drop gives once every Trinket is owned. */
+export const TRINKET_DROP_GOLD = 20;
+
+/** Names of the two extra Skins of each Companion; Skin 0 is the original. */
+export const SKINS: Record<string, [string, string]> = {
+  miso: ["Iron Warden", "Golden Aegis"],
+  luna: ["Nightshade", "Light Moon"],
+  pip: ["Night Owl", "Muad'Dib"],
+  clover: ["Frost Healer", "Field Medic"],
+  ember: ["Karate Master", "Shaolin Monk"],
+};
+
+export function initialProgress(): Progress {
+  return {
+    version: 1,
+    gold: 30,
+    xp: 0,
+    generalLevel: 0,
+    catLevels: {},
+    equipment: {},
+    inventory: [ITEMS[0]!],
+    claimedRuns: [],
+    expeditionWins: {},
+    spentGold: 0,
+    skins: {},
+    lampBoosts: 0,
+  };
+}
+
+/** What sets an enemy apart, keyed by its name. Enemies not listed just attack. */
+export interface EnemyTraits {
+  /** Plan for the rounds whose number modulo 3 is the key; it falls back to an attack when it has no one to act on. */
+  cycle?: Partial<Record<0 | 1 | 2, EnemyPlanKind>>;
+  /** Armor before the Ascension bonus. */
+  armor?: number;
+  /** Guard shield (lasting 2 turns) each room opens with. */
+  openingGuard?: number;
+  /** Curse power (1 when missing). */
+  curse?: number;
+}
+
+export const ENEMY_TRAITS: Record<string, EnemyTraits> = {
+  "Royal wisp": { cycle: { 1: "heal" } },
+  "Moss slime": { cycle: { 1: "inspire" } },
+  "Spore imp": { cycle: { 0: "mirror", 1: "curse", 2: "ward" } },
+  "The Hollow King": { cycle: { 1: "curse" }, armor: 1, curse: 2 },
+  "Bone squire": { cycle: { 1: "rally" }, armor: 2, openingGuard: 6 },
+  "Bone sentry": { armor: 2, openingGuard: 6 },
+};
