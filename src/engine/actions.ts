@@ -37,6 +37,7 @@ import {
 } from "./state";
 import {
   abilityUses,
+  abilityCost,
   abilityUnavailableReason,
   abilityTargetUnavailableReason,
   abilityPower,
@@ -45,6 +46,7 @@ import {
 import { hurt } from "./damage";
 import { canAct, resolveEnemies } from "./enemyAI";
 import { settleRoom } from "./room";
+import { RELICS, rollOffer } from "./relics";
 
 export function createRun(
   progress: Progress,
@@ -101,14 +103,40 @@ export function createRun(
     difficulty,
     secondWind: hearth.secondWind,
     hearthAp: hearth.openingAp,
+    relics: [],
+    offer: [],
+    useRelics: options.relics ?? false,
+    relicRng: (seed ^ 0x2545f491) >>> 0,
   };
-  enterRoom(run);
+  offerOrEnter(run);
   return run;
+}
+
+/** Holds the room until a Relic is picked, when there is one to offer. */
+function offerOrEnter(run: Run) {
+  const last = expeditionById(run.expedition).rooms.length - 1;
+  if (run.useRelics) run.offer = rollOffer(run, run.room === last);
+  if (run.offer.length) run.status = "relic";
+  else enterRoom(run);
+}
+
+export function pickRelic(state: Run, name: string): Run {
+  if (state.status !== "relic" || !state.offer.includes(name)) return state;
+  return transition(state, (run) => {
+    run.relics.push(name);
+    run.offer = [];
+    run.status = "combat";
+    RELICS[name]!.apply?.(run);
+    run.log.push(`Relic chosen: ${name}.`);
+    enterRoom(run);
+  });
 }
 
 /** Starts the room already set up in `run`: fresh cats, turn order, marks, then the enemies that act first. */
 function enterRoom(run: Run) {
   for (const cat of run.party) prepareRoom(cat);
+  if (run.relics.includes("Reckless torch"))
+    for (const e of run.enemies) e.abilities[0]!.power += 2;
   setOrder(run);
   markAll(run);
   beginTurn(run);
@@ -183,9 +211,46 @@ export function applyAbility(
   } else if (ability.effect === "line") {
     // The target takes the full hit; the enemies behind it (to its right) take less.
     abilityReach(run, ability, target.id).forEach((t, index) => {
-      if (actor.hp > 0) hurt(run, actor, t, ability, LINE_FALLOFF[index]);
+      if (actor.hp > 0)
+        hurt(run, actor, t, ability, (ability.falloff ?? LINE_FALLOFF)[index]);
     });
   } else hurt(run, actor, target, ability);
+  relicAftermath(run, actor, ability);
+}
+
+/** Relics that add to a skill once it has landed. */
+function relicAftermath(run: Run, actor: Unit, ability: Ability) {
+  const has = (name: string, cat: string, id: string) =>
+    run.relics.includes(name) &&
+    actor.id === cat &&
+    ability.id === id &&
+    actor.hp > 0;
+  if (has("Healing thorns", "clover", "strike")) {
+    const hurtMost = run.party
+      .filter((u) => u.hp > 0 && u.hp < u.maxHp)
+      .sort((x, y) => y.maxHp - y.hp - (x.maxHp - x.hp))[0];
+    if (hurtMost) {
+      const { healed, amount } = healUnit(run, actor, hurtMost, 3);
+      run.log.push(
+        `${actor.name} heals ${hurtMost.name}: +${healed} HP (${amount} healing power; ${hurtMost.hp}/${hurtMost.maxHp} HP).`,
+      );
+    }
+  }
+  if (has("Shield stance", "miso", "strike") && actor.guard < 3)
+    guard(run, actor, 3, GUARD_TURNS);
+  if (has("Overheat", "ember", "slam")) {
+    const lost = Math.min(5, actor.hp - 1);
+    actor.hp -= lost;
+    run.events.push({
+      type: "hit",
+      targetId: actor.id,
+      damage: lost,
+      absorbed: 0,
+    });
+    run.log.push(
+      `${actor.name} overheats: -${lost} HP (${actor.hp}/${actor.maxHp} HP).`,
+    );
+  }
 }
 
 export function act(state: Run, abilityId: string, targetId: string): Run {
@@ -201,7 +266,7 @@ export function act(state: Run, abilityId: string, targetId: string): Run {
   return transition(state, (run) => {
     const a = currentUnit(run)!;
     const t = units(run).find((u) => u.id === targetId)!;
-    run.ap -= ability.cost;
+    run.ap -= abilityCost(run, ability);
     run.uses[ability.id] = abilityUses(run, ability.id) + 1;
     const key = `${a.id}:${ability.id}`;
     run.roomUses[key] = (run.roomUses[key] ?? 0) + 1;
@@ -243,6 +308,6 @@ export function nextRoom(state: Run): Run {
     run.log.push(
       `Entering room ${run.room + 1}. Expedition Strength remains +${run.bonus} damage.`,
     );
-    enterRoom(run);
+    offerOrEnter(run);
   });
 }

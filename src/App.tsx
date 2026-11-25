@@ -6,6 +6,7 @@ import { LanguageScreen } from "./LanguageScreen";
 import { Lobby } from "./Lobby";
 import { SkinsContext } from "./Sprite";
 import { Battle } from "./Battle";
+import { RelicPick } from "./RelicPick";
 import { useTutorial } from "./useTutorial";
 import {
   EXPEDITION_KEY,
@@ -16,6 +17,7 @@ import {
   loadProgress,
   recordRun,
   runCrit,
+  runRelics,
   runSeed,
 } from "./storage";
 import { TutorialCoach, TutorialOffer } from "./Tutorial";
@@ -34,6 +36,7 @@ import {
 import {
   createRun,
   nextRoom,
+  pickRelic,
   claimRewards,
   type Run,
   type Progress,
@@ -230,13 +233,21 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
               void startRun(() =>
                 createRun(progress, party, runSeed(), {
                   crit: runCrit(),
+                  relics: runRelics(),
                   expedition: open,
                 }),
               );
             }}
           />
         )}
-        {run && (
+        {run?.status === "relic" && !showFaq && (
+          <RelicPick
+            run={run}
+            onPick={(name) => updateRun(pickRelic(run, name))}
+            onLeave={leave}
+          />
+        )}
+        {run && run.status !== "relic" && (
           // Kept mounted behind the field guide so the selection and previews survive.
           <div style={{ display: showFaq ? "none" : "contents" }}>
             <Battle

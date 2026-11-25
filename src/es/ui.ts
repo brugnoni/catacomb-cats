@@ -116,6 +116,13 @@ export const UI: Record<string, string> = {
   "Take off": "Quitar",
   "Pick a Trinket, then who wears it.":
     "Elige un amuleto y luego quién lo lleva.",
+  "Whole party": "Todo el equipo",
+  "Choose a Relic": "Elige una reliquia",
+  "It lasts until this expedition ends.":
+    "Dura hasta que termine esta expedición.",
+  Relics: "Reliquias",
+  "Hit 1 enemy for {power} and the one behind it for {second}.":
+    "Golpea a 1 enemigo por {power} y al de detrás por {second}.",
   "Export progress": "Exportar progreso",
   "Import progress": "Importar progreso",
   "That file is not a valid save. Nothing was changed.":

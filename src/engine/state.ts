@@ -28,6 +28,13 @@ export function random(run: Run): number {
   return value;
 }
 
+/** A separate stream for Relic offers. */
+export function relicRandom(run: Run): number {
+  const [next, value] = mulberry32(run.relicRng);
+  run.relicRng = next;
+  return value;
+}
+
 /** A separate stream for Trinket drops. */
 export function dropRandom(run: Run): number {
   const [next, value] = mulberry32(run.dropRng);

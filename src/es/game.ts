@@ -24,6 +24,49 @@ export const GAME: Record<string, string> = {
   "Flame paw": "Garra de fuego",
   "Sweeping embers": "Brasas arrasadoras",
   // Items
+  "Relic chosen: {1}.": "Reliquia elegida: {1}.",
+  "{1} overheats: -{2} HP ({3}/{4} HP).":
+    "{1} se sobrecalienta: -{2} PV ({3}/{4} PV).",
+  "Warm broth": "Caldo caliente",
+  "Cleared rooms heal 20% more of max HP.":
+    "Cada sala superada cura un 20% más de los PV máximos.",
+  "Lucky whisker": "Bigote de la suerte",
+  "+10% critical chance for your cats.":
+    "+10% de probabilidad de crítico para tus gatos.",
+  "+1 armor for every cat.": "+1 de armadura para cada gato.",
+  "Stone den": "Guarida de piedra",
+  "Guard shields cast by your cats are 3 stronger.":
+    "Los escudos de Guardia de tus gatos son 3 más fuertes.",
+  "Reckless torch": "Antorcha temeraria",
+  "Your cats deal 3 more damage.": "Tus gatos hacen 3 de daño extra.",
+  "Enemies deal 2 more damage.": "Los enemigos hacen 2 de daño extra.",
+  "Heavy collars": "Collares pesados",
+  "+25% max HP for every cat.": "+25% de PV máximos para cada gato.",
+  "-4 initiative for every cat.": "-4 de iniciativa para cada gato.",
+  "Healing thorns": "Espinas curativas",
+  "Thorn swipe also heals the most wounded ally for 3.":
+    "Zarpazo espinoso también cura 3 al aliado más herido.",
+  "Hurried remedy": "Remedio apurado",
+  "Healing purr costs 1 AP.": "Ronroneo curativo cuesta 1 PA.",
+  "Healing purr heals 3 less.": "Ronroneo curativo cura 3 menos.",
+  "Shield stance": "Postura de escudo",
+  "Valiant slash also gives Miso a 3 shield.":
+    "Tajo valiente también le da a Miso un escudo de 3.",
+  "Iron coat": "Capa de hierro",
+  "+2 armor for Miso.": "+2 de armadura para Miso.",
+  "-6 initiative for Miso.": "-6 de iniciativa para Miso.",
+  Kindling: "Yesca",
+  "The first Cinder jab of each turn costs no AP.":
+    "El primer Golpe de brasa de cada turno no cuesta PA.",
+  Overheat: "Sobrecalentamiento",
+  "Flame paw has no cooldown.": "Pata en llamas no tiene enfriamiento.",
+  "Each Flame paw costs Tuntun 5 HP, never the last one.":
+    "Cada Pata en llamas le cuesta 5 PV a Tuntun, nunca el último.",
+  "Full moon": "Luna llena",
+  "Moon bolt also hits the next foe for half.":
+    "Rayo lunar también golpea al siguiente enemigo con la mitad.",
+  "Smoke step": "Paso de humo",
+  "Dagger line has no cooldown.": "Línea de dagas no tiene enfriamiento.",
   "Iron bell": "Campana de hierro",
   "Iron Warden": "Guardián de Hierro",
   "Golden Aegis": "Égida Dorada",

@@ -3,6 +3,7 @@ import { cooldownText, describeAbility } from "./abilityText";
 import { translateEngine } from "./engineText";
 import { useT } from "./i18n";
 import {
+  abilityCost,
   abilityLimit,
   abilityPower,
   abilityTargetUnavailableReason,
@@ -78,7 +79,10 @@ export function AbilityButton({
         disabled={Boolean(reason) || locked}
         onClick={() => onAct(act(run, ability.id, actionTarget), ability)}
       >
-        <AbilityHead ability={ability} power={power} />
+        <AbilityHead
+          ability={{ ...ability, cost: abilityCost(run, ability) }}
+          power={power}
+        />
         {preview && (
           <span className="ability-detail damage-preview">
             {preview.damage > 0

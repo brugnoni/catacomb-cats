@@ -6,6 +6,8 @@ declare global {
   interface Window {
     /** Optional fixed seed so browser tests get reproducible enemy marks. */
     __CATACOMB_SEED__?: number;
+    /** Browser tests: false skips the Relic offers. */
+    __CATACOMB_RELICS__?: boolean;
     /** Browser tests: "off" disables critical hits, a number fixes the chance. */
     __CATACOMB_CRIT__?: "off" | number;
     /** Browser tests: removes the pauses of the battle animations. */
@@ -17,6 +19,7 @@ export const pace = (ms: number) => (window.__CATACOMB_FAST__ ? 0 : ms);
 export const runSeed = () =>
   window.__CATACOMB_SEED__ ?? crypto.getRandomValues(new Uint32Array(1))[0]!;
 export const runCrit = () => window.__CATACOMB_CRIT__ ?? "on";
+export const runRelics = () => window.__CATACOMB_RELICS__ ?? true;
 export const SAVE_KEY = "catacomb-cats.progress.v1";
 /** The last save the game could not read, kept before a fresh one replaces it. */
 export const BACKUP_KEY = "catacomb-cats.progress.backup";

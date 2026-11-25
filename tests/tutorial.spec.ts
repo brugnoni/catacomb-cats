@@ -203,3 +203,11 @@ test("the button is unavailable during a real expedition", async ({ page }) => {
     page.getByRole("button", { name: "Tutorial", exact: true }),
   ).toBeDisabled();
 });
+
+// Relic offers have their own test; the rest start straight in the room.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __CATACOMB_RELICS__?: boolean };
+    w.__CATACOMB_RELICS__ ??= false;
+  });
+});

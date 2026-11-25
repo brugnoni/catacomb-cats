@@ -219,3 +219,35 @@
   font-size: 14px;
   color: #cdb7ef;
 }
+.relic-pick {
+  text-align: center;
+  padding: 30px 0;
+}
+.relic-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.relic-cards button,
+.held-relics li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.relic-cards button {
+  padding: 18px 12px;
+  align-items: center;
+}
+.relic-drawback {
+  color: #e98e91;
+}
+.held-relics {
+  list-style: none;
+  padding: 0;
+  font-size: 15px;
+}
+.held-relics li {
+  gap: 2px;
+  margin-bottom: 8px;
+}

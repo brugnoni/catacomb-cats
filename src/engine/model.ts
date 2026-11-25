@@ -22,6 +22,8 @@ export interface Ability {
   roomLimit?: number;
   cooldownTurns?: number;
   cooldownGroup?: string;
+  /** Damage shares of a line, when it is not Dagger line's. */
+  falloff?: readonly number[];
   /** Percent of the HP damage this skill deals that heals the caster. */
   lifesteal?: number;
 }
@@ -134,7 +136,15 @@ export interface Run {
   room: number;
   /** Id of the Expedition this Run belongs to. */
   expedition: string;
-  status: "combat" | "reward" | "victory" | "defeat";
+  /** "relic": a Relic must be picked before the room starts. */
+  status: "relic" | "combat" | "reward" | "victory" | "defeat";
+  /** Relics held in this Run, and the ones on offer. */
+  relics: string[];
+  offer: string[];
+  /** Relics are offered in this Run. */
+  useRelics: boolean;
+  /** Separate generator for Relic offers. */
+  relicRng: number;
   log: string[];
   gold: number;
   xp: number;
@@ -166,6 +176,8 @@ export interface Run {
 }
 
 export interface RunOptions {
+  /** Offers a Relic before every room; off by default. */
+  relics?: boolean;
   /** "off" (default) disables critical hits; "on" uses the base chance plus Hearth; a number fixes the chance. */
   crit?: "off" | "on" | number;
   /** Expedition id; defaults to the first one. */

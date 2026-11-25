@@ -70,7 +70,12 @@ export function settleRoom(run: Run): boolean {
         const healed = Math.min(
           Math.max(
             ROOM_HEAL.flat,
-            Math.ceil((c.maxHp * ROOM_HEAL.percent) / 100),
+            Math.ceil(
+              (c.maxHp *
+                (ROOM_HEAL.percent +
+                  (run.relics.includes("Warm broth") ? 20 : 0))) /
+                100,
+            ),
           ),
           c.maxHp - c.hp,
         );

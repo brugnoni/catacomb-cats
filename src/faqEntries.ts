@@ -61,6 +61,12 @@ export function buildEntries(t: Translate): [string, string][] {
       ),
     ],
     [
+      t("What are Relics?"),
+      t(
+        "A Relic is a bonus that lasts one expedition. Before each of the three rooms you are offered three and must pick one. Some belong to one companion and only appear when that cat is in the party, and some take something in exchange. Relics never raise your Power or the enemies' Ascension.",
+      ),
+    ],
+    [
       t("How do I equip or remove a trinket?"),
       t(
         "Pick a Trinket in the Bag under the companions, then choose who wears it. Take off removes it and it stays in the Bag. Each Trinket can be worn by only one cat at a time. Trinkets are found at random: each room before the boss has a {pct}% chance to drop one you do not own, and the boss always drops one. Once you own them all, a drop gives {gold} gold instead.",

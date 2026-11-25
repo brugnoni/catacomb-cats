@@ -1,4 +1,5 @@
 import { translateEngine } from "./engineText";
+import { RelicText } from "./RelicPick";
 import { useT } from "./i18n";
 import { ROOM_HEAL } from "./progression";
 import { roomReward } from "./expeditions";
@@ -132,6 +133,15 @@ export function FieldNotes({
           })}
         </p>
       </div>
+      {run.relics.length > 0 && (
+        <ul className="held-relics" aria-label={t("Relics")}>
+          {run.relics.map((name) => (
+            <li key={name}>
+              <RelicText name={name} />
+            </li>
+          ))}
+        </ul>
+      )}
       <ol className="log" aria-label={t("Combat log")}>
         {run.log.slice(-12).map((line, index) => (
           <li key={`${index}-${line}`}>{translateEngine(t, line)}</li>

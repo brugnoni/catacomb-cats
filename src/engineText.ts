@@ -12,6 +12,11 @@ export const RULES: [RegExp, string][] = [
     /^Room rewards: \+(\d+) gold, \+(\d+) XP\. Spoils are banked when the boss is defeated\.$/,
     "Room rewards: +{1} gold, +{2} XP. Spoils are banked when the boss is defeated.",
   ],
+  [/^Relic chosen: (.+)\.$/, "Relic chosen: {1}."],
+  [
+    /^(.+) overheats: -(\d+) HP \((\d+)\/(\d+) HP\)\.$/,
+    "{1} overheats: -{2} HP ({3}/{4} HP).",
+  ],
   [/^Trinket found: (.+)\.$/, "Trinket found: {1}."],
   [
     /^No new Trinket to find: \+(\d+) gold\.$/,
