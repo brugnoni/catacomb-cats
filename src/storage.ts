@@ -60,3 +60,7 @@ export function loadProgress(): Progress {
   }
   return initialProgress();
 }
+/** The downloadable save file. */
+export const exportSave = (progress: Progress) => JSON.stringify(progress);
+/** The progress in a save file, or null when the file cannot be trusted. */
+export const importSave = (raw: string) => readProgress(raw);

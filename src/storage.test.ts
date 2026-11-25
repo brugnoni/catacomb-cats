@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { initialProgress } from "./game";
 import {
   BACKUP_KEY,
+  exportSave,
+  importSave,
   PARTY_KEY,
   SAVE_KEY,
   loadParty,
@@ -80,5 +82,14 @@ describe("backup of a save about to be reset", () => {
     memory.set(SAVE_KEY, JSON.stringify(initialProgress()));
     loadProgress();
     expect(memory.has(BACKUP_KEY)).toBe(false);
+  });
+});
+
+describe("save file", () => {
+  it("round-trips progress and rejects anything invalid", () => {
+    const progress = { ...initialProgress(), gold: 99 };
+    expect(importSave(exportSave(progress))).toMatchObject({ gold: 99 });
+    expect(importSave("nonsense")).toBeNull();
+    expect(importSave('{"version":2}')).toBeNull();
   });
 });

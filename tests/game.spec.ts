@@ -1897,3 +1897,26 @@ test("ten quick clicks on the Burrow lantern pay out and stop after five", async
   for (let i = 0; i < 60; i++) await lamp.dispatchEvent("click");
   await expect(gold).toHaveText(/^5030 gold/);
 });
+
+test("progress exports to a file and imports back, rejecting a bad file", async ({
+  page,
+}) => {
+  await seedLegacySave(page, { gold: 77 });
+  await page.goto("/");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export progress" }).click();
+  const file = await (await download).path();
+  const picker = page.locator('.save-file input[type="file"]');
+  await picker.setInputFiles({
+    name: "bad.json",
+    mimeType: "application/json",
+    buffer: Buffer.from("nonsense"),
+  });
+  await expect(page.locator(".notice")).toContainText("Nothing was changed");
+  await expect(page.locator(".currency")).toContainText("77 gold");
+  await page.getByRole("button", { name: /Improve blessing/ }).click();
+  await expect(page.locator(".currency")).not.toContainText("77 gold");
+  page.once("dialog", (dialog) => void dialog.accept());
+  await picker.setInputFiles(file);
+  await expect(page.locator(".currency")).toContainText("77 gold");
+});

@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { CatCard } from "./CatCard";
 import { ExpeditionPicker } from "./ExpeditionPicker";
+import { SaveFile } from "./SaveFile";
 import { Sprite } from "./Sprite";
 import { useT } from "./i18n";
 import {
@@ -255,6 +256,7 @@ export function Lobby({
             <br />
             {t("Dungeon spoils must make it home.")}
           </div>
+          <SaveFile progress={progress} onStore={onStore} onNotice={onNotice} />
         </aside>
       </div>
     </>

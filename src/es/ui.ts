@@ -102,6 +102,13 @@ export const UI: Record<string, string> = {
     "La dificultad queda fija al entrar. Las futuras victorias y la inversión permanente refuerzan la próxima expedición.",
   "Blessing complete": "Bendición completa",
   "Your turn!": "¡Tu turno!",
+  "Export progress": "Exportar progreso",
+  "Import progress": "Importar progreso",
+  "That file is not a valid save. Nothing was changed.":
+    "Ese archivo no es un guardado válido. No se cambió nada.",
+  "Replace your current progress with this file?":
+    "¿Reemplazar tu progreso actual por este archivo?",
+  "Progress imported.": "Progreso importado.",
   "Upgrades stay.": "Las mejoras se quedan.",
   "Dungeon spoils must make it home.":
     "El botín de la mazmorra debe llegar a casa.",

@@ -261,3 +261,8 @@ hr {
 .battle-header h1 {
   font-size: 20px;
 }
+.save-file {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+}
