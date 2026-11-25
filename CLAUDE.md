@@ -28,6 +28,15 @@ npm exec --yes --package=pnpm@11.25.0 -- pnpm <script>
 - Keep rules independent of React. Fix bugs with a regression test first; gameplay changes need meaningful tests.
 - Do not generate more images unless asked. No telemetry, remote services or secrets.
 
+## Parallel chats (stacked PRs)
+
+One chat = one branch = one worktree = one PR. `pnpm stack <cmd>` (`scripts/stack.mjs`) keeps the registry `.scratch/lanes.json` (in the primary checkout, git-ignored): `status`, `new <branch> [--on parent] [--files a,b]` (branch + worktree), `adopt <branch>` (register an existing one, rebases nothing), `submit [tip]` (restack, push, open or retarget PRs) and `land [tip]` (merge bottom-up).
+
+- Independent work branches from `main`; stack (`--on parent`) only when B needs A's code, at most 3 deep.
+- Before starting, run `status`: do not touch files another lane touches (hot spots: `src/engine/units.ts`, `src/es/ui.ts`, `src/progression.ts`) without telling the user.
+- Do not edit `docs/HANDOFF.md` on a lane; leave `.scratch/handoff-<branch>.md`. One pass folds them in after `land`.
+- `submit` and `land` push (`--force-with-lease`, lane branches only) and merge (squash, which deploys Pages). Run them only after the user approves in chat, then pass `--yes`. A rebase conflict stops the script; resolve it in that lane's worktree and rerun.
+
 ## Architecture
 
 - `src/game.ts` is only a facade re-exporting the public API of `src/engine/`: the pure, immutable rules engine, layered `model` (types) → `data` (cats, abilities, items) → `units` (builders) → `state` (turn order, marks, RNG, effects) → `abilities` (availability, power) → `damage` → `enemyAI` → `actions` (`createRun`, `act`, `endTurn`, `nextRoom`), plus `save` (`parseProgress`, upgrades). Imports only go down that list; add new public names to the facade. Public actions (`createRun`, `act`, `endTurn`, `nextRoom`) clone state and return a new `Run`; invalid actions return the _same_ object (tests rely on `toBe(r)`).
