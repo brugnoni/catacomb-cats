@@ -9,9 +9,9 @@
   --ink: #101723;
   --line: #53515a;
   --muted: #a3a5a2;
-  --paw: url("../cursors/paw.svg") 20 16, auto;
-  --paw-hover: url("../cursors/paw-hover.svg") 20 16, pointer;
-  --paw-attack: url("../cursors/paw-attack.svg") 20 16, crosshair;
+  --paw: url("../cursors/paw.svg") 18 14, auto;
+  --paw-hover: url("../cursors/paw-hover.svg") 18 14, pointer;
+  --paw-attack: url("../cursors/paw-attack.svg") 18 14, crosshair;
 }
 * {
   box-sizing: border-box;
