@@ -4,14 +4,13 @@ import {
   SIGNATURE_ABILITIES,
   buildCat,
   buyUpgrade,
-  equip,
   setSkin,
   SKINS,
   upgradeCost,
   type Cat,
   type Progress,
 } from "./game";
-import { itemBonusText, nextTrainingText } from "./uiText";
+import { nextTrainingText } from "./uiText";
 
 /** One companion in the camp: party toggle, trinket and training. */
 export function CatCard({
@@ -94,25 +93,14 @@ export function CatCard({
               ? t("Remove from party")
               : t("Add to party")}
           </button>
-          <label className="equipment-label">
+          <div className="equipment-label trinket-worn" data-worn={cat.id}>
             <span>{t("TRINKET")}</span>
-            <select
-              aria-label={t("Equipment for {name}", {
-                name: cat.name,
-              })}
-              value={progress.equipment[cat.id] ?? ""}
-              onChange={(event) =>
-                onStore(equip(progress, cat.id, event.target.value))
-              }
-            >
-              <option value="">{t("Empty slot")}</option>
-              {progress.inventory.map((item) => (
-                <option value={item} key={item}>
-                  {t(item)} {itemBonusText(item, t)}
-                </option>
-              ))}
-            </select>
-          </label>
+            <strong>
+              {progress.equipment[cat.id]
+                ? t(progress.equipment[cat.id]!)
+                : t("Empty slot")}
+            </strong>
+          </div>
           <label className="equipment-label">
             <span>{t("SKIN")}</span>
             <select

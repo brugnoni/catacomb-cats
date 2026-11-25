@@ -37,6 +37,13 @@ export const GAME: Record<string, string> = {
   "Shaolin Monk": "Monje Shaolin",
   "Silk ribbon": "Cinta de seda",
   "Lucky fang": "Colmillo de la suerte",
+  "Copper locket": "Medallón de cobre",
+  "Brass whistle": "Silbato de latón",
+  "Herb pouch": "Bolsita de hierbas",
+  "Knight's button": "Botón de caballero",
+  "Moon pebble": "Guijarro lunar",
+  "Mint sprig": "Ramita de menta",
+  "Pewter charm": "Dije de peltre",
   // Enemies
   "Crypt rat": "Rata de cripta",
   "Moss slime": "Limo musgoso",
@@ -177,8 +184,11 @@ export const GAME: Record<string, string> = {
     "+1 PA en la primera ronda de cada sala y +5% de probabilidad de crítico para cada gato.",
   // Engine log lines
   "The descent begins. {1}.": "El descenso comienza. {1}.",
-  "Room rewards: +{1} gold, +{2} XP and {3}. Spoils are banked when the boss is defeated.":
-    "Recompensas de sala: +{1} de oro, +{2} XP y {3}. El botín se guarda al derrotar al jefe.",
+  "Room rewards: +{1} gold, +{2} XP. Spoils are banked when the boss is defeated.":
+    "Recompensas de sala: +{1} de oro, +{2} XP. El botín se guarda al derrotar al jefe.",
+  "Trinket found: {1}.": "Amuleto encontrado: {1}.",
+  "No new Trinket to find: +{1} gold.":
+    "No quedan amuletos nuevos: +{1} de oro.",
   "Expedition Strength +1: all damage is now +{1} for the rest of this run.":
     "Fuerza de expedición +1: todo el daño es ahora +{1} durante el resto de esta partida.",
   "{1} fully recovers after expedition victory ({2}/{3} HP).":

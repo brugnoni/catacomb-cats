@@ -17,6 +17,8 @@ export {
   REVIVE_ABILITY,
   ITEMS,
   ITEM_BONUS,
+  TRINKET_DROP_CHANCE,
+  TRINKET_DROP_GOLD,
   SKINS,
   initialProgress,
 } from "./engine/data";

@@ -52,6 +52,6 @@ export const TUTORIAL: Record<string, string> = {
   "Keep attacking and passing the turn until both enemies fall. Critical hits, misses and ready skills are announced over the cats as you play.":
     "Sigue atacando y pasando el turno hasta que caigan los dos enemigos. Los críticos, los fallos y las habilidades listas se anuncian sobre los gatos mientras juegas.",
   "Loot and what comes next": "Botín y lo que sigue",
-  "Clearing a room gives gold, XP and an item, but they are only banked when the boss falls. Practice rewards are not kept. You can open this tutorial again any time from the Tutorial button.":
-    "Superar una sala da oro, XP y un objeto, pero solo se guardan cuando cae el jefe. Las recompensas de práctica no se conservan. Puedes abrir este tutorial otra vez cuando quieras desde el botón Tutorial.",
+  "Clearing a room gives gold, XP and sometimes a Trinket, but they are only banked when the boss falls. Practice rewards are not kept. You can open this tutorial again any time from the Tutorial button.":
+    "Superar una sala da oro, XP y a veces un amuleto, pero solo se guardan cuando cae el jefe. Las recompensas de práctica no se conservan. Puedes abrir este tutorial otra vez cuando quieras desde el botón Tutorial.",
 };
