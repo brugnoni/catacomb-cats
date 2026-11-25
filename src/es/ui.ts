@@ -49,10 +49,12 @@ export const UI: Record<string, string> = {
   "/ 3 READY": "/ 3 LISTOS",
   "Company mastery · Rank {n}": "Maestría de la compañía · Rango {n}",
   "Mastery cap reached": "Tope de maestría alcanzado",
+  "Unlock {name} to raise the mastery cap":
+    "Desbloquea {name} para subir el tope de maestría",
   "{xp} / {max} XP to next level": "{xp} / {max} XP para el siguiente nivel",
   "Experience toward next level": "Experiencia hacia el siguiente nivel",
-  "Every 150 banked XP grants +2 max HP to all cats. Every third mastery level adds +1 power to attacks, healing, Guard and blessings. Mastery bonuses stop at level 10.":
-    "Cada 150 XP guardados dan +2 PV máx. a todos los gatos. Cada tercer nivel de maestría suma +1 de poder a los ataques, la curación, la Guardia y las bendiciones. Los bonos de maestría terminan en el nivel 10.",
+  "Every 150 banked XP grants +2 max HP to all cats. Every third mastery level adds +1 power to attacks, healing, Guard and blessings. Mastery is capped by your highest unlocked Expedition, up to level 10.":
+    "Cada 150 XP guardados dan +2 PV máx. a todos los gatos. Cada tercer nivel de maestría suma +1 de poder a los ataques, la curación, la Guardia y las bendiciones. La maestría está limitada por tu expedición más alta desbloqueada, hasta el nivel 10.",
   RANK: "RANGO",
   HP: "PV",
   INIT: "INIC",
