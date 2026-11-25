@@ -8,6 +8,19 @@
   margin: 20px 0 24px;
   isolation: isolate;
   box-shadow: 0 8px 0 #080c13;
+  container-type: size;
+}
+/* Sits over the lantern in burrow.png (1672x941, source px 928,391), following the cover/center 57% crop. */
+.lamp-hotspot {
+  --s: max(calc(100cqw / 1672), calc(100cqh / 941));
+  position: absolute;
+  left: calc((100cqw - 1672 * var(--s)) * 0.5 + 928 * var(--s));
+  top: calc((100cqh - 941 * var(--s)) * 0.57 + 391 * var(--s));
+  width: calc(60 * var(--s));
+  height: calc(90 * var(--s));
+  transform: translate(-50%, -50%);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .burrow-scene:after {
   content: "";

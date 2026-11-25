@@ -19,6 +19,20 @@ export function claimRewards(progress: Progress, run: Run): Progress {
   };
 }
 
+export const LAMP_BOOST_MAX = 5;
+const LAMP_BOOST = 1000;
+
+/** Burrow lantern easter egg: a testing shortcut worth up to 5000 gold and XP in total. */
+export function lampBoost(progress: Progress): Progress {
+  if (progress.lampBoosts >= LAMP_BOOST_MAX) return progress;
+  return {
+    ...progress,
+    gold: progress.gold + LAMP_BOOST,
+    xp: progress.xp + LAMP_BOOST,
+    lampBoosts: progress.lampBoosts + 1,
+  };
+}
+
 export function upgradeCost(progress: Progress, catId?: string): number {
   return catId
     ? trainingCost(progress.catLevels[catId] ?? 0)
@@ -119,7 +133,8 @@ export function parseProgress(raw: string | null): Progress {
           Object.entries(x.expeditionWins).some(
             ([id, n]) => EXPEDITIONS.some((e) => e.id === id) && !num(n),
           ))) ||
-      (x.spentGold !== undefined && !num(x.spentGold))
+      (x.spentGold !== undefined && !num(x.spentGold)) ||
+      (x.lampBoosts !== undefined && !num(x.lampBoosts))
     )
       return initialProgress();
     const legacySpend =
@@ -147,6 +162,7 @@ export function parseProgress(raw: string | null): Progress {
         ).filter(([id]) => EXPEDITIONS.some((e) => e.id === id)),
       ),
       spentGold: x.spentGold ?? Math.min(1000000, legacySpend),
+      lampBoosts: Math.min(LAMP_BOOST_MAX, x.lampBoosts ?? 0),
       // Older saves have no Skins; bad entries are dropped instead of resetting the save.
       skins: Object.fromEntries(
         Object.entries(

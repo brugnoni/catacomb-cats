@@ -38,6 +38,8 @@ export const UI: Record<string, string> = {
   "Entering the dungeon…": "Entrando en la mazmorra…",
   "Enter the dungeon →": "Entrar en la mazmorra →",
   "Your party is ready.": "Tu equipo está listo.",
+  "The lantern flares up. +1000 gold and +1000 XP.":
+    "La lámpara se aviva. +1000 de oro y +1000 de XP.",
   "Choose 1 more companion.": "Elige 1 compañero más.",
   "Choose {n} more companions.": "Elige {n} compañeros más.",
   "SAFE HAVEN · NO ENEMIES DETECTED":

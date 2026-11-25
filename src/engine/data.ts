@@ -207,6 +207,7 @@ export function initialProgress(): Progress {
     expeditionWins: {},
     spentGold: 0,
     skins: {},
+    lampBoosts: 0,
   };
 }
 
