@@ -60,6 +60,8 @@ export interface Progress {
   spentGold: number;
   /** Chosen Skin per Companion id: 1 or 2; a missing id wears the original. */
   skins: Record<string, number>;
+  /** Times the Burrow lantern easter egg has paid out. */
+  lampBoosts: number;
 }
 
 export interface Unit {

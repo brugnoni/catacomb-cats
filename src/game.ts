@@ -39,6 +39,8 @@ export {
   upgradeCost,
   buyUpgrade,
   equip,
+  lampBoost,
+  LAMP_BOOST_MAX,
   setSkin,
   parseProgress,
 } from "./engine/save";

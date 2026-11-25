@@ -1,8 +1,15 @@
+import { useRef } from "react";
 import { CatCard } from "./CatCard";
 import { ExpeditionPicker } from "./ExpeditionPicker";
 import { Sprite } from "./Sprite";
 import { useT } from "./i18n";
-import { CATS, buyUpgrade, upgradeCost, type Progress } from "./game";
+import {
+  CATS,
+  buyUpgrade,
+  lampBoost,
+  upgradeCost,
+  type Progress,
+} from "./game";
 import {
   MAX_TRAINING_RANK,
   XP_PER_MASTERY,
@@ -49,6 +56,20 @@ export function Lobby({
   onEnter: () => void;
 }) {
   const { t } = useT();
+  const lamp = useRef({ clicks: 0, last: 0 });
+  // Easter egg: 10 quick clicks on the lantern in the art (a testing shortcut).
+  const clickLamp = () => {
+    const now = Date.now();
+    const state = lamp.current;
+    state.clicks = now - state.last > 1500 ? 1 : state.clicks + 1;
+    state.last = now;
+    if (state.clicks < 10) return;
+    state.clicks = 0;
+    const next = lampBoost(progress);
+    if (next === progress) return;
+    onStore(next);
+    onNotice(t("The lantern flares up. +1000 gold and +1000 XP."));
+  };
   const difficulty = getDifficulty(progress);
   const chosen = expeditionById(expedition);
   const mastery = masteryOf(progress);
@@ -114,6 +135,13 @@ export function Lobby({
                 )}
           </span>
         </div>
+        <button
+          type="button"
+          className="lamp-hotspot"
+          tabIndex={-1}
+          aria-hidden="true"
+          onClick={clickLamp}
+        />
         <div className="scene-coordinate" aria-hidden="true">
           {t("SAFE HAVEN · NO ENEMIES DETECTED")}
         </div>
