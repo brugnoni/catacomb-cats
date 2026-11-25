@@ -60,3 +60,72 @@ export function loadProgress(): Progress {
   }
   return initialProgress();
 }
+/** Finished Runs, for tuning difficulty. It never leaves this browser. */
+export const RUNS_KEY = "catacomb-cats.runs";
+export interface RunRecord {
+  id: string;
+  expedition: string;
+  party: string[];
+  /** Room where the Run ended, from 0. */
+  room: number;
+  won: boolean;
+}
+const isRecord = (x: unknown): x is RunRecord => {
+  const r = x as RunRecord | null;
+  return (
+    typeof r?.id === "string" &&
+    typeof r.expedition === "string" &&
+    Array.isArray(r.party) &&
+    r.party.every((id) => typeof id === "string") &&
+    Number.isInteger(r.room) &&
+    typeof r.won === "boolean"
+  );
+};
+const records = (x: unknown) => (Array.isArray(x) ? x.filter(isRecord) : []);
+export function loadRunLog(): RunRecord[] {
+  try {
+    return records(JSON.parse(localStorage.getItem(RUNS_KEY) ?? "[]"));
+  } catch {
+    return [];
+  }
+}
+export function storeRunLog(log: RunRecord[]) {
+  try {
+    // shortcut: keeps the last 1000 Runs; raise it if older history matters.
+    localStorage.setItem(RUNS_KEY, JSON.stringify(log.slice(-1000)));
+  } catch {
+    /* The record is only a convenience; the progress is what matters. */
+  }
+}
+/** Adds a won or lost Run to the record, once. */
+export function recordRun(run: {
+  id: string;
+  expedition: string;
+  party: { id: string }[];
+  room: number;
+  status: string;
+}) {
+  if (run.status !== "victory" && run.status !== "defeat") return;
+  const log = loadRunLog();
+  if (log.some((r) => r.id === run.id)) return;
+  storeRunLog([
+    ...log,
+    {
+      id: run.id,
+      expedition: run.expedition,
+      party: run.party.map((u) => u.id),
+      room: run.room,
+      won: run.status === "victory",
+    },
+  ]);
+}
+/** The downloadable save file: the progress plus the run record. */
+export const exportSave = (progress: Progress) =>
+  JSON.stringify({ ...progress, runs: loadRunLog() });
+/** What a save file holds, or null when its progress cannot be trusted. */
+export function importSave(raw: string) {
+  const progress = readProgress(raw);
+  if (!progress) return null;
+  const { runs } = JSON.parse(raw) as { runs?: unknown };
+  return { progress, runs: runs === undefined ? null : records(runs) };
+}

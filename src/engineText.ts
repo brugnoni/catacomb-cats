@@ -9,8 +9,8 @@ import type { Translate } from "./i18n";
 export const RULES: [RegExp, string][] = [
   [/^The descent begins\. (.+)\.$/, "The descent begins. {1}."],
   [
-    /^Room rewards: \+(\d+) gold, \+(\d+) XP and (.+)\. Spoils are banked only after defeating the boss and returning to the lobby\.$/,
-    "Room rewards: +{1} gold, +{2} XP and {3}. Spoils are banked only after defeating the boss and returning to the lobby.",
+    /^Room rewards: \+(\d+) gold, \+(\d+) XP and (.+)\. Spoils are banked when the boss is defeated\.$/,
+    "Room rewards: +{1} gold, +{2} XP and {3}. Spoils are banked when the boss is defeated.",
   ],
   [
     /^Expedition Strength \+1: all damage is now \+(\d+) for the rest of this run\.$/,

@@ -23,7 +23,7 @@ export function settleRoom(run: Run): boolean {
     run.status = boss ? "victory" : "reward";
     run.items = [...new Set([...run.items, ITEMS[run.room]!])];
     run.log.push(
-      `Room rewards: +${reward.gold} gold, +${reward.xp} XP and ${ITEMS[run.room]}. Spoils are banked only after defeating the boss and returning to the lobby.`,
+      `Room rewards: +${reward.gold} gold, +${reward.xp} XP and ${ITEMS[run.room]}. Spoils are banked when the boss is defeated.`,
     );
     if (!boss) {
       run.bonus++;

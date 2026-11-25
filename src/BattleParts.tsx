@@ -33,7 +33,7 @@ export function BattleResult({
             </p>
             <p>
               {t(
-                "Added to expedition loot. Gold, XP and items are banked after defeating the boss and returning to the lobby.",
+                "Added to expedition loot. Gold, XP and items are banked when the boss is defeated.",
               )}
             </p>
             <p>

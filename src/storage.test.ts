@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { initialProgress } from "./game";
 import {
   BACKUP_KEY,
+  exportSave,
+  importSave,
+  loadRunLog,
+  recordRun,
+  RUNS_KEY,
   PARTY_KEY,
   SAVE_KEY,
   loadParty,
@@ -80,5 +85,53 @@ describe("backup of a save about to be reset", () => {
     memory.set(SAVE_KEY, JSON.stringify(initialProgress()));
     loadProgress();
     expect(memory.has(BACKUP_KEY)).toBe(false);
+  });
+});
+
+describe("save file", () => {
+  it("round-trips progress and rejects anything invalid", () => {
+    const progress = { ...initialProgress(), gold: 99 };
+    expect(importSave(exportSave(progress))?.progress).toMatchObject({
+      gold: 99,
+    });
+    expect(importSave("nonsense")).toBeNull();
+    expect(importSave('{"version":2}')).toBeNull();
+  });
+});
+
+describe("run record", () => {
+  const run = {
+    id: "a",
+    expedition: "catacombs",
+    party: [{ id: "miso" }, { id: "luna" }, { id: "pip" }],
+    room: 2,
+    status: "defeat",
+  };
+  const record = {
+    id: "a",
+    expedition: "catacombs",
+    party: ["miso", "luna", "pip"],
+    room: 2,
+    won: false,
+  };
+  it("records each finished Run once, apart from the progress", () => {
+    recordRun({ ...run, status: "playing" });
+    recordRun(run);
+    recordRun(run);
+    expect(loadRunLog()).toEqual([record]);
+    expect(memory.has(SAVE_KEY)).toBe(false);
+  });
+  it("ignores broken data without touching the progress", () => {
+    memory.set(RUNS_KEY, "{broken");
+    expect(loadRunLog()).toEqual([]);
+    memory.set(RUNS_KEY, JSON.stringify([record, { id: 5 }, null]));
+    expect(loadRunLog()).toEqual([record]);
+  });
+  it("travels with the save file", () => {
+    recordRun(run);
+    const file = exportSave(initialProgress());
+    expect(importSave(file)?.runs).toEqual([record]);
+    // A file from before the record existed leaves the record alone.
+    expect(importSave(JSON.stringify(initialProgress()))?.runs).toBeNull();
   });
 });

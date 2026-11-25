@@ -23,8 +23,8 @@ export const TUTORIAL: Record<string, string> = {
   "This is your camp. You lead a company of five cats, and every expedition takes three of them underground. Choose who goes with Add to party or Remove from party. HP is a cat's health and INIT decides who acts first.":
     "Este es tu campamento. Lideras una compañía de cinco gatos y cada expedición lleva a tres de ellos bajo tierra. Elige quién va con Añadir al equipo o Quitar del equipo. Los PV son la salud del gato y la INIC decide quién actúa primero.",
   "Training, gold and trinkets": "Entrenamiento, oro y amuletos",
-  "Gold buys training for one cat. Each rank improves its stats, and rank 3 unlocks a signature skill. A trinket gives one cat a small bonus. You earn gold by clearing rooms, but only after you beat the boss and return to the lobby.":
-    "El oro compra entrenamiento para un gato. Cada rango mejora sus estadísticas y el rango 3 desbloquea una habilidad de firma. Un amuleto da a un gato un pequeño bono. Ganas oro al superar salas, pero solo después de derrotar al jefe y volver a la Madriguera.",
+  "Gold buys training for one cat. Each rank improves its stats, and rank 3 unlocks a signature skill. A trinket gives one cat a small bonus. You earn gold by clearing rooms, but they are only banked when you beat the boss.":
+    "El oro compra entrenamiento para un gato. Cada rango mejora sus estadísticas y el rango 3 desbloquea una habilidad de firma. Un amuleto da a un gato un pequeño bono. Ganas oro al superar salas, pero solo se guarda al derrotar al jefe.",
   "XP, mastery and the Hearth": "XP, maestría y el Hogar",
   "XP is never spent: every 150 XP raises the mastery level of all your cats. The Hearth blessing on the right is bought with gold and helps every cat: more HP, power and critical chance, and a Second Wind that stands up the first cat to fall.":
     "El XP nunca se gasta: cada 150 XP sube el nivel de maestría de todos tus gatos. La bendición del Hogar de la derecha se compra con oro y ayuda a todos los gatos: más PV, poder y probabilidad de crítico, y un Segundo aliento que levanta al primer gato que cae.",
@@ -52,6 +52,6 @@ export const TUTORIAL: Record<string, string> = {
   "Keep attacking and passing the turn until both enemies fall. Critical hits, misses and ready skills are announced over the cats as you play.":
     "Sigue atacando y pasando el turno hasta que caigan los dos enemigos. Los críticos, los fallos y las habilidades listas se anuncian sobre los gatos mientras juegas.",
   "Loot and what comes next": "Botín y lo que sigue",
-  "Clearing a room gives gold, XP and an item, but they are only banked after the boss falls and you return to the lobby. Practice rewards are not kept. You can open this tutorial again any time from the Tutorial button.":
-    "Superar una sala da oro, XP y un objeto, pero solo se guardan después de que caiga el jefe y vuelvas a la Madriguera. Las recompensas de práctica no se conservan. Puedes abrir este tutorial otra vez cuando quieras desde el botón Tutorial.",
+  "Clearing a room gives gold, XP and an item, but they are only banked when the boss falls. Practice rewards are not kept. You can open this tutorial again any time from the Tutorial button.":
+    "Superar una sala da oro, XP y un objeto, pero solo se guardan cuando cae el jefe. Las recompensas de práctica no se conservan. Puedes abrir este tutorial otra vez cuando quieras desde el botón Tutorial.",
 };

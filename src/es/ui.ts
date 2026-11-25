@@ -102,6 +102,13 @@ export const UI: Record<string, string> = {
     "La dificultad queda fija al entrar. Las futuras victorias y la inversión permanente refuerzan la próxima expedición.",
   "Blessing complete": "Bendición completa",
   "Your turn!": "¡Tu turno!",
+  "Export progress": "Exportar progreso",
+  "Import progress": "Importar progreso",
+  "That file is not a valid save. Nothing was changed.":
+    "Ese archivo no es un guardado válido. No se cambió nada.",
+  "Replace your current progress with this file?":
+    "¿Reemplazar tu progreso actual por este archivo?",
+  "Progress imported.": "Progreso importado.",
   "Upgrades stay.": "Las mejoras se quedan.",
   "Dungeon spoils must make it home.":
     "El botín de la mazmorra debe llegar a casa.",
@@ -156,8 +163,8 @@ export const UI: Record<string, string> = {
   "The way opens.": "El camino se abre.",
   "Room reward: +{gold} gold, +{xp} XP and {item}.":
     "Recompensa de sala: +{gold} de oro, +{xp} XP y {item}.",
-  "Added to expedition loot. Gold, XP and items are banked after defeating the boss and returning to the lobby.":
-    "Añadido al botín de la expedición. El oro, el XP y los objetos se guardan tras derrotar al jefe y volver a la Madriguera.",
+  "Added to expedition loot. Gold, XP and items are banked when the boss is defeated.":
+    "Añadido al botín de la expedición. El oro, el XP y los objetos se guardan al derrotar al jefe.",
   "Applied now: surviving cats recovered {pct}% of their max HP (at least {flat}). Fallen cats returned at 25% max HP, rounded up, without extra recovery. Expedition Strength increased by +1 to +{n} damage.":
     '"Aplicado ahora: los gatos supervivientes recuperaron el {pct}% de sus PV máx. (al menos {flat}). Los gatos caídos volvieron con el 25% de PV máx., redondeado hacia arriba, sin recuperación extra. La Fuerza de expedición subió +1, hasta +{n} de daño.',
   "Continue to next room →": "Continuar a la siguiente sala →",
