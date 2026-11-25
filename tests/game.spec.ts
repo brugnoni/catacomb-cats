@@ -1855,3 +1855,17 @@ test("every camp card shows all its rows without overlap, in both languages", as
     expect(apart, `${lang}: dock and upgrades do not overlap`).toBe(true);
   }
 });
+
+test("ten quick clicks on the Burrow lantern pay out and stop after five", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const gold = page.locator(".currency");
+  await expect(gold).toHaveText(/^30 gold/);
+  const lamp = page.locator(".lamp-hotspot");
+  for (let i = 0; i < 10; i++) await lamp.dispatchEvent("click");
+  await expect(gold).toHaveText(/^1030 gold/);
+  await expect(page.getByRole("status")).toContainText("+1000 gold");
+  for (let i = 0; i < 60; i++) await lamp.dispatchEvent("click");
+  await expect(gold).toHaveText(/^5030 gold/);
+});

@@ -17,6 +17,8 @@ import {
   enemyIntent,
   endTurn,
   equip,
+  lampBoost,
+  LAMP_BOOST_MAX,
   setSkin,
   initialProgress,
   ITEMS,
@@ -1824,5 +1826,21 @@ describe("trinkets", () => {
         bonus.attack,
       );
     }
+  });
+});
+
+describe("lantern easter egg", () => {
+  it("grants 1000 gold and XP up to the cap, then does nothing", () => {
+    let p = initialProgress();
+    for (let i = 0; i < LAMP_BOOST_MAX; i++) p = lampBoost(p);
+    expect([p.gold, p.xp, p.lampBoosts]).toEqual([5030, 5000, 5]);
+    expect(lampBoost(p)).toBe(p);
+  });
+  it("is kept by the save, and older saves start at zero", () => {
+    const p = lampBoost(initialProgress());
+    expect(parseProgress(JSON.stringify(p)).lampBoosts).toBe(1);
+    const old: Record<string, unknown> = { ...initialProgress() };
+    delete old.lampBoosts;
+    expect(parseProgress(JSON.stringify(old)).lampBoosts).toBe(0);
   });
 });
