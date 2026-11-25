@@ -46,7 +46,11 @@ export function planEnemyAction(
     return { kind, allyId: wounded.id };
   if ((kind === "inspire" || kind === "ward") && ally)
     return { kind, allyId: ally.id };
-  if (kind === "curse") return { kind, targetId: weakestCat(run)?.id };
+  if (kind === "curse") {
+    // The mark is fixed at the end of the enemy's previous turn, so the preview stays true.
+    const marked = run.party.find((u) => u.hp > 0 && u.id === actor.mark);
+    return { kind, targetId: (marked ?? weakestCat(run))?.id };
+  }
   if (kind === "mirror" || kind === "rally") return { kind };
   return { kind: "attack" };
 }

@@ -1389,11 +1389,22 @@ describe("Taunt makes every enemy mark the taunting cat", () => {
     const imp = r.enemies[0]!;
     imp.name = "Spore imp";
     r.round = 1;
-    r.party.find((c) => c.id === "pip")!.hp = 1;
+    imp.mark = "pip";
     const intent = enemyIntent(r, imp)!;
     expect(intent.kind).toBe("curse");
     expect(intent.targetId).toBe("pip");
     expect(intent.redirected).toBeUndefined();
+  });
+  it("a curse lands on the previewed cat even if HP changes before it acts", () => {
+    const r = tauntRun();
+    const imp = r.enemies[0]!;
+    imp.name = "Spore imp";
+    r.round = 1;
+    imp.mark = "pip";
+    const shown = enemyIntent(r, imp)!.targetId;
+    r.party.find((c) => c.id === "miso")!.hp = 1;
+    expect(shown).toBe("pip");
+    expect(enemyIntent(r, imp)!.targetId).toBe("pip");
   });
 });
 
