@@ -14,12 +14,27 @@
       "Bash(git diff:*)",
       "Bash(git log:*)",
       "Bash(git show:*)",
-      "Bash(rtk:*)"
+      "Bash(rtk git status:*)",
+      "Bash(rtk git diff:*)",
+      "Bash(rtk git log:*)",
+      "Bash(rtk git show:*)",
+      "Bash(rtk ls:*)",
+      "Bash(rtk gh pr list:*)",
+      "Bash(rtk gh pr view:*)"
     ],
     "deny": [
-      "Bash(git push --force:*)",
-      "Bash(git push -f:*)",
-      "Bash(git commit --no-verify:*)"
+      "Bash(git push --force*)",
+      "Bash(git push * --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f*)",
+      "Bash(git commit --no-verify*)",
+      "Bash(git commit * --no-verify*)",
+      "Bash(rtk git push --force*)",
+      "Bash(rtk git push * --force*)",
+      "Bash(rtk git push -f*)",
+      "Bash(rtk git push * -f*)",
+      "Bash(rtk git commit --no-verify*)",
+      "Bash(rtk git commit * --no-verify*)"
     ]
   }
 }
