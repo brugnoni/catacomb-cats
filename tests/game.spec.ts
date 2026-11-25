@@ -90,6 +90,7 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
 }) => {
   // Every action now pauses briefly, so a full expedition takes longer.
   test.slow();
+  await page.setViewportSize({ width: 1400, height: 400 });
   await seedLegacySave(page, { generalLevel: 8 });
   await page.goto("/");
   const miso = page
@@ -133,7 +134,15 @@ test("an upgraded party completes all three rooms and persists earned rewards", 
       await expect(page.locator(".run-loot")).toContainText(
         "Unbanked expedition loot",
       );
-      await next.click();
+      // A real click keeps the page scroll where the player left it.
+      // Stop short of the very bottom, so a shorter next room cannot clamp the scroll.
+      await next.scrollIntoViewIfNeeded();
+      await page.evaluate(() => scrollBy(0, -80));
+      const box = (await next.boundingBox())!;
+      const before = await page.evaluate(() => scrollY);
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await expect(next).toBeHidden();
+      expect(await page.evaluate(() => scrollY)).toBe(before);
       continue;
     }
     await expect(page.getByTestId("end-turn")).toBeVisible();

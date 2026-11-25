@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Faq } from "./Faq";
 
@@ -76,6 +76,13 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   // A saved choice that is locked (for example after a save reset) falls back to the first Expedition.
   const open = playableExpedition(progress, expedition).id;
   const [run, setRun] = useState<Run | null>(null);
+  // Battle remounts for every room; its scroll position is put back before paint.
+  const keptScroll = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (keptScroll.current === null) return;
+    window.scrollTo(0, keptScroll.current);
+    keptScroll.current = null;
+  }, [run?.room]);
   const [notice, setNotice] = useState("");
   const [showFaq, setShowFaq] = useState(false);
   // True while the battle art loads before a run begins.
@@ -229,7 +236,10 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
               onLeave={leave}
               onContinue={() => {
                 if (practice) endTutorial("done");
-                else setRun(nextRoom(run));
+                else {
+                  keptScroll.current = window.scrollY;
+                  setRun(nextRoom(run));
+                }
               }}
             />
           </div>
