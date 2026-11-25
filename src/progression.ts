@@ -488,11 +488,18 @@ export interface DifficultyProgress {
   catLevels?: Record<string, number>;
 }
 /**
- * How much permanent power a player has bought: the ranks of their three best
- * cats, the Hearth and the mastery level. Difficulty follows this, not gold.
+ * How much permanent power a player brings: the ranks of the party's cats (the
+ * three best owned when no party is given), the Hearth and the mastery level.
+ * Difficulty follows this, not gold.
  */
-export function powerPoints(progress: DifficultyProgress): number {
-  const top3 = Object.values(progress.catLevels ?? {})
+export function powerPoints(
+  progress: DifficultyProgress,
+  party?: readonly string[],
+): number {
+  const ranks = party
+    ? party.map((id) => progress.catLevels?.[id] ?? 0)
+    : Object.values(progress.catLevels ?? {});
+  const top3 = ranks
     .map(whole)
     .sort((a, b) => b - a)
     .slice(0, 3)
@@ -547,13 +554,18 @@ export function tierFacts(tier: number) {
   };
 }
 /** No hidden scaling from unspent gold. Snapshot this once when a run begins. */
-export function getDifficulty(progress: DifficultyProgress): Difficulty {
+export function getDifficulty(
+  progress: DifficultyProgress,
+  party?: readonly string[],
+): Difficulty {
   const tier =
     totalWins(progress) === 0
       ? 0
       : Math.min(
           DIFFICULTY_TUNING.maxTier,
-          Math.floor(powerPoints(progress) / DIFFICULTY_TUNING.pointsPerTier),
+          Math.floor(
+            powerPoints(progress, party) / DIFFICULTY_TUNING.pointsPerTier,
+          ),
         );
   return {
     tier,

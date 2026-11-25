@@ -61,7 +61,7 @@ export function createRun(
   const chosen = expeditionById(options.expedition ?? EXPEDITIONS[0]!.id);
   if (!expeditionUnlocked(progress, chosen))
     throw new Error("That expedition is still locked.");
-  const difficulty = getDifficulty(progress);
+  const difficulty = getDifficulty(progress, party);
   const hearth = hearthBonuses(progress.generalLevel);
   const crit = options.crit ?? "off";
   const run: Run = {
