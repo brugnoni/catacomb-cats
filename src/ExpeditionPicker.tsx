@@ -13,17 +13,19 @@ import {
 /** The camp's list of Expeditions: reward, recommended Power and what keeps one locked. */
 export function ExpeditionPicker({
   progress,
+  party,
   selected,
   onSelect,
 }: {
   progress: Progress;
+  party: string[];
   selected: string;
   onSelect: (id: string) => void;
 }) {
   const { t } = useT();
   // A native modal dialog gives Escape, focus trapping and focus return for free.
   const dialog = useRef<HTMLDialogElement>(null);
-  const power = powerPoints(progress);
+  const power = powerPoints(progress, party);
   /** What a player still needs to know about an Expedition: how to open it, or how ready they are. */
   const note = (e: Expedition) => {
     if (e.unlock && !expeditionUnlocked(progress, e))

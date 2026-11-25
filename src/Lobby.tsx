@@ -70,7 +70,7 @@ export function Lobby({
     onStore(next);
     onNotice(t("The lantern flares up. +1000 gold and +1000 XP."));
   };
-  const difficulty = getDifficulty(progress);
+  const difficulty = getDifficulty(progress, party);
   const chosen = expeditionById(expedition);
   const mastery = masteryOf(progress);
   const masteryDone = mastery >= masteryCap(progress);
@@ -110,6 +110,7 @@ export function Lobby({
           <h2>{t(chosen.name)}</h2>
           <p>{t("3 chambers · 1 crown")}</p>
           <ExpeditionPicker
+            party={party}
             progress={progress}
             selected={expedition}
             onSelect={onExpedition}
@@ -225,7 +226,7 @@ export function Lobby({
             <p>
               {t("{wins} victories · Power {points} · Mastery {level}", {
                 wins: totalWins(progress),
-                points: powerPoints(progress),
+                points: powerPoints(progress, party),
                 level: mastery,
               })}
             </p>

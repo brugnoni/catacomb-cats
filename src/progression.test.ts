@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createRun, initialProgress } from "./game";
 import {
   getDifficulty,
   powerPoints,
@@ -158,6 +159,29 @@ describe("ascension snapshot calculation", () => {
     expect(at(6)).toBe(2);
     // Gold spent or victories alone never raise the tier.
     expect(getDifficulty({ expeditionWins: OPEN, xp: 0 }).tier).toBe(0);
+  });
+  it("follows the chosen party, not the best cats owned", () => {
+    const owned = {
+      expeditionWins: OPEN,
+      xp: 0,
+      catLevels: { a: 8, b: 8, c: 8, d: 1, e: 1 },
+    };
+    expect(powerPoints(owned)).toBe(24);
+    expect(powerPoints(owned, ["a", "d", "e"])).toBe(10);
+    expect(powerPoints(owned, ["d", "e", "z"])).toBe(2);
+    expect(getDifficulty(owned, ["a", "d", "e"]).tier).toBe(3);
+    expect(getDifficulty(owned).tier).toBe(8);
+  });
+  it("a run snapshots the tier of the party it enters with", () => {
+    const owned = {
+      ...initialProgress(),
+      expeditionWins: OPEN,
+      catLevels: { miso: 8, luna: 8, clover: 8, pip: 1, ember: 1 },
+    };
+    expect(createRun(owned, ["miso", "pip", "ember"]).difficulty.tier).toBe(3);
+    expect(createRun(owned, ["miso", "luna", "clover"]).difficulty.tier).toBe(
+      8,
+    );
   });
   it("bounds escalation at the maximum tier", () => {
     expect(
