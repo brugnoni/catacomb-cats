@@ -43,4 +43,5 @@ export {
   LAMP_BOOST_MAX,
   setSkin,
   parseProgress,
+  readProgress,
 } from "./engine/save";

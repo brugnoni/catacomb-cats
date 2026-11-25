@@ -1,4 +1,4 @@
-import { CATS, initialProgress, parseProgress, type Progress } from "./game";
+import { CATS, initialProgress, readProgress, type Progress } from "./game";
 
 import { EXPEDITIONS } from "./expeditions";
 
@@ -18,6 +18,8 @@ export const runSeed = () =>
   window.__CATACOMB_SEED__ ?? crypto.getRandomValues(new Uint32Array(1))[0]!;
 export const runCrit = () => window.__CATACOMB_CRIT__ ?? "on";
 export const SAVE_KEY = "catacomb-cats.progress.v1";
+/** The last save the game could not read, kept before a fresh one replaces it. */
+export const BACKUP_KEY = "catacomb-cats.progress.backup";
 export const PARTY_KEY = "catacomb-cats.party";
 export const EXPEDITION_KEY = "catacomb-cats.expedition";
 /** The last chosen Expedition, or the first when nothing valid was saved. */
@@ -49,8 +51,12 @@ export function loadParty(): string[] {
 }
 export function loadProgress(): Progress {
   try {
-    return parseProgress(localStorage.getItem(SAVE_KEY));
+    const raw = localStorage.getItem(SAVE_KEY);
+    const saved = readProgress(raw);
+    if (saved) return saved;
+    if (raw !== null) localStorage.setItem(BACKUP_KEY, raw);
   } catch {
-    return initialProgress();
+    /* Start fresh when storage is unavailable. */
   }
+  return initialProgress();
 }

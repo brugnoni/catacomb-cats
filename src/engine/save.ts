@@ -87,10 +87,11 @@ export function setSkin(
   return { ...progress, skins };
 }
 
-export function parseProgress(raw: string | null): Progress {
+/** The save in raw, or null when there is none or it cannot be trusted. */
+export function readProgress(raw: string | null): Progress | null {
   try {
     const parsed: unknown = JSON.parse(raw ?? "null");
-    if (!parsed || typeof parsed !== "object") return initialProgress();
+    if (!parsed || typeof parsed !== "object") return null;
     // `wins` is the field older saves used before victories were counted per Expedition.
     const x = parsed as Progress & { wins?: number };
     const num = (n: unknown) =>
@@ -136,7 +137,7 @@ export function parseProgress(raw: string | null): Progress {
       (x.spentGold !== undefined && !num(x.spentGold)) ||
       (x.lampBoosts !== undefined && !num(x.lampBoosts))
     )
-      return initialProgress();
+      return null;
     const legacySpend =
       Object.values(x.catLevels).reduce(
         (sum, rank) => sum + 20 * rank + 10 * rank * (rank - 1),
@@ -173,6 +174,10 @@ export function parseProgress(raw: string | null): Progress {
       ),
     };
   } catch {
-    return initialProgress();
+    return null;
   }
+}
+
+export function parseProgress(raw: string | null): Progress {
+  return readProgress(raw) ?? initialProgress();
 }
