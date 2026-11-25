@@ -180,7 +180,7 @@ export type EnemyPlanKind =
 
 export interface EnemyPlan {
   kind: EnemyPlanKind;
-  /** Hostile target: the weakest cat for a curse. Attacks use the mark. */
+  /** Hostile target: the marked cat, for attacks and curses alike. */
   targetId?: string;
   /** Friendly target of a support action. */
   allyId?: string;
