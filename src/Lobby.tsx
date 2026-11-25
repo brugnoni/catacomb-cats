@@ -135,13 +135,7 @@ export function Lobby({
                 )}
           </span>
         </div>
-        <button
-          type="button"
-          className="lamp-hotspot"
-          tabIndex={-1}
-          aria-hidden="true"
-          onClick={clickLamp}
-        />
+        <div className="lamp-hotspot" aria-hidden="true" onClick={clickLamp} />
         <div className="scene-coordinate" aria-hidden="true">
           {t("SAFE HAVEN · NO ENEMIES DETECTED")}
         </div>
