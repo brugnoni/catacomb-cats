@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useT } from "./i18n";
-import { exportSave, importSave } from "./storage";
+import { exportSave, importSave, storeRunLog } from "./storage";
 import { type Progress } from "./game";
 
 /** Download the progress as a file, or replace it with one. */
@@ -38,7 +38,8 @@ export function SaveFile({
     if (!window.confirm(t("Replace your current progress with this file?")))
       return;
     onNotice(t("Progress imported."));
-    onStore(next);
+    if (next.runs) storeRunLog(next.runs);
+    onStore(next.progress);
   };
   return (
     <div className="save-file">

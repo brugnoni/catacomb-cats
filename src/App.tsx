@@ -14,6 +14,7 @@ import {
   loadExpedition,
   loadParty,
   loadProgress,
+  recordRun,
   runCrit,
   runSeed,
 } from "./storage";
@@ -127,8 +128,9 @@ function Game({ onLanguage }: { onLanguage: (lang: Lang) => void }) {
   // Rewards are banked the moment the boss falls, not when the player leaves.
   const updateRun = (next: Run) => {
     setRun(next);
-    if (next.status === "victory" && !practice)
-      storeProgress(claimRewards(progress, next));
+    if (practice) return;
+    recordRun(next);
+    if (next.status === "victory") storeProgress(claimRewards(progress, next));
   };
   const choose = (id: string) =>
     setParty((previous) =>
