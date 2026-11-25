@@ -3,19 +3,25 @@ import {
   act,
   abilityLimit,
   abilityPower,
+  abilityReach,
   abilityUses,
   abilityUnavailableReason,
-  abilityTargets,
   abilityTargetUnavailableReason,
   damagePreview,
   buildCat,
   buyUpgrade,
+  CATS,
   claimRewards,
   createRun,
   currentUnit,
+  enemyIntent,
   endTurn,
   equip,
+  lampBoost,
+  LAMP_BOOST_MAX,
+  setSkin,
   initialProgress,
+  ITEMS,
   nextRoom,
   parseProgress,
   SIGNATURE_ABILITIES,
@@ -24,6 +30,12 @@ import {
   type Progress,
   type Run,
 } from "./game";
+import { GUARD_TURNS, ROOM_HEAL, evadeChance } from "./progression";
+import { EXPEDITION_REWARD } from "./expeditions";
+import { dropFallenEnemies } from "./engine/state";
+/** Healing a surviving cat gets when a room is cleared. */
+const roomHeal = (maxHp: number) =>
+  Math.max(ROOM_HEAL.flat, Math.ceil((maxHp * ROOM_HEAL.percent) / 100));
 const start = () => createRun(initialProgress(), ["pip", "miso", "clover"]);
 function turn(run: Run, id: string) {
   run.order = [
@@ -64,16 +76,16 @@ describe("basic expedition and lobby regression", () => {
     expect(currentUnit(r)?.id).toBe("pip");
     const next = act(r, "strike", "e0");
     expect(next.ap).toBe(5);
-    expect(next.enemies[0]!.hp).toBe(20);
-    expect(r.enemies[0]!.hp).toBe(24);
+    expect(next.enemies[0]!.hp).toBe(32);
+    expect(r.enemies[0]!.hp).toBe(36);
     expect(currentUnit(endTurn(next))?.id).toBe("miso");
   });
   it("invalid actions never mutate or spend AP", () => {
     const r = start();
     expect(act(r, "strike", "pip")).toBe(r);
     expect(act(r, "bad", "e0")).toBe(r);
-    r.ap = 1;
-    expect(act(r, "pounce", "e0")).toBe(r);
+    r.ap = 0;
+    expect(act(r, "line", "e0")).toBe(r);
   });
   it("1AP skills stop at three uses and new actors reset counts", () => {
     let r = start();
@@ -87,12 +99,19 @@ describe("basic expedition and lobby regression", () => {
     expect(act(next, "strike", "e0")).not.toBe(next);
   });
   it("2AP skills stop at two uses with AP remaining", () => {
-    let r = start();
-    r.enemies[0]!.hp = 500;
-    r = act(act(r, "pounce", "e0"), "pounce", "e0");
+    let r = turn(start(), "clover");
+    r.party.find((c) => c.id === "miso")!.hp = 1;
+    r = act(act(r, "heal", "miso"), "heal", "miso");
     expect(r.ap).toBe(2);
-    expect(abilityLimit(r.party[0]!.abilities[1]!)).toBe(2);
-    expect(act(r, "pounce", "e0")).toBe(r);
+    expect(
+      abilityLimit(r.party.find((c) => c.id === "clover")!.abilities[1]!),
+    ).toBe(2);
+    expect(act(r, "heal", "miso")).toBe(r);
+  });
+  it("Moon blessing works once per turn", () => {
+    const r = act(trained("luna"), "fury", "luna");
+    expect(r.ap).toBeGreaterThanOrEqual(2);
+    expect(act(r, "fury", "pip")).toBe(r);
   });
   it("AP resets each round and next turn allows same skill again", () => {
     let r = start();
@@ -111,13 +130,15 @@ describe("basic expedition and lobby regression", () => {
   });
   it("room rewards/recovery happen once immediately and loot accumulates", () => {
     let r = start();
-    r.party[0]!.hp -= 12;
+    r.party[0]!.hp -= 20;
     r = clear(r);
     expect(r.status).toBe("reward");
-    expect(r.gold).toBe(20);
+    expect(r.gold).toBe(40);
     expect(r.xp).toBe(30);
     expect(r.bonus).toBe(1);
-    expect(r.party[0]!.hp).toBe(r.party[0]!.maxHp - 4);
+    expect(r.party[0]!.hp).toBe(
+      r.party[0]!.maxHp - 20 + roomHeal(r.party[0]!.maxHp),
+    );
     expect(act(r, "strike", "e0")).toBe(r);
     r = nextRoom(r);
     expect(r.bonus).toBe(1);
@@ -125,12 +146,26 @@ describe("basic expedition and lobby regression", () => {
     r = clear(r);
     r = clear(nextRoom(r));
     expect(r.status).toBe("victory");
-    expect(r.items).toEqual(["Iron bell", "Silk ribbon", "Lucky fang"]);
     const p = claimRewards(initialProgress(), r);
-    expect(p.gold).toBe(120);
+    expect(p.gold).toBe(30 + EXPEDITION_REWARD.gold);
     expect(p.xp).toBe(135);
-    expect(p.wins).toBe(1);
+    expect(p.expeditionWins).toEqual({ catacombs: 1 });
     expect(claimRewards(p, r)).toBe(p);
+  });
+  it("a Skin is stored per Companion, survives parsing and old saves wear the original", () => {
+    const p = setSkin(setSkin(initialProgress(), "pip", 1), "ember", 2);
+    expect(parseProgress(JSON.stringify(p)).skins).toEqual({
+      pip: 1,
+      ember: 2,
+    });
+    expect(setSkin(p, "pip", 0).skins).toEqual({ ember: 2 });
+    expect(setSkin(p, "pip", 3)).toBe(p);
+    expect(setSkin(p, "nobody", 1)).toBe(p);
+    const old: Partial<Progress> = { ...initialProgress() };
+    delete old.skins;
+    expect(parseProgress(JSON.stringify(old)).skins).toEqual({});
+    const bad = { ...p, skins: { pip: 9, nobody: 1, ember: 2 } };
+    expect(parseProgress(JSON.stringify(bad)).skins).toEqual({ ember: 2 });
   });
   it("unequips same cat and preserves inventory through persistence", () => {
     const p = equip(initialProgress(), "pip", "Iron bell");
@@ -144,7 +179,7 @@ describe("basic expedition and lobby regression", () => {
     let p = equip(initialProgress(), "pip", "Iron bell");
     p = equip(p, "miso", "Iron bell");
     expect(p.equipment.pip).toBeUndefined();
-    expect(buildCat(p, "miso").maxHp).toBe(41);
+    expect(buildCat(p, "miso").maxHp).toBe(46);
   });
 });
 describe("training, migration and increasing challenge", () => {
@@ -167,37 +202,42 @@ describe("training, migration and increasing challenge", () => {
       catLevels: { miso: 8, pip: 1, clover: 2 },
     };
     expect(buyUpgrade(p, "miso")).toBe(p);
-    expect(buildCat(p, "miso").maxHp).toBe(51);
+    expect(buildCat(p, "miso").maxHp).toBe(56);
     expect(buildCat(p, "pip").initiative).toBe(21);
     expect(buildCat(p, "clover").abilities[1]!.power).toBe(8);
   });
   it("mastery increases HP slowly and every numerical skill every third mastery", () => {
     const p = { ...initialProgress(), xp: 450 };
     const c = buildCat(p, "clover");
-    expect(c.maxHp).toBe(35);
+    expect(c.maxHp).toBe(42);
     expect(c.abilities[0]!.power).toBe(5);
     expect(c.abilities[1]!.power).toBe(8);
-    expect(buildCat({ ...p, xp: 100000 }, "clover").maxHp).toBe(49);
+    expect(
+      buildCat(
+        { ...p, xp: 100000, expeditionWins: { catacombs: 3, warrens: 5 } },
+        "clover",
+      ).maxHp,
+    ).toBe(56);
+    expect(buildCat({ ...p, xp: 100000 }, "clover").maxHp).toBe(44);
   });
   it("difficulty increases after a win using investment and mastery but unspentgold does not matter", () => {
     const p = initialProgress();
     const first = createRun({ ...p, gold: 9999 }, ["pip", "miso", "clover"]);
     expect(first.difficulty.tier).toBe(0);
-    const harder = createRun({ ...p, wins: 2, spentGold: 400, xp: 600 }, [
-      "pip",
-      "miso",
-      "clover",
-    ]);
+    const trained = {
+      expeditionWins: { catacombs: 2 },
+      xp: 600,
+      generalLevel: 8,
+      catLevels: { miso: 8, pip: 8, clover: 8 },
+    };
+    const harder = createRun({ ...p, ...trained }, ["pip", "miso", "clover"]);
     expect(harder.difficulty.tier).toBeGreaterThan(first.difficulty.tier);
     expect(harder.enemies[0]!.maxHp).toBeGreaterThan(first.enemies[0]!.maxHp);
     expect(harder.enemies.length).toBe(3);
     expect(
-      createRun({ ...p, wins: 9999, spentGold: 9999, xp: 99999 }, [
-        "pip",
-        "miso",
-        "clover",
-      ]).enemies,
-    ).toHaveLength(4);
+      createRun({ ...p, ...trained, xp: 99999 }, ["pip", "miso", "clover"])
+        .enemies,
+    ).toHaveLength(3);
     const snapshot = structuredClone(harder.difficulty);
     expect(nextRoom(clear(harder)).difficulty).toEqual(snapshot);
   });
@@ -209,14 +249,14 @@ describe("training, migration and increasing challenge", () => {
       catLevels: { miso: 12 },
       claimedRuns: ["legacy-victory"],
     };
-    delete p.wins;
+    delete p.expeditionWins;
     delete p.spentGold;
     const q = parseProgress(JSON.stringify(p));
     expect(q.gold).toBe(77);
     expect(q.catLevels.miso).toBe(12);
-    expect(q.wins).toBe(1);
+    expect(q.expeditionWins).toEqual({ catacombs: 1 });
     expect(q.spentGold).toBe(1560);
-    expect(buildCat(q, "miso").maxHp).toBe(51);
+    expect(buildCat(q, "miso").maxHp).toBe(56);
     expect(parseProgress(JSON.stringify({ ...q, wins: -1 }))).toEqual(
       initialProgress(),
     );
@@ -240,8 +280,8 @@ describe("non-stacking effects and exact numeric outcomes", () => {
     pip.guard -= 2;
     pip.guardTurns = 1;
     r = act(r, "guard", "pip");
-    expect(r.party.find((u) => u.id === "pip")!.guard).toBe(6);
-    expect(r.party.find((u) => u.id === "pip")!.guardTurns).toBe(2);
+    expect(r.party.find((u) => u.id === "pip")!.guard).toBe(8);
+    expect(r.party.find((u) => u.id === "pip")!.guardTurns).toBe(GUARD_TURNS);
   });
   it("Inspired does not amplify itself, and support skills benefit", () => {
     let r = turn(
@@ -327,7 +367,7 @@ describe("signature mechanics", () => {
   it("Moonwell pays1 gives2 AP plus persistent roomcapacity and cannot repeat or scale", () => {
     let r = trained("luna");
     const a = r.party[0]!.abilities[2]!;
-    expect(abilityTargets(r, a, "luna")).toBe(true);
+    expect(abilityTargetUnavailableReason(r, a, "luna")).toBeUndefined();
     r = act(r, "surge", "luna");
     expect(r.ap).toBe(7);
     expect(r.maxAp).toBe(8);
@@ -373,7 +413,7 @@ describe("enemy role actions", () => {
     r.order = ["pip", "e1", "e0", "miso", "clover"];
     r = endTurn(r);
     expect(r.log.some((l) => l.includes("Inspired +2"))).toBe(true);
-    expect(r.log.some((l) => l.includes("7 attack power"))).toBe(true);
+    expect(r.log.some((l) => l.includes("11 attack power"))).toBe(true);
   });
   it("tank foes have initial armor/guard and agile bats have higher initiative", () => {
     const r = nextRoom(clear(start()));
@@ -413,7 +453,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
     (fallen) => {
       let r = start();
       const live = r.party[0]!;
-      live.hp -= 12;
+      live.hp -= 20;
       for (let i = 1; i <= fallen; i++) {
         const c = r.party[i]!;
         c.hp = 0;
@@ -426,7 +466,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
       }
       r.tauntId = r.party[1]!.id;
       r = clear(r);
-      expect(r.party[0]!.hp).toBe(live.maxHp - 4);
+      expect(r.party[0]!.hp).toBe(live.maxHp - 20 + roomHeal(live.maxHp));
       for (let i = 1; i <= fallen; i++) {
         const c = r.party[i]!;
         expect(c.hp).toBe(Math.ceil(c.maxHp / 4));
@@ -477,7 +517,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
     tank.fury = 2;
     tank.furyTurns = 3;
     const guard = tank.abilities.find((a) => a.id === "guard")!;
-    expect(abilityPower(r, tank, guard)).toBe(8);
+    expect(abilityPower(r, tank, guard)).toBe(10);
     const mage = trained("luna");
     const luna = mage.party[0]!;
     luna.fury = 2;
@@ -512,6 +552,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
     expect(abilityUses(r, "fury")).toBe(1);
     const tank = r.party[1]!;
     tank.furyTurns = 2;
+    r.uses = {};
     const refreshed = act(r, "fury", "miso");
     expect(refreshed).not.toBe(r);
     expect(refreshed.party[1]!.furyTurns).toBe(3);
@@ -521,12 +562,26 @@ describe("revival, inspiration and safe targeting regressions", () => {
     let r = turn(start(), "miso");
     r = act(r, "guard", "pip");
     const target = r.party.find((c) => c.id === "pip")!;
-    target.guard = 2;
+    target.guard = 8;
     expect(act(r, "guard", "pip")).toBe(r);
     target.guardTurns = 1;
     r = act(r, "guard", "pip");
-    expect(r.party.find((c) => c.id === "pip")!.guard).toBe(6);
-    expect(r.party.find((c) => c.id === "pip")!.guardTurns).toBe(2);
+    expect(r.party.find((c) => c.id === "pip")!.guard).toBe(8);
+    expect(r.party.find((c) => c.id === "pip")!.guardTurns).toBe(GUARD_TURNS);
+  });
+  it("lets a stronger shield replace Stand behind me at full duration, never adding to it", () => {
+    let r = turn(trained("miso"), "miso");
+    r.ap = 10;
+    r = act(r, "taunt", "miso");
+    const miso = () => r.party.find((c) => c.id === "miso")!;
+    const weak = miso().guard;
+    expect(miso().guardTurns).toBe(GUARD_TURNS);
+    const guard = miso().abilities.find((a) => a.id === "guard")!;
+    expect(abilityPower(r, miso(), guard)).toBeGreaterThan(weak);
+    expect(abilityTargetUnavailableReason(r, guard, "miso")).toBeUndefined();
+    r = act(r, "guard", "miso");
+    expect(miso().guard).toBe(abilityPower(r, miso(), guard));
+    expect(abilityTargetUnavailableReason(r, guard, "miso")).toBeDefined();
   });
   it("prevents full-HP single and area healing without spending resources, while injured allies remain legal", () => {
     const r = trained("clover");
@@ -564,6 +619,24 @@ describe("revival, inspiration and safe targeting regressions", () => {
       "1 damage (6 attack power, 2 armor, 0 Guard blocked, 0 Ice Ward blocked; 0/37 HP)",
     );
   });
+  it("a fallen enemy leaves the initiative queue at once and the turn pointer follows", () => {
+    const r = turn(start(), "pip");
+    const foe = r.enemies[0]!;
+    foe.hp = 1;
+    foe.armor = foe.guard = 0;
+    const next = act(r, "strike", "e0");
+    expect(next.enemies[0]!.hp).toBe(0);
+    expect(next.order).not.toContain("e0");
+    expect(next.order[next.turn]).toBe("pip");
+    // A fallen enemy earlier in the queue shifts the pointer back onto the same unit.
+    const late = turn(start(), "pip");
+    late.order = ["e0", "pip", "miso", "clover", "e1"];
+    late.turn = 1;
+    late.enemies[0]!.hp = 0;
+    dropFallenEnemies(late);
+    expect(late.order).toEqual(["pip", "miso", "clover", "e1"]);
+    expect(late.order[late.turn]).toBe("pip");
+  });
   it("correctly displays a surviving1HP enemy when Guard absorbs the spell after armor", () => {
     let r = start();
     const actor = r.party[0]!;
@@ -595,7 +668,7 @@ describe("revival, inspiration and safe targeting regressions", () => {
 
 describe("owner-start clocks, automatic exhaustion and expedition recovery", () => {
   it.each(["miso", "pip"])(
-    "Guard on %s lasts its next two starts and ignores unrelated End turns",
+    "Guard on %s lasts its next three starts and ignores unrelated End turns",
     (targetId) => {
       let r = turn(start(), "miso");
       r = act(r, "guard", targetId);
@@ -604,18 +677,23 @@ describe("owner-start clocks, automatic exhaustion and expedition recovery", () 
       r.turn = 0;
       r = endTurn(r);
       expect(currentUnit(r)?.id).toBe("clover");
-      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(2);
+      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(3);
       r = endTurn(r);
       expect(currentUnit(r)?.id).toBe(targetId);
-      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(1);
-      expect(r.party.find((c) => c.id === targetId)!.guard).toBe(6);
+      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(2);
+      expect(r.party.find((c) => c.id === targetId)!.guard).toBe(8);
       // Completing the affected turn itself does not consume another duration.
       r.order = [targetId, otherId, "clover"];
       r.turn = 0;
       r = endTurn(r);
-      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(1);
+      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(2);
       r.party.find((c) => c.id === targetId)!.initiative = 100;
       r = endTurn(endTurn(r));
+      expect(currentUnit(r)?.id).toBe(targetId);
+      expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(1);
+      r.order = [otherId, targetId, "clover"];
+      r.turn = 0;
+      r = endTurn(r);
       expect(currentUnit(r)?.id).toBe(targetId);
       expect(r.party.find((c) => c.id === targetId)!.guardTurns).toBe(0);
       expect(r.party.find((c) => c.id === targetId)!.guard).toBe(0);
@@ -658,7 +736,7 @@ describe("owner-start clocks, automatic exhaustion and expedition recovery", () 
     const tankBefore = r.party[0]!.hp;
     r = act(r, "strike", "e0");
     expect(r.party[0]!.hp).toBeLessThan(tankBefore);
-    // The new round starts with Pip; Miso's taunt remains until his own start.
+    // The new round starts with Pursian; Miso's taunt remains until his own start.
     expect(currentUnit(r)?.id).toBe("pip");
     expect(r.tauntId).toBe("miso");
     r = endTurn(r);
@@ -771,46 +849,54 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r = nextRoom(clear(r));
     expect(r.party.find((c) => c.id === "clover")!.cooldowns).toEqual({});
   });
-  it("Ember attacks each skip the next own turn and have independent cooldowns", () => {
+  it("Tuntun Cinder jab never has a cooldown and Flame paw waits one own turn", () => {
     let r = trained("ember");
-    r.enemies[0]!.hp = 100;
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
+    const claw = r.party[0]!.abilities[0]!;
     const slam = r.party[0]!.abilities.find((a) => a.id === "slam")!;
-    const cleave = r.party[0]!.abilities.find((a) => a.id === "cleave")!;
+    expect(claw.id).toBe("strike");
+    expect(claw.cooldownTurns).toBeUndefined();
+    r = act(r, "strike", "e0");
+    expect(cooldownRemaining(r.party[0]!, claw)).toBe(0);
+    expect(abilityUnavailableReason(r, claw)).toBeUndefined();
+    r = act(r, "strike", "e0");
+    expect(abilityUnavailableReason(r, claw)).toBeUndefined();
+    r = onlyOwnTurns(r, "ember");
+    expect(abilityUnavailableReason(r, claw)).toBeUndefined();
     r = act(r, "slam", "e0");
     expect(cooldownRemaining(r.party[0]!, slam)).toBe(2);
-    expect(abilityUnavailableReason(r, cleave)).toBeUndefined();
+    expect(abilityUnavailableReason(r, claw)).toBeUndefined();
+  });
+  it("Tuntun Flame paw is blocked for one own turn and returns on the second", () => {
+    let r = trained("ember");
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
+    const slam = r.party[0]!.abilities.find((a) => a.id === "slam")!;
+    r = act(r, "slam", "e0");
+    expect(cooldownRemaining(r.party[0]!, slam)).toBe(2);
     r = onlyOwnTurns(r, "ember");
     expect(abilityUnavailableReason(r, slam)).toContain("Cooldown");
-    expect(
-      abilityUnavailableReason(r, r.party[0]!.abilities[0]!),
-    ).toBeUndefined();
+    expect(act(r, "slam", "e0")).toBe(r);
     r = onlyOwnTurns(r, "ember");
     expect(abilityUnavailableReason(r, slam)).toBeUndefined();
-    const basic = r.party[0]!.abilities[0]!;
-    r = act(r, basic.id, "e0");
-    expect(act(r, basic.id, "e0")).toBe(r);
-    r = onlyOwnTurns(r, "ember");
-    expect(abilityUnavailableReason(r, basic)).toContain("Cooldown");
-    r = onlyOwnTurns(r, "ember");
-    expect(abilityUnavailableReason(r, basic)).toBeUndefined();
+    expect(act(r, "slam", "e0")).not.toBe(r);
   });
-  it.each(["strike", "slam", "cleave"])(
-    "Ember %s blocks the following own turn and returns on the one after",
-    (id) => {
-      let r = trained("ember");
-      r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
-      const ability = r.party[0]!.abilities.find((a) => a.id === id)!;
-      const target = ability.target === "all-enemies" ? "ember" : "e0";
-      r = act(r, id, target);
-      expect(cooldownRemaining(r.party[0]!, ability)).toBe(2);
-      r = onlyOwnTurns(r, "ember");
-      expect(abilityUnavailableReason(r, ability)).toContain("Cooldown");
-      expect(act(r, id, target)).toBe(r);
-      r = onlyOwnTurns(r, "ember");
-      expect(abilityUnavailableReason(r, ability)).toBeUndefined();
-      expect(act(r, id, target)).not.toBe(r);
-    },
-  );
+  it("Tuntun Sweeping embers keeps its own one-turn cooldown", () => {
+    let r = trained("ember");
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 100));
+    const cleave = r.party[0]!.abilities.find((a) => a.id === "cleave")!;
+    r = act(r, "cleave", "ember");
+    expect(cooldownRemaining(r.party[0]!, cleave)).toBe(2);
+    r = onlyOwnTurns(r, "ember");
+    expect(abilityUnavailableReason(r, cleave)).toContain("Cooldown");
+    r = onlyOwnTurns(r, "ember");
+    expect(abilityUnavailableReason(r, cleave)).toBeUndefined();
+  });
+  it("Flame paw out-damages spamming Cinder jab for the same AP", () => {
+    const flame = CATS.find((c) => c.id === "ember")!.abilities;
+    const claw = flame[0]!;
+    const slam = flame[1]!;
+    expect(slam.power / slam.cost).toBeGreaterThan(claw.power / claw.cost);
+  });
   it("mastery improves native heal, Guard and blessing without changing revive percentage or AP", () => {
     const p = {
       ...initialProgress(),
@@ -822,7 +908,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     ).toBe(9);
     expect(
       buildCat(p, "miso").abilities.find((a) => a.id === "guard")!.power,
-    ).toBe(7);
+    ).toBe(9);
     expect(
       buildCat(p, "luna").abilities.find((a) => a.id === "fury")!.power,
     ).toBe(3);
@@ -833,7 +919,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
       buildCat(p, "luna").abilities.find((a) => a.id === "surge")!.power,
     ).toBe(2);
   });
-  it("Miso and Ember start every room with their trained shield", () => {
+  it("Miso and Tuntun start every room with their trained shield", () => {
     const p = { ...initialProgress(), catLevels: { miso: 5, ember: 8 } };
     let r = createRun(p, ["pip", "miso", "ember"]);
     expect(r.party.find((c) => c.id === "miso")!.guard).toBe(4);
@@ -854,7 +940,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r.turn = 0;
     r = endTurn(r);
     const after = r.party.find((c) => c.id === "luna")!;
-    expect(after.hp).toBe(7);
+    expect(after.hp).toBe(3);
     expect(after.iceCharges).toBe(2);
     expect(r.log.some((line) => line.includes("2 Ice Ward blocked"))).toBe(
       true,
@@ -871,7 +957,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r.turn = 0;
     r = endTurn(r);
     const mei = r.party.find((c) => c.id === "clover")!;
-    expect(mei.hp).toBe(7);
+    expect(mei.hp).toBe(3);
     expect(mei.reactiveHealCharges).toBe(2);
     mei.hp = 1;
     r.order = ["pip", "e0", "clover", "miso", "e1"];
@@ -879,7 +965,7 @@ describe("revival choices, cooldown timing and trained passives", () => {
     r = endTurn(r);
     expect(r.party.find((c) => c.id === "clover")!.hp).toBe(0);
   });
-  it("Pip's opening bonus applies to one damaging cast and resets per room", () => {
+  it("Pursian's opening bonus applies to one damaging cast and resets per room", () => {
     let r = createRun({ ...initialProgress(), catLevels: { pip: 5 } }, [
       "pip",
       "miso",
@@ -914,5 +1000,956 @@ describe("reactive passive preview consistency", () => {
     r = act(r, "strike", target.id);
     expect(r.enemies[0]!.hp).toBe(preview.remainingHp);
     expect(r.enemies[0]!.reactiveHealCharges).toBe(0);
+  });
+});
+
+describe("enemy marks and combat events", () => {
+  const catIds = ["pip", "miso", "clover"];
+  it("every living enemy starts marked on a living cat", () => {
+    const r = start();
+    for (const e of r.enemies) expect(catIds).toContain(e.mark);
+  });
+  it("marks are reproducible per seed and not always the same cat", () => {
+    const marks = (seed: number) =>
+      createRun(initialProgress(), catIds, seed).enemies.map((e) => e.mark);
+    expect(marks(7)).toEqual(marks(7));
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 40; seed++)
+      for (const m of marks(seed)) seen.add(m!);
+    expect(seen.size).toBe(3);
+  });
+  it("an enemy attacks the cat it marked, then marks a new living cat", () => {
+    let r = start();
+    expect(currentUnit(r)!.id).toBe("pip");
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    expect(r.log.join(" ")).toContain("Crypt rat hits Mei");
+    expect(catIds).toContain(r.enemies[0]!.mark);
+  });
+  it("re-rolls a mark whose cat has fallen instead of wasting the attack", () => {
+    let r = start();
+    r.party.find((c) => c.id === "clover")!.hp = 0;
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    expect(r.log.join(" ")).toMatch(/Crypt rat hits (Pursian|Miso)/);
+  });
+  it("reports the intent with the marked cat and no arrow for a dead mark", () => {
+    const r = start();
+    const rat = r.enemies[0]!;
+    rat.mark = "miso";
+    expect(enemyIntent(r, rat)).toMatchObject({
+      kind: "attack",
+      label: "Attack",
+      targetId: "miso",
+    });
+    r.party.find((c) => c.id === "miso")!.hp = 0;
+    expect(enemyIntent(r, rat)!.targetId).toBeUndefined();
+    rat.hp = 0;
+    expect(enemyIntent(r, rat)).toBeUndefined();
+  });
+  it("Taunt redirects the shown intent only for enemies acting before the taunt ends", () => {
+    const r = start();
+    r.tauntId = "miso";
+    const rat = r.enemies[0]!;
+    rat.mark = "clover";
+    // Order: Pursian (current), Crypt rat, Miso, Mei, Moss slime. The rat acts before Miso.
+    expect(enemyIntent(r, rat)).toMatchObject({
+      targetId: "miso",
+      redirected: true,
+    });
+    // Miso now begins a turn before the rat acts, so Taunt will already be over.
+    r.order = ["pip", "miso", "e0", "clover", "e1"];
+    expect(enemyIntent(r, rat)).toMatchObject({ targetId: "clover" });
+    expect(enemyIntent(r, rat)!.redirected).toBeUndefined();
+  });
+  it("support enemies show their ally instead of a hostile target", () => {
+    const r = createRun(initialProgress(), catIds);
+    const slime = r.enemies[1]!;
+    r.round = 1;
+    r.order = ["pip", "e0", "miso", "clover", "e1"];
+    r.turn = 0;
+    const intent = enemyIntent(r, slime)!;
+    expect(intent.kind).toBe("inspire");
+    expect(intent.allyId).toBe("e0");
+    expect(intent.targetId).toBeUndefined();
+  });
+  it("records a hit event for each damaging blow and bumps the event id", () => {
+    let r = start();
+    expect(r.events).toEqual([]);
+    const before = r.eventId;
+    r = act(r, "strike", "e0");
+    expect(r.eventId).toBe(before + 1);
+    expect(r.events).toEqual([
+      { type: "hit", targetId: "e0", damage: 4, absorbed: 0 },
+    ]);
+    r = endTurn(r);
+    expect(r.eventId).toBe(before + 2);
+    expect(r.events.some((e) => e.type === "hit")).toBe(true);
+    expect(r.events.length).toBeGreaterThan(0);
+  });
+  it("tags enemy-turn events with the acting enemy and the round", () => {
+    let r = start();
+    r = act(r, "strike", "e0");
+    expect(r.events.every((e) => e.actorId === undefined)).toBe(true);
+    r = endTurn(r);
+    const enemyIds = r.enemies.map((e) => e.id);
+    expect(r.events.length).toBeGreaterThan(0);
+    for (const e of r.events) {
+      expect(enemyIds).toContain(e.actorId);
+      expect(e.round).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
+describe("Hearth blessing in combat", () => {
+  const catIds = ["pip", "miso", "clover"];
+  const withHearth = (generalLevel: number) => ({
+    ...initialProgress(),
+    generalLevel,
+  });
+  it("adds its stats to every cat and to damaging skills", () => {
+    const base = createRun(withHearth(0), catIds);
+    const rank2 = createRun(withHearth(2), catIds);
+    base.party.forEach((cat, i) => {
+      expect(rank2.party[i]!.maxHp).toBe(cat.maxHp + 2);
+      expect(rank2.party[i]!.initiative).toBe(cat.initiative + 1);
+      expect(rank2.party[i]!.abilities[0]!.power).toBe(
+        cat.abilities[0]!.power + 1,
+      );
+    });
+  });
+  it("rank 5 also raises healing, Guard and Inspired power", () => {
+    const base = createRun(withHearth(0), catIds);
+    const r5 = createRun(withHearth(5), catIds);
+    const power = (run: Run, catId: string, effect: string) =>
+      run.party
+        .find((c) => c.id === catId)!
+        .abilities.find((a) => a.effect === effect)!.power;
+    expect(power(r5, "clover", "heal")).toBe(power(base, "clover", "heal") + 1);
+    expect(power(r5, "miso", "guard")).toBe(power(base, "miso", "guard") + 1);
+  });
+  it("rank 8 gives +1 AP only in the first round of each room", () => {
+    let r = createRun(withHearth(8), catIds);
+    expect(r.ap).toBe(7);
+    expect(r.maxAp).toBe(6);
+    r = clear(r);
+    r = nextRoom(r);
+    expect(r.ap).toBe(7);
+    expect(createRun(withHearth(7), catIds).ap).toBe(6);
+  });
+  it("Second Wind raises the first fallen cat once per expedition", () => {
+    let r = createRun(withHearth(3), catIds);
+    const mei = r.party.find((c) => c.id === "clover")!;
+    mei.hp = 1;
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    const risen = r.party.find((c) => c.id === "clover")!;
+    expect(risen.hp).toBe(Math.ceil(risen.maxHp * 0.4));
+    expect(r.secondWind).toBe(0);
+    expect(r.log.join(" ")).toContain("Second Wind!");
+    risen.hp = 1;
+    r.enemies.forEach((e) => (e.mark = "clover"));
+    for (let i = 0; i < 6 && risen.hp > 0; i++) r = endTurn(r);
+    expect(r.party.find((c) => c.id === "clover")!.hp).toBe(0);
+  });
+  it("Second Wind restores 60 percent from rank 7", () => {
+    let r = createRun(withHearth(7), catIds);
+    r.party.find((c) => c.id === "clover")!.hp = 1;
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    const risen = r.party.find((c) => c.id === "clover")!;
+    expect(risen.hp).toBe(Math.ceil(risen.maxHp * 0.6));
+  });
+  it("Second Wind prevents defeat when the last cat falls", () => {
+    let r = createRun(withHearth(3), catIds);
+    for (const cat of r.party) if (cat.id !== "clover") cat.hp = 0;
+    r.party.find((c) => c.id === "clover")!.hp = 1;
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    expect(r.status).toBe("combat");
+    expect(r.party.find((c) => c.id === "clover")!.hp).toBeGreaterThan(0);
+  });
+  it("without Hearth rank 3 a fallen cat stays down", () => {
+    let r = createRun(withHearth(2), catIds);
+    r.party.find((c) => c.id === "clover")!.hp = 1;
+    r.enemies[0]!.mark = "clover";
+    r = endTurn(r);
+    expect(r.party.find((c) => c.id === "clover")!.hp).toBe(0);
+  });
+});
+
+describe("automatic pass when no skill is usable", () => {
+  it("passes Tuntun's turn after three Cinder jabs leave 1 AP and nothing else fits", () => {
+    let r = trained("ember");
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 200));
+    r.ap = 4;
+    r = act(r, "strike", "e0");
+    r = act(r, "strike", "e0");
+    expect(currentUnit(r)!.id).toBe("ember");
+    expect(r.ap).toBe(2);
+    r = act(r, "strike", "e0");
+    // The third use hits the per-turn limit; 1 AP remain but Flame paw and
+    // Sweeping embers cost 3, so the turn ends on its own.
+    expect(currentUnit(r)!.id).not.toBe("ember");
+    expect(r.log.join(" ")).toContain("Tuntun has no usable skills left");
+  });
+  it("keeps the turn while any skill is still usable", () => {
+    let r = trained("ember");
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 200));
+    r = act(r, "strike", "e0");
+    r = act(r, "strike", "e0");
+    r = act(r, "strike", "e0");
+    // 3 AP remain: Flame paw is usable, so Tuntun keeps acting.
+    expect(currentUnit(r)!.id).toBe("ember");
+    expect(r.ap).toBe(3);
+  });
+});
+
+describe("piercing attacks ignore every defense", () => {
+  const needleOf = (r: Run) =>
+    r.party[0]!.abilities.find((a) => a.id === "pierce")!;
+  it("deals its full power through armor, Guard and Ice Ward", () => {
+    let r = trained("pip");
+    const foe = r.enemies[0]!;
+    foe.hp = foe.maxHp = 100;
+    foe.armor = 2;
+    foe.guard = 6;
+    foe.guardTurns = 2;
+    foe.iceArmor = 2;
+    foe.iceCharges = 3;
+    const needle = needleOf(r);
+    const power = abilityPower(r, r.party[0]!, needle);
+    expect(damagePreview(r, r.party[0]!, needle, foe)).toMatchObject({
+      armor: 0,
+      blocked: 0,
+      iceBlocked: 0,
+      damage: power,
+    });
+    r = act(r, "pierce", "e0");
+    expect(r.enemies[0]!.hp).toBe(100 - power);
+    // Nothing was spent: the shield and the Ice Ward charges are untouched.
+    expect(r.enemies[0]!.guard).toBe(6);
+    expect(r.enemies[0]!.iceCharges).toBe(3);
+    expect(r.log.join(" ")).toContain(
+      `${power} damage (${power} attack power, 0 armor, 0 Guard blocked, 0 Ice Ward blocked`,
+    );
+  });
+  it("reported case: a 40 HP enemy with 2 armor takes the whole hit", () => {
+    let r = trained("pip");
+    const foe = r.enemies[0]!;
+    foe.hp = foe.maxHp = 40;
+    foe.armor = 2;
+    const power = abilityPower(r, r.party[0]!, needleOf(r));
+    r = act(r, "pierce", "e0");
+    expect(r.enemies[0]!.hp).toBe(40 - power);
+  });
+  it("a regular attack on the same defended target is still mitigated", () => {
+    const r = trained("pip");
+    const foe = r.enemies[0]!;
+    foe.hp = foe.maxHp = 100;
+    foe.armor = 2;
+    foe.guard = 6;
+    const strike = r.party[0]!.abilities[0]!;
+    const preview = damagePreview(r, r.party[0]!, strike, foe);
+    expect(preview.armor).toBe(2);
+    expect(preview.blocked).toBeGreaterThan(0);
+    expect(preview.damage).toBeLessThan(strike.power);
+  });
+  it("preview and resolution agree for every defense mix", () => {
+    for (const [armor, guard, charges] of [
+      [0, 0, 0],
+      [2, 0, 0],
+      [0, 6, 0],
+      [3, 4, 2],
+    ] as const) {
+      let r = trained("pip");
+      const foe = r.enemies[0]!;
+      foe.hp = foe.maxHp = 100;
+      foe.armor = armor;
+      foe.guard = guard;
+      foe.guardTurns = guard ? 2 : 0;
+      foe.iceArmor = 2;
+      foe.iceCharges = charges;
+      const needle = needleOf(r);
+      const expected = damagePreview(r, r.party[0]!, needle, foe).damage;
+      r = act(r, "pierce", "e0");
+      expect(100 - r.enemies[0]!.hp).toBe(expected);
+    }
+  });
+});
+
+describe("Dagger line", () => {
+  const withThreeFoes = () => {
+    const r = start();
+    const extra = structuredClone(r.enemies[0]!);
+    extra.id = "e2";
+    extra.name = "Cave bat";
+    r.enemies.push(extra);
+    r.enemies.forEach((e) => {
+      e.hp = e.maxHp = 500;
+      e.armor = 0;
+      e.guard = 0;
+    });
+    return r;
+  };
+  it("hits the target fully, the one behind it for half and the next for 35%", () => {
+    let r = withThreeFoes();
+    const line = r.party[0]!.abilities.find((a) => a.id === "line")!;
+    const power = abilityPower(r, r.party[0]!, line);
+    r = act(r, "line", "e0");
+    expect(500 - r.enemies[0]!.hp).toBe(power);
+    expect(500 - r.enemies[1]!.hp).toBe(Math.round(power * 0.5));
+    expect(500 - r.enemies[2]!.hp).toBe(Math.round(power * 0.35));
+  });
+  it("only reaches the enemies behind the target, never the ones in front", () => {
+    let r = withThreeFoes();
+    r = act(r, "line", "e1");
+    expect(r.enemies[0]!.hp).toBe(500);
+    expect(r.enemies[1]!.hp).toBeLessThan(500);
+    expect(r.enemies[2]!.hp).toBeLessThan(500);
+    const last = withThreeFoes();
+    const hit = act(last, "line", "e2");
+    expect(hit.enemies[0]!.hp).toBe(500);
+    expect(hit.enemies[1]!.hp).toBe(500);
+    expect(hit.enemies[2]!.hp).toBeLessThan(500);
+  });
+  it("skips fallen enemies when counting who is behind", () => {
+    let r = withThreeFoes();
+    r.enemies[1]!.hp = 0;
+    r = act(r, "line", "e0");
+    expect(r.enemies[1]!.hp).toBe(0);
+    expect(r.enemies[2]!.hp).toBeLessThan(500);
+  });
+  it("armor still reduces each hit of the line", () => {
+    let r = withThreeFoes();
+    r.enemies[1]!.armor = 2;
+    const power = abilityPower(
+      r,
+      r.party[0]!,
+      r.party[0]!.abilities.find((a) => a.id === "line")!,
+    );
+    r = act(r, "line", "e0");
+    expect(500 - r.enemies[1]!.hp).toBe(Math.round(power * 0.5) - 2);
+  });
+  it("is limited to one use per turn and then waits one own turn", () => {
+    let r = withThreeFoes();
+    const line = r.party[0]!.abilities.find((a) => a.id === "line")!;
+    r = act(r, "line", "e0");
+    expect(abilityUnavailableReason(r, line)).toBeDefined();
+    expect(cooldownRemaining(r.party[0]!, line)).toBe(2);
+    r = endTurn(r);
+    // Pursian's next turn: still cooling down.
+    let guardTurns = 0;
+    while (currentUnit(r)!.id !== "pip" && guardTurns++ < 12) r = endTurn(r);
+    expect(abilityUnavailableReason(r, line)).toContain("Cooldown");
+    r = endTurn(r);
+    while (currentUnit(r)!.id !== "pip" && guardTurns++ < 24) r = endTurn(r);
+    expect(abilityUnavailableReason(r, line)).toBeUndefined();
+  });
+});
+
+describe("Taunt makes every enemy mark the taunting cat", () => {
+  const tauntRun = (seed = 1) => {
+    const p = { ...initialProgress(), catLevels: { miso: 3 } };
+    const r = createRun(p, ["miso", "pip", "clover"], seed);
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 500));
+    return turn(r, "miso");
+  };
+  it("marks Miso on every living enemy as soon as Taunt is cast", () => {
+    let r = tauntRun();
+    r = act(r, "taunt", "miso");
+    expect(r.tauntId).toBe("miso");
+    for (const enemy of r.enemies) expect(enemy.mark).toBe("miso");
+    const rat = r.enemies[0]!;
+    expect(enemyIntent(r, rat)).toMatchObject({
+      kind: "attack",
+      targetId: "miso",
+    });
+  });
+  it("keeps the mark on Miso after each enemy acts while Taunt lasts", () => {
+    let r = tauntRun();
+    r = act(r, "taunt", "miso");
+    r = endTurn(r);
+    let checked = 0;
+    for (let i = 0; i < 12 && r.status === "combat" && r.tauntId; i++) {
+      for (const enemy of r.enemies.filter((e) => e.hp > 0))
+        expect(enemy.mark).toBe("miso");
+      checked++;
+      r = endTurn(r);
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+  it("every enemy attack lands on Miso during Taunt", () => {
+    let r = tauntRun();
+    r = act(r, "taunt", "miso");
+    const hits: string[] = [];
+    for (let i = 0; i < 6 && r.tauntId; i++) {
+      const before = r.log.length;
+      r = endTurn(r);
+      hits.push(
+        ...r.log
+          .slice(before)
+          .filter((line) => /^(Crypt rat|Moss slime) hits /.test(line)),
+      );
+    }
+    expect(hits.length).toBeGreaterThan(0);
+    for (const line of hits) expect(line).toContain("hits Miso");
+  });
+  it("releases the marks when Taunt ends and rolls them again", () => {
+    let nonMiso = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      let r = tauntRun(seed);
+      r = act(r, "taunt", "miso");
+      for (let i = 0; i < 12 && r.tauntId; i++) r = endTurn(r);
+      expect(r.tauntId).toBeUndefined();
+      if (r.enemies.some((e) => e.hp > 0 && e.mark !== "miso")) nonMiso++;
+    }
+    expect(nonMiso).toBeGreaterThan(0);
+  });
+  it("curses and support actions do not follow Taunt", () => {
+    const r = tauntRun();
+    r.tauntId = "miso";
+    const imp = r.enemies[0]!;
+    imp.name = "Spore imp";
+    r.round = 1;
+    imp.mark = "pip";
+    const intent = enemyIntent(r, imp)!;
+    expect(intent.kind).toBe("curse");
+    expect(intent.targetId).toBe("pip");
+    expect(intent.redirected).toBeUndefined();
+  });
+  it("a curse lands on the previewed cat even if HP changes before it acts", () => {
+    const r = tauntRun();
+    const imp = r.enemies[0]!;
+    imp.name = "Spore imp";
+    r.round = 1;
+    imp.mark = "pip";
+    const shown = enemyIntent(r, imp)!.targetId;
+    r.party.find((c) => c.id === "miso")!.hp = 1;
+    expect(shown).toBe("pip");
+    expect(enemyIntent(r, imp)!.targetId).toBe("pip");
+  });
+});
+
+describe("critical hits", () => {
+  const party = ["pip", "miso", "clover"];
+  it("are off in the engine unless requested", () => {
+    const r = createRun(initialProgress(), party);
+    expect(r.critChance).toBe(0);
+    expect(r.enemyCritChance).toBe(0);
+    const hit = act(r, "strike", "e0");
+    expect(hit.events.every((e) => !e.crit)).toBe(true);
+  });
+  it("use 10 percent for everyone and add Hearth bonuses only for cats", () => {
+    const base = createRun(initialProgress(), party, 1, { crit: "on" });
+    expect(base.critChance).toBe(10);
+    expect(base.enemyCritChance).toBe(10);
+    for (const [rank, chance] of [
+      [5, 10],
+      [6, 15],
+      [8, 20],
+    ] as const) {
+      const r = createRun(
+        { ...initialProgress(), generalLevel: rank },
+        party,
+        1,
+        {
+          crit: "on",
+        },
+      );
+      expect(r.critChance).toBe(chance);
+      expect(r.enemyCritChance).toBe(10);
+    }
+  });
+  it("only Hearth changes the chance, not mastery, training or equipment", () => {
+    const rich: Progress = {
+      ...initialProgress(),
+      xp: 1500,
+      catLevels: { pip: 8 },
+      equipment: { pip: "Iron bell" },
+    };
+    expect(createRun(rich, party, 1, { crit: "on" }).critChance).toBe(10);
+  });
+  it("a critical hit deals 50 percent more, rounded up, before armor", () => {
+    let r = createRun(initialProgress(), party, 1, { crit: 100 });
+    r = act(r, "strike", "e0");
+    expect(r.events[0]).toMatchObject({ type: "hit", crit: true, damage: 6 });
+    expect(r.enemies[0]!.hp).toBe(36 - 6);
+    expect(r.log.join(" ")).toContain(
+      "Pursian scores a critical hit on Crypt rat!",
+    );
+    let armored = createRun(initialProgress(), party, 1, { crit: 100 });
+    armored.enemies[0]!.armor = 2;
+    armored = act(armored, "strike", "e0");
+    expect(armored.events[0]).toMatchObject({ crit: true, damage: 4 });
+  });
+  it("heals can be critical too", () => {
+    let r = turn(
+      createRun(initialProgress(), party, 1, { crit: 100 }),
+      "clover",
+    );
+    r.party.find((c) => c.id === "miso")!.hp = 1;
+    r = act(r, "heal", "miso");
+    expect(r.events[0]).toMatchObject({ type: "heal", crit: true, amount: 11 });
+    expect(r.party.find((c) => c.id === "miso")!.hp).toBe(12);
+    expect(r.log.join(" ")).toContain("Mei lands a critical heal on Miso!");
+  });
+  it("enemy attacks can be critical", () => {
+    let r = createRun(initialProgress(), party, 1, { crit: 100 });
+    r = endTurn(r);
+    const enemyHits = r.events.filter(
+      (e) => e.type === "hit" && e.targetId !== "e0" && e.targetId !== "e1",
+    );
+    expect(enemyHits.length).toBeGreaterThan(0);
+    expect(enemyHits.every((e) => e.crit)).toBe(true);
+  });
+  it("roll each target of an area attack separately", () => {
+    const rates = new Set<number>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const p = { ...initialProgress(), catLevels: { ember: 3 } };
+      let r = turn(
+        createRun(p, ["ember", "pip", "miso"], seed, { crit: 50 }),
+        "ember",
+      );
+      r.enemies.forEach((e) => (e.hp = e.maxHp = 500));
+      r = act(r, "cleave", "ember");
+      rates.add(r.events.filter((e) => e.crit).length);
+    }
+    // With 50 percent per target, sometimes none, one or both are critical.
+    expect(rates.size).toBeGreaterThan(1);
+  });
+  it("happen about one time in ten over many hits", () => {
+    let hits = 0;
+    let crits = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      let r = createRun(initialProgress(), party, seed, { crit: "on" });
+      r.enemies[0]!.hp = r.enemies[0]!.maxHp = 500;
+      r = act(r, "strike", "e0");
+      const own = r.events[0]!;
+      hits++;
+      if (own.crit) crits++;
+    }
+    expect(crits / hits).toBeGreaterThan(0.05);
+    expect(crits / hits).toBeLessThan(0.17);
+  });
+  it("never change who the enemies mark", () => {
+    const marks = (crit: "off" | "on") =>
+      createRun(initialProgress(), party, 7, { crit }).enemies.map(
+        (e) => e.mark,
+      );
+    expect(marks("on")).toEqual(marks("off"));
+  });
+});
+
+describe("lifesteal and Miso's shield", () => {
+  const foes = (r: Run) =>
+    r.enemies.forEach((e) => {
+      e.hp = e.maxHp = 500;
+      e.armor = e.guard = 0;
+    });
+  it("Flame paw heals Tuntun for 30 percent of the damage dealt, rounded up", () => {
+    let r = trained("ember");
+    foes(r);
+    r.party[0]!.hp = 10;
+    const power = abilityPower(r, r.party[0]!, r.party[0]!.abilities[1]!);
+    r = act(r, "slam", "e0");
+    expect(r.party[0]!.hp).toBe(10 + Math.ceil(power * 0.3));
+    expect(
+      r.events.some((e) => e.type === "heal" && e.targetId === "ember"),
+    ).toBe(true);
+    expect(r.log.join(" ")).toContain(
+      `Tuntun drains ${Math.ceil(power * 0.3)} HP from Crypt rat.`,
+    );
+  });
+  it("only drains from damage that reaches HP and never over max HP", () => {
+    let r = trained("ember");
+    foes(r);
+    r.enemies[0]!.armor = 999;
+    r.party[0]!.hp = 10;
+    r = act(r, "slam", "e0");
+    expect(r.party[0]!.hp).toBe(10);
+    r = trained("ember");
+    foes(r);
+    r.party[0]!.hp = r.party[0]!.maxHp - 1;
+    r = act(r, "slam", "e0");
+    expect(r.party[0]!.hp).toBe(r.party[0]!.maxHp);
+  });
+  it("Sweeping embers drains once per enemy hit", () => {
+    let r = trained("ember");
+    foes(r);
+    r.party[0]!.hp = 5;
+    const sweep = r.party[0]!.abilities.find((a) => a.id === "cleave")!;
+    const power = abilityPower(r, r.party[0]!, sweep);
+    r = act(r, "cleave", "ember");
+    expect(r.party[0]!.hp).toBe(5 + 2 * Math.ceil(power * 0.3));
+  });
+  it("Dagger line drains 30 percent per target hit and critical hits do not raise it", () => {
+    let r = turn(
+      createRun(initialProgress(), ["pip", "miso", "clover"], 1, { crit: 100 }),
+      "pip",
+    );
+    foes(r);
+    r.party[0]!.hp = 5;
+    r = act(r, "line", "e0");
+    const hits = r.events.filter((e) => e.type === "hit" && "damage" in e);
+    const gained = r.party[0]!.hp - 5;
+    const expected = hits.reduce(
+      (sum, e) =>
+        sum + Math.ceil(((e as { damage: number }).damage * 30) / 100),
+      0,
+    );
+    expect(gained).toBe(expected);
+    expect(hits.every((e) => (e as { crit?: boolean }).crit)).toBe(true);
+  });
+  it("Miso's Stand behind me also shields him for three turns", () => {
+    let r = trained("miso");
+    foes(r);
+    r = act(r, "taunt", "miso");
+    expect(r.tauntId).toBe("miso");
+    expect(r.party[0]!.guard).toBe(5);
+    expect(r.party[0]!.guardTurns).toBe(GUARD_TURNS);
+  });
+  it("a Guard shield now lasts three turns", () => {
+    expect(GUARD_TURNS).toBe(3);
+    let r = turn(start(), "miso");
+    r = act(r, "guard", "pip");
+    expect(r.party.find((c) => c.id === "pip")!.guardTurns).toBe(3);
+  });
+});
+
+describe("curse lowers received shields", () => {
+  it("a cursed ally receives a smaller Nine lives shield", () => {
+    let r = turn(start(), "miso");
+    const pip = r.party.find((c) => c.id === "pip")!;
+    pip.curse = 2;
+    pip.curseTurns = 2;
+    r = act(r, "guard", "pip");
+    expect(r.party.find((c) => c.id === "pip")!.guard).toBe(6);
+    expect(r.log.join(" ")).toContain("Pursian gains a 6 shield");
+  });
+  it("never goes below zero", () => {
+    let r = turn(start(), "miso");
+    const pip = r.party.find((c) => c.id === "pip")!;
+    pip.curse = 99;
+    pip.curseTurns = 2;
+    r = act(r, "guard", "pip");
+    expect(r.party.find((c) => c.id === "pip")!.guard).toBe(0);
+  });
+  it("an uncursed ally still gets the full shield", () => {
+    const r = act(turn(start(), "miso"), "guard", "pip");
+    expect(r.party.find((c) => c.id === "pip")!.guard).toBe(8);
+  });
+});
+
+describe("misses and evasion", () => {
+  const party = ["pip", "miso", "clover"];
+  it("evade chance is one percent per initiative above 12, capped", () => {
+    expect([5, 12, 13, 20, 24, 99].map(evadeChance)).toEqual([
+      0, 0, 1, 8, 12, 12,
+    ]);
+  });
+  it("are off unless luck is on, so tests stay deterministic", () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const r = createRun(initialProgress(), party, seed);
+      expect(r.luck).toBe(false);
+      expect(
+        act(r, "strike", "e0").events.every((e) => e.type !== "avoid"),
+      ).toBe(true);
+    }
+  });
+  it("happen about one hit in fourteen at the starting fight and deal nothing", () => {
+    let tries = 0;
+    let avoided = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const r = createRun(initialProgress(), party, seed, { crit: "on" });
+      r.enemies[0]!.hp = r.enemies[0]!.maxHp = 500;
+      const after = act(r, "strike", "e0");
+      tries++;
+      const miss = after.events.find((e) => e.type === "avoid");
+      if (miss) {
+        avoided++;
+        expect(after.enemies[0]!.hp).toBe(500);
+        expect(after.ap).toBe(r.ap - 1);
+        expect(after.log.join(" ")).toMatch(
+          /misses Crypt rat!|Crypt rat evades Pursian's attack!/,
+        );
+      }
+    }
+    expect(avoided / tries).toBeGreaterThan(0.03);
+    expect(avoided / tries).toBeLessThan(0.14);
+  });
+  it("a fast target evades more often than a slow one", () => {
+    const rate = (index: number, initiative: number) => {
+      let avoided = 0;
+      for (let seed = 1; seed <= 400; seed++) {
+        const r = createRun(initialProgress(), party, seed, { crit: "on" });
+        r.enemies[index]!.initiative = initiative;
+        r.enemies[index]!.hp = r.enemies[index]!.maxHp = 500;
+        const after = act(r, "strike", r.enemies[index]!.id);
+        if (after.events.some((e) => e.type === "avoid" && e.kind === "evade"))
+          avoided++;
+      }
+      return avoided / 400;
+    };
+    expect(rate(0, 24)).toBeGreaterThan(rate(1, 5) + 0.05);
+  });
+  it("healing and shields never miss", () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      let r = turn(
+        createRun(initialProgress(), party, seed, { crit: "on" }),
+        "miso",
+      );
+      r = act(r, "guard", "pip");
+      expect(r.party.find((c) => c.id === "pip")!.guard).toBe(8);
+    }
+  });
+});
+
+describe("cooldown ready events", () => {
+  it("announces when a cooling-down skill becomes usable again", () => {
+    let r = trained("ember");
+    r.enemies.forEach((e) => (e.hp = e.maxHp = 500));
+    r = act(r, "slam", "e0");
+    const slam = r.party[0]!.abilities.find((a) => a.id === "slam")!;
+    expect(cooldownRemaining(r.party[0]!, slam)).toBe(2);
+    let ready: string | undefined;
+    for (let i = 0; i < 20 && !ready; i++) {
+      r = endTurn(r);
+      const event = r.events.find(
+        (e) => e.type === "ready" && e.targetId === "ember",
+      );
+      if (event && event.type === "ready") ready = event.name;
+    }
+    expect(ready).toBe("Flame paw");
+    expect(
+      cooldownRemaining(
+        r.party.find((c) => c.id === "ember")!,
+        slam,
+      ),
+    ).toBe(0);
+  });
+});
+
+describe("curse lowers received healing too", () => {
+  it("a cursed ally is healed for less, and never below zero", () => {
+    const heal = (curse: number) => {
+      let r = turn(start(), "clover");
+      const miso = r.party.find((c) => c.id === "miso")!;
+      miso.hp = 1;
+      miso.curse = curse;
+      miso.curseTurns = 2;
+      r = act(r, "heal", "miso");
+      return r.party.find((c) => c.id === "miso")!.hp - 1;
+    };
+    const full = heal(0);
+    expect(heal(2)).toBe(full - 2);
+    expect(heal(99)).toBe(0);
+  });
+  it("applies to every target of a group heal", () => {
+    let r = turn(start(), "clover");
+    r = trained("clover");
+    r.party.forEach((c) => (c.hp = 1));
+    r.party.find((c) => c.id === "pip")!.curse = 3;
+    r.party.find((c) => c.id === "pip")!.curseTurns = 2;
+    const power = abilityPower(r, r.party[0]!, SIGNATURE_ABILITIES.clover!);
+    r = act(r, "renewal", "clover");
+    const gained = (id: string) => r.party.find((c) => c.id === id)!.hp - 1;
+    const others = r.party.filter((c) => c.id !== "pip");
+    expect(others.every((c) => gained(c.id) > 0)).toBe(true);
+    expect(gained("pip")).toBe(Math.max(0, gained(others[0]!.id) - 3));
+    expect(power).toBeGreaterThan(0);
+  });
+});
+
+describe("Mei lifts curses", () => {
+  it("Healing purr can target a cursed ally at full HP and lifts the curse", () => {
+    let r = turn(start(), "clover");
+    const miso = r.party.find((c) => c.id === "miso")!;
+    expect(act(r, "heal", "miso")).toBe(r); // full HP and not cursed: still refused
+    miso.curse = 2;
+    miso.curseTurns = 2;
+    r = act(r, "heal", "miso");
+    const after = r.party.find((c) => c.id === "miso")!;
+    expect(after.curse + after.curseTurns).toBe(0);
+    expect(r.log.some((l) => l.includes("lifts the curse on Miso"))).toBe(true);
+  });
+  it("Circle of renewal lifts every curse even when everyone is at full HP", () => {
+    let r = trained("clover");
+    expect(act(r, "renewal", "clover")).toBe(r);
+    for (const c of r.party.slice(1)) {
+      c.curse = 1;
+      c.curseTurns = 2;
+    }
+    r = act(r, "renewal", "clover");
+    expect(r.party.every((c) => c.curse === 0 && c.curseTurns === 0)).toBe(
+      true,
+    );
+  });
+});
+
+describe("ability reach", () => {
+  const ids = (units: { id: string }[]) => units.map((u) => u.id);
+  const setup = () => {
+    const r = turn(start(), "pip");
+    const extra = structuredClone(r.enemies[0]!);
+    extra.id = "e2";
+    r.enemies.push(extra);
+    return { r, pip: r.party.find((u) => u.id === "pip")! };
+  };
+  const skill = (id: string, r: Run) =>
+    currentUnit(r)!.abilities.find((a) => a.id === id)!;
+  it("a line starts at the chosen foe and stops after LINE_FALLOFF targets", () => {
+    const { r } = setup();
+    const line = skill("line", r);
+    expect(ids(abilityReach(r, line, "e1"))).toEqual(["e1", "e2"]);
+    expect(ids(abilityReach(r, line, "e0"))).toEqual(["e0", "e1", "e2"]);
+  });
+  it("skips fallen foes and covers every living foe when none is chosen", () => {
+    const { r } = setup();
+    r.enemies[1]!.hp = 0;
+    expect(ids(abilityReach(r, skill("line", r), ""))).toEqual(["e0", "e2"]);
+    expect(
+      ids(
+        abilityReach(
+          r,
+          { ...skill("line", r), effect: "cleave", target: "all-enemies" },
+          "pip",
+        ),
+      ),
+    ).toEqual(["e0", "e2"]);
+  });
+  it("a single-foe skill reaches only the chosen foe, or the first living foe without a choice", () => {
+    const { r } = setup();
+    const strike = skill("strike", r);
+    expect(ids(abilityReach(r, strike, "e2"))).toEqual(["e2"]);
+    expect(ids(abilityReach(r, strike, ""))).toEqual(["e0"]);
+    r.enemies[0]!.hp = 0;
+    expect(ids(abilityReach(r, strike, ""))).toEqual(["e1"]);
+  });
+  it("an ally skill reaches the chosen living cat, or the caster without a choice", () => {
+    const { r } = setup();
+    const ally = { ...skill("strike", r), target: "ally" as const };
+    expect(ids(abilityReach(r, ally, "miso"))).toEqual(["miso"]);
+    expect(ids(abilityReach(r, ally, ""))).toEqual(["pip"]);
+    r.party.find((u) => u.id === "miso")!.hp = 0;
+    expect(ids(abilityReach(r, ally, "miso"))).toEqual(["pip"]);
+  });
+  it("group, self and fallen-ally skills", () => {
+    const { r } = setup();
+    const base = skill("strike", r);
+    r.party.find((u) => u.id === "miso")!.hp = 0;
+    expect(
+      ids(abilityReach(r, { ...base, target: "all-allies" }, "pip")),
+    ).toEqual(["pip", "clover"]);
+    expect(ids(abilityReach(r, { ...base, target: "self" }, "pip"))).toEqual([
+      "pip",
+    ]);
+    expect(
+      ids(abilityReach(r, { ...base, target: "fallen-ally" }, "miso")),
+    ).toEqual(["miso"]);
+  });
+});
+
+describe("trinkets", () => {
+  it("each trinket adds exactly its listed bonus to the cat wearing it", () => {
+    const owned = { ...initialProgress(), inventory: [...ITEMS] };
+    // [HP, initiative, attack, Healing purr, Nine lives, Moon blessing]
+    const expected: Record<string, number[]> = {
+      "Iron bell": [6, 0, 0, 0, 0, 0],
+      "Silk ribbon": [0, 3, 0, 0, 0, 0],
+      "Lucky fang": [0, 0, 1, 0, 0, 0],
+      "Copper locket": [3, 1, 0, 0, 0, 0],
+      "Brass whistle": [2, 2, 0, 0, 0, 0],
+      "Herb pouch": [0, 0, 0, 2, 0, 0],
+      "Knight's button": [0, 0, 0, 0, 2, 0],
+      "Moon pebble": [0, 0, 0, 0, 0, 1],
+      "Mint sprig": [3, 0, 0, 1, 0, 0],
+      "Pewter charm": [3, 0, 0, 0, 1, 0],
+      ...Object.fromEntries(
+        ITEMS.slice(10).map((item) => [item, [0, 0, 0, 0, 0, 0]]),
+      ),
+    };
+    expect(ITEMS).toEqual(Object.keys(expected));
+    const gain = (id: string, item: string) => {
+      const base = buildCat(owned, id);
+      const worn = buildCat(equip(owned, id, item), id);
+      return {
+        hp: worn.maxHp - base.maxHp,
+        initiative: worn.initiative - base.initiative,
+        first: worn.abilities[0]!.power - base.abilities[0]!.power,
+        second: worn.abilities[1]!.power - base.abilities[1]!.power,
+      };
+    };
+    for (const [item, [hp, init, atk, heal, guard, fury]] of Object.entries(
+      expected,
+    )) {
+      expect(gain("miso", item), item).toEqual({
+        hp,
+        initiative: init,
+        first: atk,
+        second: guard,
+      });
+      expect(gain("clover", item).second, item).toBe(heal);
+      expect(gain("luna", item).second, item).toBe(fury);
+    }
+  });
+});
+
+describe("lantern easter egg", () => {
+  it("grants 1000 gold and XP up to the cap, then does nothing", () => {
+    let p = initialProgress();
+    for (let i = 0; i < LAMP_BOOST_MAX; i++) p = lampBoost(p);
+    expect([p.gold, p.xp, p.lampBoosts]).toEqual([5030, 5000, 5]);
+    expect(lampBoost(p)).toBe(p);
+  });
+  it("is kept by the save, and older saves start at zero", () => {
+    const p = lampBoost(initialProgress());
+    expect(parseProgress(JSON.stringify(p)).lampBoosts).toBe(1);
+    const old: Record<string, unknown> = { ...initialProgress() };
+    delete old.lampBoosts;
+    expect(parseProgress(JSON.stringify(old)).lampBoosts).toBe(0);
+  });
+});
+
+describe("Trinket drops", () => {
+  /** Settles the current room by felling the last foe. */
+  const win = (run: Run) => {
+    run.enemies.forEach((e, i) => (e.hp = i === 0 ? 1 : 0));
+    run.enemies[0]!.guard = run.enemies[0]!.armor = 0;
+    run.order = [run.party[0]!.id, ...run.enemies.map((e) => e.id)];
+    run.turn = 0;
+    return act(run, "strike", "e0");
+  };
+  const expedition = (progress: Progress, seed: number) => {
+    const rooms: Run[] = [];
+    let run = createRun(progress, ["miso", "luna", "pip"], seed);
+    for (let room = 0; room < 3; room++) {
+      run = win(room ? nextRoom(run) : run);
+      rooms.push(run);
+    }
+    return rooms;
+  };
+  it("drops half the time before the boss and always from the boss", () => {
+    let early = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      const [first, , last] = expedition(initialProgress(), seed);
+      early += first!.items.length;
+      expect(typeof last!.drop).toBe("string");
+      expect(new Set(last!.items).size).toBe(last!.items.length);
+      expect(last!.items).not.toContain("Iron bell");
+    }
+    expect(early).toBeGreaterThan(70);
+    expect(early).toBeLessThan(130);
+  });
+  it("is reproducible from the seed", () => {
+    const items = () => expedition(initialProgress(), 5)[2]!.items;
+    expect(items()).toEqual(items());
+  });
+  it("gives gold instead once every Trinket is owned", () => {
+    const all = { ...initialProgress(), inventory: [...ITEMS] };
+    const last = expedition(all, 5)[2]!;
+    expect(last.items).toEqual([]);
+    expect(last.drop).toBe(20);
+    expect(last.gold).toBeGreaterThanOrEqual(EXPEDITION_REWARD.gold + 20);
   });
 });

@@ -1,0 +1,163 @@
+/* Tutorial: first-visit offer, guide panel and the highlighted spot */
+.tutorial-offer {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #060a12cc;
+}
+.tutorial-offer-card {
+  max-width: 460px;
+  padding: 26px 30px;
+  text-align: center;
+  background: #101723;
+  border: 3px solid #ae8951;
+  box-shadow: 4px 4px #080c13;
+}
+.tutorial-offer-card h2 {
+  margin: 0 0 10px;
+  color: var(--gold);
+}
+.tutorial-offer-card p {
+  font-size: 20px;
+  line-height: 1.3;
+}
+.tutorial-offer-card small {
+  display: block;
+  margin-top: 14px;
+  color: #9fb0bd;
+  font-size: 16px;
+}
+.tutorial-coach {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 150;
+  width: min(380px, calc(100vw - 36px));
+  padding: 14px 16px;
+  background: #101723f2;
+  border: 3px solid #ae8951;
+  box-shadow: 4px 4px #080c13;
+}
+.tutorial-coach h2 {
+  margin: 2px 0 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gold);
+}
+.tutorial-coach p {
+  margin: 0 0 12px;
+  font-size: 19px;
+  line-height: 1.3;
+}
+.tutorial-step {
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: #9fb0bd;
+}
+.tutorial-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tutorial-wait {
+  font-size: 16px;
+  color: #8fe39a;
+}
+.tutorial-spot {
+  outline: 3px solid #ffd84a !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 18px #ffd84a88 !important;
+}
+.practice-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 8px;
+  font-size: 15px;
+  letter-spacing: 1px;
+  color: #082410;
+  background: #8fe39a;
+}
+.tutorial-offer-card .language-options button {
+  min-width: 150px;
+  font-size: 20px;
+  padding: 8px 14px;
+}
+
+/* Short loading screen before a battle so the art is ready */
+.entering-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  letter-spacing: 2px;
+  color: var(--gold);
+  background: #060a12f2;
+  animation: entering-fade 0.9s ease-in-out infinite alternate;
+}
+@keyframes entering-fade {
+  from {
+    color: #b98f3f;
+  }
+  to {
+    color: #ffe3a1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .entering-overlay {
+    animation: none;
+  }
+}
+.expedition-picker {
+  margin: 10px 0;
+}
+.expedition-toggle {
+  color: #e8bb63;
+}
+.expedition-modal {
+  width: min(460px, 92vw);
+  padding: 18px 20px 20px;
+  color: inherit;
+  background: #151c26;
+  border: 3px solid #55505a;
+  box-shadow: 0 5px #080c13;
+}
+.expedition-modal::backdrop {
+  background: #05080ecc;
+}
+.expedition-modal h2 {
+  margin: 0 0 12px;
+  color: #e8bb63;
+  text-align: center;
+}
+.expedition-modal ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.expedition-modal li button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  font-size: 18px;
+}
+.expedition-modal li[data-locked="true"] button {
+  opacity: 0.55;
+}
+.expedition-modal li button[aria-pressed="true"] {
+  border-color: #e8bb63;
+}
+.expedition-modal .power-warning {
+  color: #e07a6a;
+}
+.expedition-modal .locked-note {
+  color: #a99d86;
+}
