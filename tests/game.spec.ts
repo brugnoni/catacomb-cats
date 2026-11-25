@@ -1766,3 +1766,92 @@ test("a chosen skin changes the sprite sheet and persists", async ({
     page.locator(".cat-card", { hasText: "Pursian" }).locator(".sprite"),
   ).toHaveClass(/skin-1/);
 });
+
+test("every camp card shows all its rows without overlap, in both languages", async ({
+  page,
+}) => {
+  for (const lang of ["en", "es"]) {
+    await page.addInitScript(
+      (l) => localStorage.setItem("catacomb-cats.lang", l),
+      lang,
+    );
+    await page.goto("/");
+    const cards = page.locator(".cat-card");
+    await expect(cards).toHaveCount(5);
+    const rows = [
+      ".portrait-stage",
+      ".cat-name-line",
+      ".role",
+      ".stats",
+      ".milestone-progress",
+      ".party-toggle",
+      ".equipment-label:nth-of-type(1)",
+      ".equipment-label:nth-of-type(2)",
+      ".training-description",
+      ".train-button",
+    ];
+    const layout = await cards.evaluateAll((els, selectors) => {
+      const box = (e: Element) => {
+        const r = e.getBoundingClientRect();
+        return { x: r.x, y: r.y, w: r.width, h: r.height };
+      };
+      return els.map((card) => ({
+        card: box(card),
+        rows: selectors.map((s) => {
+          const e = card.querySelector(s);
+          return e
+            ? {
+                ...box(e),
+                clipped: e.scrollHeight > e.clientHeight + 1,
+                text: (e.textContent ?? "").trim().length,
+              }
+            : null;
+        }),
+      }));
+    }, rows);
+    for (const { card, rows: found } of layout) {
+      const shown = found.map((r, i) => {
+        expect(r, `${lang}: ${rows[i]} exists`).not.toBeNull();
+        return r!;
+      });
+      shown.forEach((r, i) => {
+        expect(r.h, `${lang}: ${rows[i]} is visible`).toBeGreaterThan(5);
+        expect(r.clipped, `${lang}: ${rows[i]} is not clipped`).toBe(false);
+        expect(r.x).toBeGreaterThanOrEqual(card.x - 1);
+        expect(r.x + r.w).toBeLessThanOrEqual(card.x + card.w + 1);
+        expect(
+          r.y + r.h,
+          `${lang}: ${rows[i]} stays in its card`,
+        ).toBeLessThanOrEqual(card.y + card.h + 1);
+      });
+      for (let i = 1; i < shown.length; i++)
+        expect(
+          shown[i]!.y,
+          `${lang}: ${rows[i]} sits below ${rows[i - 1]}`,
+        ).toBeGreaterThanOrEqual(shown[i - 1]!.y + shown[i - 1]!.h - 1);
+    }
+    // Rows line up across the five cats and the cards never overlap.
+    rows.forEach((_, i) => {
+      const tops = layout.map((l) => Math.round(l.rows[i]!.y));
+      expect(new Set(tops).size, `${lang}: ${rows[i]} aligns`).toBe(1);
+    });
+    for (let i = 1; i < layout.length; i++)
+      expect(layout[i]!.card.x).toBeGreaterThanOrEqual(
+        layout[i - 1]!.card.x + layout[i - 1]!.card.w - 1,
+      );
+    // The roster dock holds the cards and never runs under the camp upgrades.
+    const dock = (await page.locator(".roster-dock").boundingBox())!;
+    const upgrades = (await page.locator(".camp-upgrades").boundingBox())!;
+    for (const { card } of layout) {
+      expect(card.x).toBeGreaterThanOrEqual(dock.x - 1);
+      expect(card.x + card.w).toBeLessThanOrEqual(dock.x + dock.width + 1);
+      expect(card.y + card.h).toBeLessThanOrEqual(dock.y + dock.height + 1);
+    }
+    const apart =
+      dock.x + dock.width <= upgrades.x + 1 ||
+      upgrades.x + upgrades.width <= dock.x + 1 ||
+      dock.y + dock.height <= upgrades.y + 1 ||
+      upgrades.y + upgrades.height <= dock.y + 1;
+    expect(apart, `${lang}: dock and upgrades do not overlap`).toBe(true);
+  }
+});
