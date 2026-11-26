@@ -6,14 +6,14 @@ Personal browser roguelite: React 19, TypeScript, Vite, Node 24. Public reposito
 
 ## Read when
 
-| Before                                           | Read                                                         |
-| ------------------------------------------------ | ------------------------------------------------------------ |
-| Changing code                                    | `docs/ARCHITECTURE.md`                                       |
-| Changing gameplay or balance                     | `docs/HANDOFF.md` (Spanish: accepted decisions and behavior) |
-| Naming anything in code, UI or replies           | `GLOSSARY.md`                                                |
-| Reworking a past decision                        | `docs/adr/`                                                  |
-| Touching saves, CSP, dependencies, CI or hosting | `SECURITY.md`                                                |
-| Writing specs or tickets                         | `docs/agents/`                                               |
+| Before                                           | Read                                                |
+| ------------------------------------------------ | --------------------------------------------------- |
+| Changing code                                    | `docs/ARCHITECTURE.md`                              |
+| Changing gameplay or balance                     | `docs/HANDOFF.md` (accepted decisions and behavior) |
+| Naming anything in code, UI or replies           | `GLOSSARY.md`                                       |
+| Reworking a past decision                        | `docs/adr/`                                         |
+| Touching saves, CSP, dependencies, CI or hosting | `SECURITY.md`                                       |
+| Writing specs or tickets                         | `docs/agents/`                                      |
 
 ## Workflow
 
@@ -95,7 +95,7 @@ The pre-commit hook runs `pnpm check` (format check only for documentation-only 
 - Internal ids (`clover` is Mei, `pip` is Pursian, `ember` is Tuntun, ability and effect ids) never change. Saves are versioned; keep migrations.
 - Every visible text goes through `t()` with a Spanish entry.
 - Balance values and their descriptions agree.
-- Code, identifiers, commits and process docs are in English.
+- Code, identifiers, commits and all documentation are in English (game translations live in `src/es/`).
 - Generate images only when asked.
 
 ## Decisions
