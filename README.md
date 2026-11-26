@@ -27,7 +27,7 @@ Training uses an explicit eight-rank track for each cat. Rank 3 unlocks their si
 
 Clearing either of the first two rooms revives fallen cats at ceil(25% maximum HP), minimum 1. Boss victory fully heals and revives the entire party, clears combat effects and leaves the next expedition ready at full HP. A full-party defeat never revives anyone. In the first two rooms, cats that survived recover up to 8 HP and the team gains +1 run damage; revived cats do not also receive the 8 HP. Gold, XP and discovered items remain carried Expedition Loot until the final boss is defeated, which banks them. Defeat, retreat or reloading loses unbanked loot; permanent upgrades remain.
 
-After the first boss victory, future runs use a frozen Ascension snapshot based on the Power bought with training and the Hearth (see src/progression.ts). Enemy HP, skill power, initiative, armor and eventual reinforcements grow within bounded limits. The entry screen explains the next run’s tier and modifiers. Unspent gold does not increase difficulty. See outputs/balance-report.md for formulas and measured scenarios.
+After the first boss victory, future runs use a frozen Ascension snapshot based on the Power bought with training and the Hearth (see src/progression.ts). Enemy HP, skill power, initiative, armor and eventual reinforcements grow within bounded limits. The entry screen explains the next run’s tier and modifiers. Unspent gold does not increase difficulty. See outputs/BALANCE_REPORT.md for formulas and measured scenarios.
 
 ## Architecture and workflow
 
@@ -39,7 +39,7 @@ This is a desktop vertical slice with raster pixel artwork and initial balance. 
 
 ## Visual assets
 
-Scene backgrounds and a transparent 5×2 character atlas live in `public/art/`. See `public/art/ART-DIRECTION.md` for direction, generation provenance and prompt specifications. UI uses locally bundled pixel fonts. `outputs/lobby.png` and `outputs/combat.png` are review captures.
+Scene backgrounds and a transparent 5×2 character atlas live in `public/art/`. See `public/art/ART_DIRECTION.md` for direction, generation provenance and prompt specifications. UI uses locally bundled pixel fonts. `outputs/lobby.png` and `outputs/combat.png` are review captures.
 
 ## Rules and feedback
 

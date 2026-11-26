@@ -15,6 +15,8 @@ Personal browser roguelite: React 19, TypeScript, Vite, Node 24. Public reposito
 | Touching saves, CSP, dependencies, CI or hosting | `SECURITY.md`                                       |
 | Writing specs or tickets                         | `docs/agents/`                                      |
 
+Markdown files are named `UPPER_SNAKE_CASE.md`, including files a skill generates. ADRs keep `NNNN-slug.md`, and names a tool requires (`SKILL.md`) stay as the tool expects.
+
 ## Workflow
 
 1. **Understand.** Change nothing until you are 95% confident of what to build; ask until you are.
@@ -116,7 +118,7 @@ One chat = one branch = one worktree = one PR. `pnpm stack <cmd>` (`scripts/stac
 
 ## Agent skills
 
-- Issue tracker: local markdown under `.scratch/`, see `docs/agents/issue-tracker.md`.
-- Triage labels: `docs/agents/triage-labels.md`.
-- Domain docs: `GLOSSARY.md` and `docs/adr/`, see `docs/agents/domain.md`.
+- Issue tracker: local markdown under `.scratch/`, see `docs/agents/ISSUE_TRACKER.md`.
+- Triage labels: `docs/agents/TRIAGE_LABELS.md`.
+- Domain docs: `GLOSSARY.md` and `docs/adr/`, see `docs/agents/DOMAIN.md`.
 - Project skills: `.agents/skills/catacomb-feature` and `.agents/skills/catacomb-review`.

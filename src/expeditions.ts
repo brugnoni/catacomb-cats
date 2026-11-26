@@ -25,7 +25,7 @@ export interface Expedition {
 
 /**
  * Every Expedition, in unlock order. Stats are tuned against the Ascension a
- * party at the Rank cap meets (see outputs/balance-report.md), so a later route
+ * party at the Rank cap meets (see outputs/BALANCE_REPORT.md), so a later route
  * can have weaker base enemies than an earlier one.
  */
 export const EXPEDITIONS: readonly Expedition[] = [

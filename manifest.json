@@ -88,7 +88,7 @@
       "sha256": "725c894188151c4a7f5299b625b6db3c1d28cd254a4932bc4525dcb72703123e"
     },
     {
-      "path": "dist/art/ART-DIRECTION.md",
+      "path": "dist/art/ART_DIRECTION.md",
       "bytes": 2112,
       "sha256": "c21b7ca4e7ca6cedf1f9783927274ab152abab8e9746d02f2778c84f0f1fdbb9"
     },
@@ -178,9 +178,9 @@
       "sha256": "d716ff517d6b86fff070e3affa7cc61c7e7827e75f4b3a6943f9adb9115aa959"
     },
     {
-      "path": "docs/TRANSFERENCIA.md",
-      "bytes": 6620,
-      "sha256": "27a8beec24447485d251398b59889f4814f2c68af88f8c4b5a4b88904fcc70d6"
+      "path": "docs/TRANSFER.md",
+      "bytes": 2903,
+      "sha256": "4ae3fd471b0581c2a81bdb3f8a5afe4ae9535013be5568aff388bf1c6938f067"
     },
     {
       "path": "eslint.config.js",
@@ -198,14 +198,14 @@
       "sha256": "c814e01a2ccae58f2856f8f412df895cef57e0ab3ea58e3f80a2cb3a12ee312f"
     },
     {
-      "path": "outputs/VALIDACION-TRASLADO.md",
-      "bytes": 1705,
-      "sha256": "3f440cc56bcca1290062ecd48eed3dca7ff92ea3ed3df95395bf964e91c6be02"
+      "path": "outputs/TRANSFER_VALIDATION.md",
+      "bytes": 1531,
+      "sha256": "959d73729a7d69e8a826e4e31644deb7004806a674358d6df3b42703f647bc78"
     },
     {
-      "path": "outputs/balance-report.md",
-      "bytes": 6867,
-      "sha256": "063bf8fa1d002eeb84bcc6c575d6c980670cd8480af7c1d7a94abed077390124"
+      "path": "outputs/BALANCE_REPORT.md",
+      "bytes": 9559,
+      "sha256": "3b0d6a7222783a9a3a1ae483416c4589aa2a88fc10850aff22c645f1b366260a"
     },
     {
       "path": "outputs/combat.png",
@@ -243,7 +243,7 @@
       "sha256": "ac02d96368617c760f093cfe61fdec64b6244007ab3553e0d6621f706f54a353"
     },
     {
-      "path": "public/art/ART-DIRECTION.md",
+      "path": "public/art/ART_DIRECTION.md",
       "bytes": 2112,
       "sha256": "c21b7ca4e7ca6cedf1f9783927274ab152abab8e9746d02f2778c84f0f1fdbb9"
     },
