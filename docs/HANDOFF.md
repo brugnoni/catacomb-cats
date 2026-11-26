@@ -1,199 +1,152 @@
-# Catacomb Cats — continuidad del proyecto
+# Catacomb Cats: accepted decisions and behavior
 
-Estado documentado: 23 de noviembre de 2026. Este archivo permite retomar el desarrollo sin depender del chat anterior. Las reglas ejecutables en `src/game.ts` y `src/progression.ts` prevalecen si una nota queda desactualizada.
+Checked against the code on 2026-11-26. If a note here disagrees with the code, the code wins; fix the note. Working rules are in `CLAUDE.md`, the code layout in `docs/ARCHITECTURE.md`, vocabulary in `GLOSSARY.md`.
 
-## Alcance
+## The game
 
-Las reglas de trabajo viven en `CLAUDE.md`; este archivo solo registra comportamiento y decisiones del juego.
+A party of cats explores a dungeon turn by turn, brings back loot and spends it at camp. The tone mixes a cosy shelter (**The Burrow**) with dark catacombs. Desktop browser game, English and Spanish. The generic dashboard look and cats drawn with CSS were explicitly rejected.
 
-- Juego de navegador para escritorio, en inglés y español.
-- Se rechazó expresamente la estética genérica de dashboard y los gatos dibujados con CSS.
+There are five cats and the player picks three: Miso (Vanguard), Luna (Mystic), Pursian (Scout), Mei (Healer) and Tuntun (Brawler). **Internal ids do not follow the visible names** (Mei is `clover`, Pursian is `pip`, Tuntun is `ember`); never rename them, since training, equipment and saves depend on them.
 
-## Idea y experiencia actual
+Flow: camp → three rooms → victory or defeat → camp. In The Catacombs the first room has two enemies, the second three, and the last The Hollow King with two companions. Ascension can add reinforcements.
 
-Un equipo de gatos explora una mazmorra por turnos, obtiene tesoros y vuelve a su refugio para mejorar. El tono combina un refugio acogedor con catacumbas oscuras. La primera expedición se llama **The Hollow Below** y su lobby **The Burrow**.
+## Combat rules to preserve
 
-Hay cinco gatos y se eligen tres: Miso (Vanguard), Luna (Mystic), Pursian (Scout), Mei (Healer) y Tuntun (Brawler). **Los IDs internos no siguen al nombre visible**: Mei es `clover`, Pursian es `pip` y Tuntun es `ember`; se conservan para no romper entrenamiento, equipo ni guardados anteriores. No renombrar esos IDs solo para hacer coincidir el nombre visible.
+- One initiative queue with living cats and enemies. The party shares 6 AP per round.
+- A 1 AP skill can be used up to three times per own turn, a 2 AP skill up to twice. Some skills have tighter limits (Moon blessing: once per turn).
+- At 0 AP the turn ends, cats without AP are skipped, enemies act and control returns to the next playable turn. A new round refills AP.
+- **Auto pass:** a cat with AP but no usable skill ends its turn by itself (`canAct()`).
+- Invalid attempts consume no AP, uses or cooldowns. The engine validates and the UI explains.
+- Timed effects tick at the **start of the affected unit's turn**, never per End turn click of others. Guard on Mei follows Mei's turns even when Miso casts it.
+- **Guard** lasts 3 turns (`GUARD_TURNS`). It does not stack; an allowed refresh restores its **full power and duration**, and a fully consumed shield can be applied again.
+- **Inspired** (Moon blessing; internally `fury`, never shown as "Fury") improves damage, healing and Guard, not AP, taunt or another blessing. Refreshing renews duration only. A full-duration effect blocks an accidental repeat.
+- Single-target healing is refused on a full-HP cat; group healing when every living ally is full.
+- **Curse** lowers the damage, healing and shields the cursed cat gives **and** the healing and shields it receives (minimum 0).
+- **Mei lifts curses:** Healing purr and Circle of renewal clear the curse on whom they heal, and can be cast on a cursed ally at full HP.
+- **Lifesteal:** Flame paw, Sweeping embers and Dagger line heal the caster for 30% of the damage that reaches HP, per target, rounded up, never from armor or shields nor above maximum HP. Critical hits do not raise the percentage.
+- **Piercing (Needle strike)** ignores armor, Guard and Ice Ward and spends no charges or shield.
+- **Dagger line** (1 AP, power 5, once per turn, cooldown 1): hits the target for 100%, the next living enemy to its right for 50% and the one after for 35% (`LINE_FALLOFF`). Armor and shields reduce each hit. It never hits enemies in front of the target.
+- Damage order, shared by resolution and preview (`damagePreview()`): modified power → armor → Ice Ward → Guard → HP lost, including reactive healing.
+- An attack keeps its living enemy target during the same cat turn.
 
-El flujo implementado es lobby → tres salas → victoria/derrota → lobby. La primera sala tiene dos enemigos, la segunda tres y la última al Hollow King con dos acompañantes. Ascension puede añadir refuerzos. Eso describe The Catacombs; hay dos Expediciones más y un selector (ver "Expediciones").
+### Enemy marks, Taunt and intent
 
-## Reglas de combate que deben conservarse
+- When a room starts and after each of its own turns, every enemy marks a random living cat (seeded by `Run.rng`). Its next attack goes to that mark; if the marked cat fell, another is drawn.
+- **Taunt** (Stand behind me, which also gives Miso a 5 shield) makes every living enemy mark Miso while it lasts, and ends at Miso's next turn start, when marks are drawn again. Support skills ignore Taunt.
+- A curse goes to the marked cat, or to the weakest one if the mark fell.
+- **Open question:** the field guide says Taunt does not redirect curses, but casting Taunt rewrites every mark to Miso and curses follow the mark.
+- `enemyIntent()` previews the next action. Threads are red toward an attacked cat, green toward a helped ally and violet for a curse.
+- Enemy behavior is data in `ENEMY_TRAITS` (`src/engine/data.ts`): a cycle by `round % 3`, armor, opening shield and curse power. Roles include armored tanks, fast attackers, attack buffs, curses, protection, reflection (fixed return damage, never reflected again) and limited ally healing.
 
-- Cola global por iniciativa, incluyendo enemigos y gatos vivos. El equipo comparte 6 AP por ronda.
-- Cada habilidad de 1 AP admite hasta tres usos por turno propio; cada habilidad de 2 AP admite hasta dos. Algunas habilidades tienen límites más estrictos.
-- Al llegar a 0 AP, termina el turno actual, se omiten gatos sin AP, actúan los enemigos y se devuelve el control al siguiente turno jugable. Una nueva ronda repone el máximo de AP correspondiente.
-- Un ataque conserva el objetivo enemigo vivo mientras continúe el mismo turno del mismo gato. Una habilidad de apoyo, End turn, un cambio automático de turno, la muerte del objetivo o el resultado de sala limpian la selección.
-- Los efectos temporales descuentan duración al **inicio del turno de la unidad afectada**, nunca por cada clic en End turn de otros personajes. Guard sobre Mei sigue los inicios de turno de Mei, aunque lo lance Miso.
-- Taunt dirige los ataques enemigos a Miso mientras viva y termina al comenzar su próximo turno. No desvía apoyo enemigo ni maldiciones.
-- Moon Blessing otorga **Inspired**, no “Fury” visible. Sus campos/efecto internos todavía se llaman `fury`. Mejora daño, curación y Guard; no aumenta AP, taunt ni la potencia de otra bendición.
-- Inspired no acumula potencia al refrescarse: solo renueva duración. Un efecto con duración completa bloquea una repetición accidental.
-- Guard tampoco se acumula, pero un refresco permitido restaura **toda su potencia efectiva y duración**. Un escudo completamente consumido puede aplicarse de nuevo.
-- Un objetivo con HP completo no admite curación individual; la cura de grupo se bloquea si todos los aliados vivos están completos.
-- **Marcas enemigas:** al iniciar la sala y al terminar cada turno suyo, cada enemigo marca un gato vivo al azar (`Unit.mark`, generador con semilla `Run.rng`; `createRun(progress, party, seed)` usa semilla 1 por defecto para pruebas deterministas y `App.tsx` usa una aleatoria). Su siguiente ataque va a esa marca; Taunt la sustituye y, si la marca cayó, se vuelve a sortear. Las maldiciones siguen yendo al gato con menos HP. `enemyIntent()` expone la acción siguiente (también apoyo a aliados) y la UI dibuja hilos bajo las tarjetas (rojo al gato marcado, verde al aliado que recibirá apoyo): al inicio de cada turno se muestran de uno en uno, en el orden de actuación (máx. ~3 s en total), y después solo al pasar el mouse (o foco de teclado) por una unidad: un enemigo muestra su propio plan, un gato muestra quién lo atacará y un enemigo apoyado muestra quién lo ayudará. Los E2E fijan la semilla con `window.__CATACOMB_SEED__`.
-- **Eventos de combate:** cada transición (`act`, `endTurn`, `nextRoom`) reinicia `Run.events` con un evento `hit` por golpe y sube `Run.eventId`. La UI los usa para el destello rojo de 1 s (borde, nombre, barra y HP); alterna las clases `hit-0`/`hit-1` para reiniciar la animación.
-- **Bordes de estado:** un escudo (`guard > 0`) pone borde plateado persistente hasta que se rompe o expira; una curación (`CombatEvent` tipo `heal`, incluye Revive y la cura del Royal wisp) hace destellar el borde verde 1 s en cada unidad curada. Expedition Strength se muestra en la franja de dificultad bajo el nombre de la sala.
-- **Dagger line (Pursian, 1 AP):** potencia 5; golpea al objetivo con 100%, al enemigo vivo siguiente (a su derecha en el campo, orden de `Run.enemies`) con 50% y al siguiente con 35% (`LINE_FALLOFF`, redondeo normal). La armadura y los escudos reducen cada golpe. Un uso por turno y cooldown de 1 turno. Nunca golpea a los enemigos que están delante del objetivo.
-- **Ataques perforantes (Needle strike):** ignoran por completo armadura, Guard y Ice Ward; no gastan cargas de Ice Ward ni escudo. Vista previa y resolución usan `damagePreview()`.
-- **Taunt y marcas:** al lanzar Taunt, todos los enemigos vivos marcan al gato que provoca (`mark`); mientras dure, cada marca nueva también es ese gato. Al terminar Taunt (inicio del turno del gato) se vuelven a sortear las marcas. Las maldiciones y el apoyo no siguen a Taunt: la maldición va al gato con menos HP y su hilo es **violeta**; el ataque es rojo y el apoyo verde.
-- **Críticos:** cada golpe y cada curación (gatos y enemigos) tiene `BASE_CRIT_CHANCE` = 10% de ser crítico (`CRIT_MULTIPLIER` = 1.5, redondeo hacia arriba, antes de armadura). La probabilidad es fija: solo la bendición del Hogar suma (+5% en rango 6 y +5% en rango 8, solo gatos). Cada objetivo de un ataque en área o de Dagger line tira por separado. Tiene su propio generador (`Run.critRng`) para no alterar las marcas. `createRun(..., { crit })`: `"off"` (por defecto en el motor y en las pruebas), `"on"` (juego real) o un número fijo; los E2E usan `window.__CATACOMB_CRIT__`.
-- **Rango siguiente:** el lobby escribe "Next rank N · título: …" para que quede claro que ese es el próximo rango, no el actual.
-- **Robo de vida (`Ability.lifesteal`):** Flame paw y Sweeping embers (Tuntun) curan al lanzador el 30% del daño que llega a la vida; Dagger line (Pursian) también el 30%. Por objetivo, redondeo hacia arriba, nunca sobre armadura/escudo ni sobre el máximo; los críticos no suben el porcentaje. Emite evento `heal` (destello verde) y la línea "X drains N HP from Y".
-- **Guard dura 3 turnos** (`GUARD_TURNS` en `src/progression.ts`) y **Stand behind me** da además un escudo de 5 a Miso.
-- **Fallos y esquivas:** con `crit: "on"` (juego real) cada golpe tiene `MISS_CHANCE` = 5% de fallar y, además, el objetivo esquiva `evadeChance(iniciativa)` = 1% por punto de iniciativa sobre 12 (máx. 12%). Usan el generador `critRng` (no alteran las marcas); curar, escudar y bendecir nunca fallan. Evento `avoid` (`miss`/`evade`) y avisos "MISS!/EVADED!" sobre el objetivo. Los E2E y el simulador usan `crit: "off"`/numérico, por lo que no hay azar. **El balance medido por el simulador no incluye fallos/esquivas.**
-- **Curse afecta a todo:** daño, curación y escudos que hace el gato maldecido **y** la curación y los escudos que recibe salen reducidos por su maldición (mínimo 0).
-- **Eventos `ready`:** al empezar el turno de un gato cuya habilidad termina su enfriamiento se emite `ready` ("X ready!" sobre el gato). Insignias de enfriamiento sobre cada gato (`UnitEffects`) muestran los turnos restantes.
-- **Interfaz de combate:** pausa de 1,6 s con aviso "The enemies strike first!" cuando los enemigos golpean antes del primer turno (se muestra la vida previa y los golpes aparecen después; `Game.beginRun`); el hover queda bloqueado mientras dura esa pausa y la vista previa de amenazas (`data-previewing` en `.battlefield`); el botón de turno dice "Pass to {siguiente gato}" y "End turn" con el último; los PA se explican como compartidos; al pasar el mouse por una habilidad (también con teclado) se contornean en amarillo los objetivos posibles (`aimedIds`); el grupo elegido se guarda en `localStorage` (`catacomb-cats.party`).
-- **Tutorial** (`src/tutorialSteps.ts`, `src/Tutorial.tsx`, textos en `src/es/tutorial.ts`): 12 pasos, 4 de lobby (gatos y grupo, entrenamiento/oro/amuletos, XP/maestría/Hogar, salas/jefe/Amenaza) y 8 en una **batalla de práctica** (`practiceRun()`: primera sala con enemigos al 60% de vida y poder 3, nunca se guarda ni toca el progreso real). Los pasos con `gate` ("attack", "pass", "reward") avanzan solos cuando el jugador lo hace (se derivan en `Game`, sin efectos). Se ofrece la primera vez tras elegir idioma (`catacomb-cats.tutorial` = `done`/`skipped`) y siempre se puede repetir con el botón **Tutorial** de la barra superior (deshabilitado en una expedición real). Un paso resalta con `.tutorial-spot` los elementos de su `spot`. Los E2E marcan el tutorial como respondido; `tests/tutorial.spec.ts` lo cubre.
-- **Pantalla de carga** ("Entering the dungeon…", `startRun` en `Game` + `src/preload.ts`): antes de cada expedición o práctica se precargan las imágenes del combate (mínimo 0,9 s, máximo 5 s) y solo entonces empieza el combate y su pausa inicial.
-- **Pase automático:** si un gato aún tiene AP pero ninguna habilidad utilizable (límites de uso, cooldowns, coste mayor que el AP restante, sin objetivo válido), su turno termina solo (`canAct()` en `src/game.ts`).
-- **Descripciones:** `src/abilityText.ts` genera tipo (Damage/Heal/Shield/Buff/Utility), objetivo y una frase corta por habilidad. Duraciones se dicen en turnos ("Lasts 2 turns"), sin "turn starts".
-- Los intentos inválidos no consumen AP, usos ni cooldowns. Estas reglas se validan en el motor y también se explican en la interfaz.
-- Los iconos de estado encima de cada personaje muestran valor y reglas mediante tooltip al pasar el mouse o usar foco de teclado.
+### Luck
 
-## Habilidades desbloqueadas en rango 3
+- Every hit and heal (cats and enemies) has a 10% critical chance (`BASE_CRIT_CHANCE`), ×1.5, rounded up, before armor. Hearth ranks 6 and 8 add +5% each for cats; some Relics and Trinkets add more. Each target of an area attack rolls separately.
+- In the real game each hit also has a 5% miss chance (`MISS_CHANCE`), and the target evades 1% per initiative point above 12, at most 12%. Healing, shields and blessings never miss.
+- Luck uses `Run.critRng`, so it never disturbs marks. The engine, tests and simulator run with luck off or fixed, so **measured balance does not include misses or evasion**.
 
-| Gato    | Desbloqueo y restricciones                                                                                                                                                                                                                                |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Miso    | Stand behind me: Taunt, 2 AP, una vez por turno.                                                                                                                                                                                                          |
-| Luna    | Moonwell: 1 AP de coste, +2 AP actuales y +2 al máximo por ronda durante esa sala; una vez por sala. Ganancia inmediata neta de +1 AP. Se reinicia al cambiar de sala.                                                                                    |
-| Mei     | Circle of renewal: cura a todos los aliados vivos, 3 AP y una vez por turno; **sin cooldown de varios turnos**. El mismo desbloqueo agrega Return to the hearth para revivir a un aliado caído al 60% de su HP máximo, redondeado hacia arriba, por 3 AP. |
-| Pursian | Needle strike: 2 AP, **ignora armadura, escudos (Guard) y Ice Ward**; una vez por turno.                                                                                                                                                                  |
-| Tuntun  | Sweeping embers: 3 AP, daño a todos los enemigos vivos; una vez por turno y con cooldown propio.                                                                                                                                                          |
+## Skills
 
-La última aclaración expresa del usuario es que **solo Revive de Mei tiene cooldown de dos turnos**. No comparte cooldown con la cura de grupo ni con Healing purr. Usar Revive en el turno N lo bloquea en N+1 y N+2; vuelve en N+3. Se puede elegir un gato muerto desde su sprite o el selector. El revivido actúa desde la siguiente ronda, no gana un turno inmediato.
+| Cat     | Theme            | Skills                                                             |
+| ------- | ---------------- | ------------------------------------------------------------------ |
+| Miso    | Knight           | Valiant slash, Nine lives, Stand behind me                         |
+| Luna    | Moon             | Moon bolt, Moon blessing, Moonwell                                 |
+| Pursian | Rogue            | Claw strike, Dagger line, Needle strike                            |
+| Mei     | Herbs and hearth | Thorn swipe, Healing purr, Circle of renewal, Return to the hearth |
+| Tuntun  | Fire             | Cinder jab, Flame paw, Sweeping embers                             |
 
-**Tuntun:** Cinder jab **no tiene cooldown**. Flame paw (potencia 24, 3 AP) tiene cooldown de 1 turno: usado en N, bloqueado en N+1, disponible en N+2. Sweeping embers conserva su cooldown de 1 turno. Cada ataque tiene su propio cooldown, y otro ataque listo sigue siendo utilizable. Flame paw debe rendir más daño por AP que repetir Cinder jab (prueba en `game.test.ts`). Los cooldowns cuentan inicios de turno del propio gato y se reinician entre salas.
+Rank 3 unlocks:
 
-## Idiomas (inglés y español)
+| Cat     | Unlock and limits                                                                                                                                           |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Miso    | Stand behind me: Taunt, 2 AP, once per turn.                                                                                                                |
+| Luna    | Moonwell: 1 AP, +2 current AP and +2 maximum per round for that room, once per room.                                                                        |
+| Mei     | Circle of renewal: heals all living allies, 3 AP, once per turn, no cooldown. Also Return to the hearth: revives a fallen ally at 60% HP, rounded up, 3 AP. |
+| Pursian | Needle strike: 2 AP, ignores armor and shields, once per turn.                                                                                              |
+| Tuntun  | Sweeping embers: 3 AP, power 8, all living enemies, once per turn, cooldown 1.                                                                              |
 
-- Primera visita: pantalla "Select Your Language" con el fondo de The Burrow (`src/LanguageScreen.tsx`); la elección se guarda en `localStorage` (`catacomb-cats.lang`, separada del progreso) y se puede cambiar en cualquier momento con el menú **Language/Idioma** junto a FAQ, incluso a mitad de expedición.
-- El **texto en inglés es la clave**: `t("English text", { params })` de `src/i18n.ts`. El español vive en `src/es/` (`ui.ts` interfaz, `game.ts` nombres, entrenamiento, Hearth y mensajes del motor, `faq.ts` guía). Los nombres internos (ids, enemigos, habilidades) siguen en inglés en el motor; solo se traducen al mostrarlos.
-- Los mensajes del motor (registro de combate y motivos de rechazo) se traducen en la interfaz con las reglas de `src/engineText.ts`; el motor no cambia. Si añades o cambias un mensaje del motor, añade o ajusta su regla y su traducción.
-- `src/i18n.test.ts` falla si falta una traducción (claves `t("...")` del código, nombres, entrenamiento, Hearth, reglas del motor, enemigos), si cambian los marcadores `{x}`, o si un mensaje real de partidas simuladas no tiene regla. Los E2E fijan el inglés con `localStorage`.
-- Español: PV (HP), PA (AP), Guardia, Barrera de hielo, Hogar (Hearth), Madriguera (Burrow/lobby).
+- **Only Mei's revive has a two-turn cooldown**, not shared with her heals. Used on turn N, it is blocked on N+1 and N+2. The revived cat acts from the next round.
+- **Tuntun:** Cinder jab has no cooldown. Flame paw (power 24, 3 AP) has cooldown 1 and must deal more damage per AP than repeating Cinder jab (tested).
+- Cooldowns count the owner's turn starts and reset between rooms.
+- Nine lives costs 1 AP.
 
-## Nombres de habilidades (un tema por gato)
+Base HP: Miso 40, Luna 30, Pursian 40, Mei 36, Tuntun 42. Tuntun's initiative is 12.
 
-| Gato    | Tema            | Habilidades                                                        |
-| ------- | --------------- | ------------------------------------------------------------------ |
-| Miso    | Caballero       | Valiant slash, Nine lives, Stand behind me                         |
-| Luna    | Luna            | Moon bolt, Moon blessing, Moonwell                                 |
-| Pursian | Pícaro          | Claw strike, Dagger line, Needle strike                            |
-| Mei     | Hierbas y hogar | Thorn swipe, Healing purr, Circle of renewal, Return to the hearth |
-| Tuntun  | Fuego           | Cinder jab, Flame paw, Sweeping embers                             |
+## Progression
 
-Los ids internos (`strike`, `guard`, `slam`...) no cambian; solo los nombres visibles.
+`src/progression.ts` is the single source for the engine, FAQ and camp texts.
 
-## Progresión y pasivas
+- **Training:** eight ranks per cat costing 20, 30, 50, 70, 90, 110, 130 and 150 gold. Rank 3 unlocks the signature skill, rank 5 a passive and rank 8 improves it. The camp shows only the next rank ("Next rank N · …"); the FAQ shows all eight.
+- **Passives:** Miso and Tuntun start each room with a shield (4 → 6 and 3 → 5). Luna's Ice Ward reduces the next 3 incoming attacks by 2 (4 charges at rank 8). Mei's Soothing Spirit recovers 2 HP when an attack hurts her, 3 times per room (5 at rank 8). Pursian's first damaging skill of each room gets +2 power (+3 at rank 8).
+- **Mastery:** every 150 banked XP is one level for all cats: +2 HP, and every third level +1 power of attacks, healing, Guard and blessings. Maximum 10. It does not change AP, taunt, revive percentage or passive values.
+- **Hearth blessing:** eight ranks costing 20 + 20 × current rank. R1 +2 HP and +1 initiative; R2 +1 attack; R3 Second Wind (once per Run the first fallen cat rises at 40% HP); R4 +3 HP and +1 initiative; R5 +1 healing, Guard and Inspired; R6 +1 attack and +5% critical; R7 Second Wind at 60% and +3 HP; R8 +1 AP in the first round of each room and +5% critical.
 
-`TRAINING_TRACKS`, `trainingTrack()`, `trainingBonuses()` y `trainingPassives()` en `src/progression.ts` son la fuente común del motor, la FAQ y el texto de próxima mejora del lobby.
+## Trinkets and Relics
 
-- Ocho rangos individuales por gato. Precios: 20, 30, 50, 70, 90, 110, 130 y 150 de oro. El desbloqueo de rango 3 cuesta 100 en total.
-- Cada rango tiene un beneficio concreto; el rango 3 conserva la habilidad especial, el 5 introduce una pasiva y el 8 la mejora.
-- Miso prioriza HP y Guard; Luna, ataques y bendiciones; Mei, curación; Pursian, iniciativa y ataques; Tuntun, HP y ataques.
-- Miso empieza cada sala con Guard 4 en rango 5, que pasa a 6 en rango 8. Tuntun empieza con Guard 3, después 5.
-- Luna obtiene Ice Ward: reducción de 2 para los próximos tres ataques entrantes válidos; cuatro cargas en rango 8. No es un temporizador de turnos.
-- Mei obtiene Soothing Spirit: recupera 2 HP cuando un ataque le quita HP y sobrevive, hasta tres veces por sala; cinco en rango 8. No revive ni produce bucles con daño reflejado.
-- Pursian obtiene +2 de potencia en su primera habilidad dañina de cada sala; +3 en rango 8. Se consume una vez por lanzamiento, no una vez por objetivo.
-- La FAQ muestra los ocho rangos completos y su coste. El lobby muestra solo la próxima mejora, con texto breve y legible.
-- Cada 150 XP bancados da un nivel de maestría compartida: +2 HP para todos. Cada tres niveles añade +1 a potencia numérica de ataques, curación, Guard y bendiciones. Maestría máxima 10.
-- Maestría no modifica AP, taunt, el 60% fijo de Revive ni los valores fijos de pasivas. `masteryBonuses().attack` es un alias de `power`; no sumar ambos.
-- **Hearth (bendición global)**, `HEARTH_TRACK` en `src/progression.ts`; ocho rangos, coste 20 + 20 × rango. R1 +2 HP y +1 iniciativa; R2 +1 ataque; R3 **Second Wind** (una vez por expedición el primer gato caído se levanta al 40% HP, `Run.secondWind`); R4 +3 HP y +1 iniciativa; R5 +1 curación/Guard/Inspired; R6 +1 ataque y +5% crítico; R7 Second Wind al 60% y +3 HP; R8 +1 AP en la primera ronda de cada sala y +5% crítico (`Run.hearthAp`). Los guardados antiguos conservan el rango pero siguen estas reglas nuevas (ya no es +2 HP por rango).
-- Equipo único: Iron bell +6 HP; Silk ribbon +3 iniciativa; Lucky fang +1 ataque. Empty slot desequipa sin perder el objeto.
+- **Trinkets:** 20, permanent, one per cat, equipped from the Bag. A cleared room before the boss drops one 50% of the time, the boss always; never a duplicate; once all are owned the drop is 20 gold. Never rename one: an unknown name invalidates the save. The camp marks a Trinket that does nothing for its wearer. Rules that need care: Brave bell works strictly below half HP; Thorn ring only if the hit removes HP; Warm milk adds to skill healing, not lifesteal or room recovery.
+- **Relics** (`src/engine/relics.ts`): 14, five with a drawback. Before each room up to three are offered and one must be picked. They last for that Run and never count toward Power. Companion Relics appear only with that cat in the party; Warm broth is never offered before the boss. Own generator (`Run.relicRng`).
+- Offers and drops use a loot seed saved per Expedition until a Run there is won or lost, so retreating or reloading cannot re-roll them.
 
-## Daño, enemigos y dificultad
+## Rooms, rewards and saves
 
-El motor comparte `damagePreview()` entre resolución y UI: potencia modificada → armadura → Ice Ward → Guard → pérdida real de HP; también contempla curación reactiva. No aplicar esa curación dos veces.
+- Room rewards: 40/30, 60/45 and 80/60 gold/XP (`ROOM_REWARD`), multiplied by the Expedition.
+- Gold, XP and Trinkets are **carried loot**, banked the moment the boss falls. Trinkets found mid-Run cannot be equipped yet. Defeat, retreat or reload loses unbanked loot.
+- After rooms one and two, surviving cats recover 33% of maximum HP (at least 8, `ROOM_HEAL`; Warm broth adds 20 points), the party gains +1 damage for the Run, and fallen cats rise at 25% HP without the extra recovery.
+- Beating the boss heals and revives everyone and clears effects. A full-party defeat revives no one.
+- Permanent progress is in `localStorage` under `catacomb-cats.progress.v1`. The active Run is never saved. It depends on origin, port and browser profile.
+- An unreadable save is copied to `catacomb-cats.progress.backup`. The camp can **export and import** progress as a file. Keep migrations and validation.
+- A local Run record (`catacomb-cats.runs`, last 1000) travels in the export. It has no screen and nothing is sent anywhere.
+- **Burrow lantern easter egg:** ten quick clicks give +1000 gold and +1000 XP, at most five times. It is a testing shortcut.
+- Skins: two extra color variants per cat, cosmetic only.
 
-El caso reportado de 1/37 HP, armadura 2 y ataque de potencia 6 está cubierto: muere sin escudo adicional. Guard suficiente puede absorber los 4 restantes; el preview y Field Notes muestran esa diferencia.
+## Difficulty
 
-Los enemigos tienen roles: tanques con armadura/Guard, ágiles con iniciativa alta, mejoras de ataque, maldiciones, protección, reflexión y curación limitada de aliados. Reflejar causa daño de retorno fijo y no vuelve a reflejarse.
+- After the first boss victory, Ascension is fixed on entering from **Power** (`powerPoints()`): training ranks of the chosen party, plus Hearth rank, plus mastery level. Gold held does not change it.
+- `tier = min(14, floor(Power / 3))`, 0 before the first victory. Enemy HP × (1 + 0.13 × tier); power + ceil(tier / 2); initiative + floor(tier / 4); one reinforcement per room from tier 10; armor + floor(tier / 8), at most 2. Numbers live in `DIFFICULTY_TUNING` and `tierFacts()`.
+- Target: medium bot wins 75–85%, optimal bot 92–97%. Measurements are in `outputs/balance-report.md`; the simulator is `src/sim.ts`.
 
-Tras la primera victoria, se fija al entrar una dificultad de Ascension según el **Poder** comprado (`powerPoints()` en `src/progression.ts`: rangos de los tres mejores gatos + rango del Hogar + nivel de maestría); ganar, gastar oro o perder no la cambian por sí solos. El nivel no cambia durante la run. Todos los números están en `DIFFICULTY_TUNING` y `tierFacts()` (las comparten motor, lobby y FAQ). Fórmula actual:
+## Expeditions
 
-`tier = min(14, floor(Poder / 3))` (0 antes de la primera victoria)
+Rank cap decision: `docs/adr/0001-rank-cap-per-expedition.md`.
 
-HP enemigo × `(1 + 0.13 × tier)`; potencia +`ceil(tier / 2)`; iniciativa +`floor(tier / 4)`. Desde el tier 10 aparece un refuerzo por sala. Los enemigos ya acorazados ganan +1 de armadura desde el tier 8. Objetivo de balance: ver `outputs/balance-report.md` (bot medio 75-85%, bot óptimo 92-97%; el simulador está en `src/sim.ts`).
+- Three Expeditions of three rooms (`src/expeditions.ts`): The Catacombs, Moss Warrens and Bone Vault. The last two reuse sprites and enemy types with their own stats.
+- **Unlock:** Moss Warrens after 3 wins in The Catacombs; Bone Vault after 5 in Moss Warrens. `Progress.expeditionWins` is the only source; the old `wins` field is read only to migrate.
+- **Rank cap:** training and Hearth 4/6/8 and mastery 4/7/10 by the highest unlocked Expedition. Ranks already bought stay; spare gold and XP stay banked; effective mastery (so Power) is held to the cap.
+- **Rewards:** ×1, ×1.5, ×2 per room. Repeating never pays less.
+- **Ascension** is global, with no floor per Expedition. The picker shows Recommended Power (31 and 42 for the later two) as a warning, never a block.
 
-## Recompensas, recuperación y guardado
+## Battle interface
 
-- Sala 1: 40 oro/30 XP; sala 2: 60 oro/45 XP; jefe: 80 oro/60 XP (`ROOM_REWARD`). Total completo: 180 oro y 135 XP, más objetos descubiertos.
-- Oro, XP y objetos de salas son **Expedition Loot provisional**. Se bancan en cuanto cae el jefe. No se equipan objetos encontrados a mitad de run.
-- Tras las primeras dos salas, los supervivientes recuperan el 33% de su HP máximo (mínimo 8, `ROOM_HEAL`) y todos ganan +1 de daño para el resto de la run. Los caídos reviven al 25% de HP máximo, redondeado arriba, sin recibir además la curación de sala.
-- Vencer al jefe cura y revive a todo el grupo al máximo y limpia efectos temporales. La siguiente expedición comienza sana.
-- Derrota total, retirada o recarga pierden loot provisional. Una derrota total no activa resurrección.
-- El progreso permanente está en `localStorage`, clave **`catacomb-cats.progress.v1`**. La run activa no se guarda.
-- **Mover esta carpeta no mueve automáticamente el progreso del navegador.** El almacenamiento depende también del origen/puerto y perfil. Exportar/importar progreso no es una función del juego actual; consultar la guía de traslado incluida para el procedimiento disponible.
-- Mantener migración y validación de guardados. No cambiar IDs o versión sin plan de compatibilidad. Los rangos antiguos se conservan aunque sus efectos sigan las reglas nuevas.
+- A loading screen preloads battle art before a Run or practice (0.9 s minimum, 5 s maximum).
+- After an action, play is replayed step by step: a round banner, then each enemy attacking on its own. A room where enemies act first shows "The enemies strike first!". Hover is locked meanwhile.
+- Threads are not always on: the Threats button shows every enemy's plan (hover, focus or click to pin), and hovering or focusing a unit shows only what concerns it.
+- Hovering or focusing a skill outlines its reachable targets in yellow, after a short delay if the cursor was already resting there.
+- The turn button says "Pass to {next cat}", or "End turn" for the last one. AP is explained as shared. The chosen party and Expedition are remembered.
+- Hits flash red and heals green on the card; a shield keeps a silver border; status icons show tooltips on hover or focus; cooldown badges sit above each cat; "ready", "MISS!" and "EVADED!" are announced.
+- `src/abilityText.ts` writes each skill's type, target and a short sentence; durations are stated in turns.
+- Accessibility (`tests/a11y.spec.ts`): named controls and 4.5 contrast in camp, offer and battle (background images are not measured); targets describe their HP; the latest log line is announced; focus moves to the Relic offer and the result.
 
-## Arquitectura y herramientas
+## Tutorial and languages
 
-| Área                                              | Ubicación                                                                                                                                                                                                           |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Motor puro e inmutable, validadores y tipos       | `src/engine/*` (fachada pública en `src/game.ts`)                                                                                                                                                                   |
-| Datos de rangos, pasivas, maestría y Ascension    | `src/progression.ts`                                                                                                                                                                                                |
-| Lobby, combate, tutorial y guardado del navegador | `src/App.tsx` (coordinador), `Lobby.tsx`, `Battle.tsx` (+ `Combatant.tsx`, `useThreatPreview.ts`, `useCombatFeedback.tsx`, `battleView.ts`, `AbilityButton.tsx`, `BattleParts.tsx`), `useTutorial.ts`, `storage.ts` |
-| FAQ en inglés con todas las reglas                | `src/Faq.tsx`                                                                                                                                                                                                       |
-| Sprites, estados y estilos                        | `src/Sprite.tsx`, `src/UnitEffects.tsx`, `src/styles.css`                                                                                                                                                           |
-| Pruebas de reglas y simulaciones                  | `src/*.test.ts`                                                                                                                                                                                                     |
-| Pruebas Chromium de la aplicación compilada       | `tests/game.spec.ts`                                                                                                                                                                                                |
-| Arte final y procedencia/prompts                  | `public/art/`                                                                                                                                                                                                       |
-| Capturas y mediciones                             | `outputs/`                                                                                                                                                                                                          |
-| Skills del proyecto                               | `.agents/skills/catacomb-feature/`, `.agents/skills/catacomb-review/`                                                                                                                                               |
-| Hook y CI preparado                               | `.githooks/`, `.github/`                                                                                                                                                                                            |
+- **Tutorial:** 12 steps, 4 in camp and 8 in a practice battle (first room, enemies at 60% HP and power 3, never saved). Steps with a `gate` advance when the player does the action. Offered on first visit after the language choice; the top-bar button replays it except during a real Run.
+- **Languages:** the first visit asks for English or Spanish (`catacomb-cats.lang`, separate from progress); the top-bar menu changes it any time. Spanish terms: PV (HP), PA (AP), Guardia, Barrera de hielo, Hogar (Hearth), Madriguera (Burrow). How translation works: `docs/ARCHITECTURE.md`.
 
-Stack: React, TypeScript estricto y Vite. Node 24 LTS es el objetivo; `package.json` fija pnpm 11.25.0 y `pnpm-lock.yaml` fija dependencias. No crear un segundo lockfile con npm.
+## Balance notes
 
-Comandos desde la raíz: `pnpm install --frozen-lockfile`, `pnpm exec playwright install chromium`, `pnpm dev` y `pnpm check`. Con dependencias ya instaladas, `npm run dev` también arranca el juego. No asumir que pnpm está en el PATH de otra máquina: en el entorno original solo estaba expuesto internamente a Codex.
+Historical measurements, not re-measured for this document.
 
-`pnpm check` ejecuta formato, lint, tipos, pruebas unitarias, build y E2E. `pnpm install` configura el hook si hay `.git`; en una copia sin `.git` revisar la guía de traslado para inicializarlo. CI incluye auditoría, secretos, CodeQL y Dependabot. Pages usa `base: "./"` en `vite.config.ts` para funcionar bajo `/catacomb-cats/`; el progreso del juego es `localStorage` de ese origen, separado del local.
+- **Last balance round:** enemies +15% HP and +1 base power (Bone Vault +10% more HP). Saving AP between rounds was tried and dropped: no better decisions and 13% longer fights.
+- At the Rank cap the medium bot won about 58% in Moss Warrens and 60% in Bone Vault. The goal "under 30% with the previous cap" was not met (about 71% and 52%) because Ascension rises with Power. The Catacombs at its cap is almost always won: it is the starting route.
+- Rounds per room, level 1 without Ascension: about 3.3 / 5.2 / 6.9; at the cap with Ascension 10: about 5.2 / 7.4 / 9.7.
+- **How to measure:** luck off and a greedy bot exaggerate differences between parties. Compare parties with luck on, 12 or more seeds and a width-3 planner (`optimalPlan(run, 3)`). Bots almost always win; absolute difficulty needs human games.
+- **Not measured:** balance with Relics and the new Trinkets (the simulator picks no Relics). Long thread, Warm milk and Four-leaf clover looked weak.
 
-Verificación repetida al preparar el traslado: **71 pruebas de motor/progresión/balance y 21 de navegador pasaron**, además de formato, lint, tipos y build, mediante la ruta npm/pnpm documentada. El archivo `outputs/VALIDACION-TRASLADO.md` describe el alcance de la comprobación y del paquete.
+## Visual state and limits
 
-## Estado visual y límites conocidos
+Backgrounds and atlases are generated raster pixel art, reviewed and integrated; art direction is in `public/art/ART-DIRECTION.md`. Pixel fonts are bundled. No accounts, server, telemetry or cloud. Mobile is not a target.
 
-Los escenarios y atlas son recursos raster de estilo pixel generados, inspeccionados e integrados; no se afirmaron dibujados manualmente. Las fuentes pixel se empaquetan localmente. No hay cuentas, servidor, telemetría ni nube. El diseño es de escritorio; móvil no es objetivo de esta versión.
+## Next work
 
-El balance está documentado en `outputs/balance-report.md`, con simulaciones reproducibles mediante `src/balance.test.ts`. Esas políticas prueban ejemplos concretos, no una tasa universal de victoria ni la dificultad justa de todas las combinaciones. Las resurrecciones y nuevas mejoras hicieron el juego más permisivo; no se retocaron enemigos solo para ocultarlo.
-
-## Expediciones (implementado)
-
-Vocabulario en `GLOSSARY.md`; decisión del tope de rango en `docs/adr/0001-rank-cap-per-expedition.md`.
-
-- **Tres Expediciones de tres salas** (`EXPEDITIONS` en `src/expeditions.ts`, que también tiene salas, desbloqueo, topes y recompensas): The Catacombs (la ruta original), Moss Warrens y Bone Vault. Las dos nuevas reutilizan sprites y tipos de enemigo con stats propios. Se elige en el lobby (`ExpeditionPicker.tsx`, recordada en `catacomb-cats.expedition`); `createRun(..., { expedition })` rechaza ids desconocidos o bloqueados.
-- **Desbloqueo:** Moss Warrens tras 3 victorias en The Catacombs; Bone Vault tras 5 en Moss Warrens. `Progress.expeditionWins` cuenta victorias por Expedición y es la única fuente (`totalWins()` las suma; el campo antiguo `wins` solo se lee al migrar: sus victorias pasan a The Catacombs).
-- **Tope de rango:** entrenamiento y Hogar hasta 4/6/8 y maestría hasta 4/7/10 según la Expedición más alta abierta. Los rangos ya comprados por encima se conservan; el oro y la XP sobrantes se guardan. La maestría efectiva (y por tanto el Poder) sí se limita al tope, así que una partida con mucha XP vuelve a su nivel topado hasta abrir la siguiente Expedición.
-- **Recompensas:** x1, x1,5 y x2 por sala; repetir nunca paga menos.
-- **Ascension:** global y sin cambios; sin piso por Expedición. El selector muestra un Poder recomendado (31 y 42 para las nuevas; es el Poder en el tope de la Expedición anterior y de la propia) como aviso, nunca bloqueo.
-- **Balance medido** (`playerAtCap` en `src/sim.ts`, test en `src/balance.test.ts`, bot medio, tres grupos, 16 semillas): en el tope de su Expedición el grupo gana ≈58% en Moss Warrens y ≈60% en Bone Vault. **Límite conocido:** no se cumple "menos de 30% con el tope de la Expedición anterior" (≈71% y ≈52%), porque Ascension sube con el Poder y compensa; el salto de tier 10 añade un enemigo extra. The Catacombs en su tope (tier 6) se gana ~100%: es la Expedición de arranque.
-
-## Ronda de balance del 24 de noviembre de 2026
-
-Resultado de la auditoría (`docs/AUDIT.md`) y de las mediciones de `outputs/balance-report.md`:
-
-- **Estadísticas base de los gatos:** HP Miso 40, Luna 30, Pursian 40, Mei 36, Tuntun 42; iniciativa de Tuntun 12. **Nine lives** cuesta 1 AP. **Dagger line** 1 AP, potencia 5, robo de vida 30%. **Flame paw** potencia 24 y cooldown de 1 turno; **Sweeping embers** potencia 8.
-- **Mei** quita maldiciones: Healing purr y Circle of renewal limpian la maldición de quien curan, y se pueden lanzar sobre un aliado maldecido con la vida completa.
-- **Enemigos** de las tres Expediciones: +15% de HP y +1 de potencia base; Bone Vault un 10% más de HP.
-- **Modelo de AP:** se probó ahorrar AP entre rondas (hasta +3) y se descartó: no mejora las decisiones y alarga los combates un 13%. Los 6 AP compartidos se mantienen.
-- **Cómo medir:** el azar apagado y el bot voraz exageran el desequilibrio entre equipos. Para comparar equipos usar críticos y fallos activados, 12 o más semillas y un planificador de anchura 3 (`optimalPlan(run, 3)`). Los bots ganan casi siempre; la dificultad absoluta se calibra con partidas humanas.
-- **Rondas por sala** (ronda = un ciclo de la cola de iniciativa, con 6 AP repuestos): sala 1 ≈ 21% de las rondas, sala 2 ≈ 34%, jefe ≈ 44%. Grupo en nivel 1 sin Ascension: ~15–16 rondas en total (3,3 / 5,2 / 6,9 con jugador competente); grupo al tope con Ascension 10: ~22 (5,2 / 7,4 / 9,7).
-
-## Runs roguelite (25 de noviembre de 2026)
-
-Reemplaza lo que arriba diga sobre objetos, guardado o cobro del botín.
-
-- **Reliquias** (`src/engine/relics.ts`): 14, 5 con coste. Antes de cada sala se ofrecen 3 y hay que elegir una (`Run.status === "relic"`, `pickRelic`); duran la run, no suman Poder. Las de un compañero solo salen si está en el equipo y Warm broth nunca sale antes del jefe. En el motor y las pruebas están apagadas por defecto (`createRun(..., { relics: true })`); en navegador se apagan con `window.__CATACOMB_RELICS__ = false`. Generador propio (`Run.relicRng`).
-- **Amuletos:** 20. Caen al azar (50% por sala antes del jefe, el jefe siempre), sin repetidos; con todos, 20 de oro. Se equipan desde la Bolsa (`Bag.tsx`). Nunca renombrar uno: un nombre desconocido invalida el guardado.
-- **Guardado:** el progreso ilegible se copia a `catacomb-cats.progress.backup`; se puede exportar e importar; el botín se guarda al caer el jefe.
-- **Registro local de runs** en `catacomb-cats.runs` (viaja en el export; sin pantalla todavía; nada se envía).
-- **Moon blessing** (Luna) se usa una vez por turno; el umbral de sala 1 en `balance.test.ts` pasó de 99 a 100.
-- **Sin medir:** el balance con Reliquias y amuletos nuevos. El simulador no elige Reliquias.
-- **Amuletos con regla propia** (campos de `TrinketBonus` en `src/engine/data.ts`; los cambios de habilidad se aplican en `buildCat`): Brave bell actúa con estrictamente menos de la mitad de HP; Thorn ring solo si el golpe quita HP; Warm milk suma a la curación de habilidades, no al robo de vida ni a la curación entre salas. La potencia de un ataque se fija al lanzarlo. `trinketIdle` marca en el campamento un amuleto sin efecto en quien lo lleva.
-- **Accesibilidad** (`tests/a11y.spec.ts`): controles con nombre y contraste 4.5 en campamento, oferta y combate (no mide imágenes de fondo); cada objetivo describe su HP; la última línea del registro se anuncia; el foco pasa a la oferta de Reliquias y al resultado.
-- **Pendiente:** la recalibración (bots, enemigos, jefe y `outputs/balance-report.md`). En el simulador, Long thread, Warm milk y Four-leaf clover se ven flojos.
-
-## Siguiente trabajo
-
-1. Probar balance con partidas humanas (los bots ganan casi siempre) y ajustar la dificultad absoluta por pasos. Mei sigue pasando ~50% de sus turnos sin acción con el bot competente.
-2. Revisar si hace falta endurecer el salto entre Expediciones (ver límite conocido arriba) sin tocar la fórmula de Ascension.
-3. Sprites y fondos propios para Moss Warrens y Bone Vault; más salas por Expedición; objetivos opcionales de desbloqueo.
+1. Playtest balance with humans and tune absolute difficulty step by step. Mei still spends about half her turns idle with the competent bot.
+2. Recalibrate bots, enemies, the boss and `outputs/balance-report.md` for Relics and Trinkets.
+3. Decide whether the jump between Expeditions needs hardening, without touching the Ascension formula.
+4. Own sprites and backgrounds for Moss Warrens and Bone Vault; more rooms per Expedition; optional unlock goals.

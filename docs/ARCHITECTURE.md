@@ -9,7 +9,7 @@ How the code is built. Process rules are in `CLAUDE.md`.
 - Imports only go down that list. Add new public names to the facade. ESLint stops the UI from importing `engine/` and the engine from importing anything above it except `progression` and `expeditions`.
 - Public actions clone state and return a new `Run`; invalid actions return the _same_ object (tests rely on `toBe(r)`).
 - `src/progression.ts` holds shared balance data (training tracks, Hearth, mastery, difficulty, crit constants). Engine, UI and FAQ read from it. `src/expeditions.ts` defines Expeditions, rooms, unlocks, caps and rewards.
-- Enemy turns: `planEnemyAction` is the single source of what an enemy does; `resolveEnemies` executes it and `enemyIntent` previews it. Taunt forces every enemy's mark; curses and support ignore it.
+- Enemy turns: `planEnemyAction` is the single source of what an enemy does; `resolveEnemies` executes it and `enemyIntent` previews it. Taunt forces every enemy's mark; support ignores it (curses follow the mark, see the open question in `HANDOFF.md`).
 
 ## Determinism
 
