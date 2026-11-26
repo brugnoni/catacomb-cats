@@ -31,9 +31,9 @@ After the first boss victory, future runs use a frozen Ascension snapshot based 
 
 ## Architecture and workflow
 
-`src/game.ts` is the immutable rules engine and validated save boundary. `src/App.tsx` renders state and handles browser storage. Unit tests exercise the engine; Playwright drives the built application through complete runs, so browser coverage also checks integration. Fix bugs by adding a reproducible failing test before the repair. Browser failure traces are retained under test-results; open them with `pnpm exec playwright show-trace <trace.zip>`.
+Working rules are in [CLAUDE.md](CLAUDE.md) and the code layout in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Browser failure traces are retained under test-results; open them with `pnpm exec playwright show-trace <trace.zip>`.
 
-Use `.agents/skills/catacomb-feature` for feature work and `.agents/skills/catacomb-review` for quality review. Assign separate file ownership to parallel agents; the main agent reviews and integrates. Git hooks install during pnpm install; verify `git config core.hooksPath` returns `.githooks`. CI additionally audits dependencies and scans secrets; CodeQL and Dependabot configuration are included. The public remote is github.com/brugnoni/catacomb-cats; `ci.yml` publishes to GitHub Pages only after every check passes.
+Git hooks install during pnpm install; verify `git config core.hooksPath` returns `.githooks`. CI additionally audits dependencies and scans secrets; CodeQL and Dependabot configuration are included. The public remote is github.com/brugnoni/catacomb-cats; `ci.yml` publishes to GitHub Pages only after every check passes.
 
 This is a desktop vertical slice with raster pixel artwork and initial balance. CI targets Node 24 LTS; local verification may use compatible Node 26. Dependency versions are captured in pnpm-lock.yaml. See SECURITY.md for browser storage and future hosting boundaries.
 

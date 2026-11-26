@@ -1,75 +1,122 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Source of truth for how software is built in Catacomb Cats, for agents and people. A rule lives here once; other files link to it. If another document disagrees with this one about process, this one wins; about game behavior, the code (`src/game.ts`, `src/progression.ts`) wins. Fix the stale document when you notice it.
 
-Personal browser roguelite (React 19 + TypeScript + Vite, Node 24). `AGENTS.md` holds the binding project rules and `docs/HANDOFF.md` (Spanish) the accepted decisions and current behavior; read both before changing gameplay. Where a note disagrees with the code, `src/game.ts` and `src/progression.ts` win.
+Personal browser roguelite: React 19, TypeScript, Vite, Node 24. Public repository, deployed to https://brugnoni.github.io/catacomb-cats/.
 
-Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
+## Read when
+
+| Before                                           | Read                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| Changing code                                    | `docs/ARCHITECTURE.md`                                       |
+| Changing gameplay or balance                     | `docs/HANDOFF.md` (Spanish: accepted decisions and behavior) |
+| Naming anything in code, UI or replies           | `GLOSSARY.md`                                                |
+| Reworking a past decision                        | `docs/adr/`                                                  |
+| Touching saves, CSP, dependencies, CI or hosting | `SECURITY.md`                                                |
+| Writing specs or tickets                         | `docs/agents/`                                               |
+
+## Workflow
+
+1. **Understand.** Change nothing until you are 95% confident of what to build; ask until you are.
+2. **Isolate.** Run the overlap check (see Parallel chats) and work on a branch. Never commit to `main`.
+3. **Build.** Reuse the codebase, then the platform, then a dependency already installed. Fix a bug with a failing regression test first; gameplay changes need meaningful tests.
+4. **Verify.** `pnpm check` passes; visible changes are also checked in the browser.
+5. **Review** the branch diff.
+6. **Push and open a PR**, after approval.
+7. **Merge** by squash with CI green, after approval. The merge deploys.
+8. **Confirm** the deploy succeeded and the site loads.
+
+### Ask the user first
+
+- Push, merge, or anything else that changes GitHub or the live site.
+- Adding, removing or upgrading a dependency.
+- Changing the save format, storage keys or internal ids.
+- Changing balance or game rules beyond what was requested.
+- Changing CI, hooks, permissions or repository settings.
+- Deleting files, branches or worktrees.
+
+Everything else inside the requested scope (local refactors, tests, texts) proceeds without asking. Approval covers the action asked about, once. The user chooses each phase of the work; agents never commit on their own initiative outside it.
+
+### Done means
+
+- Tests cover the change.
+- `pnpm check` passes.
+- Visible text exists in English and Spanish.
+- Docs the change made wrong are updated.
+- Visible changes were verified in the browser.
+- The report says what was not checked.
+
+### Pull requests
+
+One PR does one thing. Aim for under about 400 changed lines (a guide, not a limit). The description says what, why and how it was tested.
+
+### Commits
+
+A brief subject line, then a short description. No `Co-Authored-By` or other attribution lines, in commits or PRs.
+
+### If production breaks
+
+Revert the PR first (with approval), then fix calmly. Before reverting a change that touched saves, check that the older version can read saves written by the newer one.
 
 ## Commands
 
-`pnpm` is often not on PATH; use the pinned version through npm (this is also what the pre-commit hook does):
+`pnpm` is often not on PATH; use the pinned version through npm:
 
 ```
 npm exec --yes --package=pnpm@11.25.0 -- pnpm <script>
 ```
 
-- `pnpm dev` / `npm run dev`: Vite on http://127.0.0.1:5173
-- `pnpm check`: format check, eslint (`--max-warnings 0`), `tsc --noEmit`, vitest, build, Playwright. **Required before every commit**; `.githooks/pre-commit` runs it again. Never bypass it.
-- `pnpm format`: Prettier write (run before `check` or the format check fails)
-- `pnpm test`: unit tests (`src/**/*.test.ts`); one file: `pnpm exec vitest run src/game.test.ts`; one test: `-t "name"`
-- `pnpm test:e2e`: Playwright against `vite preview` on :4173 (builds first via `check`); one test: `pnpm exec playwright test -g "name"`. Chromium needs `pnpm exec playwright install chromium` once.
+- `pnpm install --frozen-lockfile`, then `pnpm exec playwright install chromium` once
+- `pnpm dev`: Vite on http://127.0.0.1:5173
+- `pnpm format`, then `pnpm check` (format, lint, types, unit tests, build, browser tests)
+- One unit file: `pnpm exec vitest run src/game.test.ts` (one test: `-t "name"`)
+- One browser test: `pnpm exec playwright test -g "name"` (run `pnpm build` first)
 
-## Repository rules that are easy to miss
+The pre-commit hook runs `pnpm check` (format check only for documentation-only commits). Never bypass it or suppress a finding to make it pass.
 
-- Local only, one public remote (`origin`, github.com/brugnoni/catacomb-cats). **Never push without the user's approval in chat**; never force-push. Pushing to `main` auto-deploys to GitHub Pages (`.github/workflows/ci.yml (after all checks pass)`). Never commit secrets or private data.
-- Commit messages: a brief subject line, then a short, concise description. **No `Co-Authored-By` or other attribution lines.**
-- Never write to `localStorage` of `http://localhost:5173` in the shared browser pane (it is the user's real save). Use another origin such as `127.0.0.1` or Playwright for seeded saves.
-- Keep rules independent of React. Fix bugs with a regression test first; gameplay changes need meaningful tests.
-- Do not generate more images unless asked. No telemetry, remote services or secrets.
+## Dependencies
 
-## Parallel chats (stacked PRs)
+- A new one is the last resort. First say what it is for, its license, how maintained it is and its size, then wait for approval.
+- Only `pnpm`, one lockfile, committed with the change.
+- One major version upgrade per PR.
+- GitHub Actions are pinned to a commit SHA with the version in a comment.
 
-One chat = one branch = one worktree = one PR. `pnpm stack <cmd>` (`scripts/stack.mjs`) keeps the registry `.scratch/lanes.json` (in the primary checkout, git-ignored): `status`, `new <branch> [--on parent] [--files a,b]` (branch + worktree), `adopt <branch>` (register an existing one, rebases nothing), `submit [tip]` (restack, push, open or retarget PRs) and `land [tip]` (merge bottom-up).
+## Security
 
-- Independent work branches from `main`; stack (`--on parent`) only when B needs A's code, at most 3 deep.
-- Before starting, run `status`: do not touch files another lane touches (hot spots: `src/engine/units.ts`, `src/es/ui.ts`, `src/progression.ts`, `src/styles/*.css`) without telling the user.
-- **Overlap check before the first edit** (any chat, even for a "quick fix"): (1) run `status` and `gh pr list --state open` to see every open lane and PR, plus `git diff --name-only main...<lane>` for the lanes that might collide; (2) list the files you expect to change; (3) if any is touched by another lane or open PR, or another running chat could be editing it, stop and tell the user which lane and files before editing; (4) otherwise register your own lane (`new` or `adopt`, which print `OVERLAP` lines for other lanes and for open PRs of unregistered chats) so other chats see it. Re-run the check if the plan grows to new files. Never edit on a branch or worktree another chat owns.
-- Moving, splitting or renaming shared files without changing behavior (a refactor that cuts across lanes) is its own short lane: start it only when `status` shows no other open lane touching those files (otherwise tell the user), land it first, and then every other lane merges `main` right away. `styles.css` only imports `src/styles/NN-*.css` in order; new rules go in the file for their area, and relative `url()` paths in CSS custom properties resolve from that file.
-- Before every merge (`land` or by hand), copy the work's `.scratch/<feature>` folder and handoff notes into the primary checkout's `.scratch/`, and add an entry to `.scratch/changelog.md` there (date, PRs, what changed). Landing removes the lane's worktree and everything git-ignored in it.
-- Do not edit `docs/HANDOFF.md` on a lane; leave `.scratch/handoff-<branch>.md`. One pass folds them in after `land`.
-- `submit` and `land` push (`--force-with-lease`, lane branches only) and merge (squash, which deploys Pages). Run them only after the user approves in chat, then pass `--yes`. A rebase conflict stops the script; resolve it in that lane's worktree and rerun.
+- The repository is public: never commit secrets, personal data or anything private.
+- Personal project: never access or reuse company information, code, credentials or integrations.
+- No backend, telemetry or remote services; those need a new threat review.
+- One remote (`origin`, github.com/brugnoni/catacomb-cats). Never force-push `main`. Deploy only to GitHub Pages through `.github/workflows/ci.yml`.
+- Never write to `localStorage` of `http://localhost:5173` in a shared browser: it is the user's real save. Seed saves on `127.0.0.1` or in Playwright.
 
-## Architecture
+## Code rules
 
-- `src/game.ts` is only a facade re-exporting the public API of `src/engine/`: the pure, immutable rules engine, layered `model` (types) → `data` (cats, abilities, items) → `units` (builders) → `state` (turn order, marks, RNG, effects) → `abilities` (availability, power) → `damage` → `enemyAI` → `actions` (`createRun`, `act`, `endTurn`, `nextRoom`), plus `save` (`parseProgress`, upgrades). Imports only go down that list; add new public names to the facade. Public actions (`createRun`, `act`, `endTurn`, `nextRoom`) clone state and return a new `Run`; invalid actions return the _same_ object (tests rely on `toBe(r)`).
-- `src/progression.ts`: shared balance data (training tracks, Hearth blessing track, mastery, difficulty, crit constants). The engine, UI and FAQ all read from here; keep descriptions and values in agreement with it.
-- Determinism: enemy marks use a seeded generator (`Run.rng`) and crits a separate one (`Run.critRng`) so they never disturb each other. `createRun(progress, party, seed = 1, { crit })` defaults to **no crits** and seed 1; the real game passes a random seed and `crit: "on"`. Misses and evasion share the `crit` option (off in the engine by default). Tutorial steps are data in `src/tutorialSteps.ts` (English text is the translation key, covered by `i18n.test.ts`); browser tests set `catacomb-cats.tutorial` to `skipped` so the first-visit question does not block them. Browser tests wait for `previewDone(page)` (`.battlefield[data-previewing="false"]`) before hovering and press the turn button through `getByTestId("end-turn")`, because its label changes. Browser tests fix both via `window.__CATACOMB_SEED__` and `window.__CATACOMB_CRIT__`.
-- Enemy turns: `planEnemyAction` is the single source of what an enemy does; `resolveEnemies` executes it and `enemyIntent` previews it for the UI. Taunt forces every enemy's mark; curses and support ignore it.
-- Combat feedback: each transition resets `Run.events` (hit/heal, optional `crit`) and bumps `Run.eventId`; the UI replays them as card flashes (alternating `-0/-1` CSS classes restart animations). Threads under the cards are drawn by `IntentArrows.tsx`, measured with `getBoundingClientRect` and corrected for the `zoom: 0.9` on `.app`.
-- UI: `src/App.tsx` is only the coordinator (language, progress, party, which screen, top bar). `Lobby.tsx` is the camp; `Battle.tsx` is one fight and **remounts for every run and room** (its selection, hover and previews live there and reset by key), using `Combatant.tsx` (one unit card), `useThreatPreview.ts` (preview, hover, aim), `useCombatFeedback.tsx` (flashes, pops, shown HP) and `battleView.ts` (pure turn derivations), `AbilityButton.tsx`, `BattleParts.tsx` (results, field notes) and `IntentArrows.tsx`. `useTutorial.ts` holds the tutorial, `storage.ts` the `localStorage` loaders (progress key `catacomb-cats.progress.v1`; active runs are never saved). `Faq.tsx` is the field guide; `UnitEffects.tsx` the status badges. Keep new UI state next to the component that needs it; props down, callbacks up, no global store.
-- Compatibility: Internal ids do not follow the visible name (Mei is `clover`, Pursian is `pip`, Tuntun is `ember`); internal effect names (`fury` = the visible "Inspired") and ability ids (`strike`, `guard`, `slam`...) must not change. Saves are versioned; keep migrations.
+- Game rules stay in the pure engine, independent of React.
+- Internal ids (`clover` is Mei, `pip` is Pursian, `ember` is Tuntun, ability and effect ids) never change. Saves are versioned; keep migrations.
+- Every visible text goes through `t()` with a Spanish entry.
+- Balance values and their descriptions agree.
+- Code, identifiers, commits and process docs are in English.
+- Generate images only when asked.
 
-## Internationalization (English and Spanish)
+## Decisions
 
-- The **English text is the key**: `t("English text", { params })` from `src/i18n.ts`; Spanish lives in `src/es/` (`ui.ts`, `game.ts`, `faq.ts`). Engine log lines and refusal reasons stay English in the engine and are translated in the UI by regex rules in `src/engineText.ts`.
-- Any new visible text needs `t()` plus a Spanish entry; any new engine message needs a rule and a translation. `src/i18n.test.ts` fails on missing keys, mismatched `{placeholders}`, untranslated names and unmatched engine messages (it plays simulated runs). Keep `t("...")` arguments as single-line string literals so the scanner finds them.
-- Browser tests set the language to English via `localStorage` in `tests/game.spec.ts` `beforeEach`.
+Write an ADR in `docs/adr/` only when a decision is hard to reverse, surprising without context and the result of a real trade-off.
 
-## Tests
+## Parallel chats
 
-Balance lives in `DIFFICULTY_TUNING`, `ROOM_REWARD`, `ROOM_HEAL` and the enemy stats in `src/engine/units.ts`; measure changes with the simulator in `src/sim.ts` (`BALANCE_REPORT=1 SIM_OUT=file pnpm exec vitest run src/sim.test.ts`, it writes results to the file because vitest hides console output) and keep `outputs/balance-report.md` current. Engine tests are in `src/game.test.ts` (rules), `src/progression.test.ts`, `src/balance.test.ts` (seeded simulations; they use seeds because enemy marks are random) and `src/abilityText.test.ts`. `tests/game.spec.ts` drives the built app; it picks targets by clicking `[data-unit="id"] .unit-target` and shows threads on hover.
+One chat = one branch = one worktree = one PR. `pnpm stack <cmd>` (`scripts/stack.mjs`) keeps the registry `.scratch/lanes.json` in the primary checkout (git-ignored): `status`, `new <branch> [--on parent] [--files a,b]`, `adopt <branch>`, `submit [tip]`, `land [tip]`.
+
+- **Overlap check before the first edit**, even for a quick fix: run `status` and `gh pr list --state open`; compare the files you expect to change (`git diff --name-only origin/main...<lane>`). If another lane, open PR or chat touches one, stop and tell the user. Otherwise register your lane. Repeat if the plan grows. Never edit another chat's branch or worktree.
+- Hot spots: `src/engine/units.ts`, `src/es/ui.ts`, `src/progression.ts`, `src/styles/*.css`.
+- Branch from `main`; stack (`--on parent`) only when B needs A's code, at most 3 deep.
+- A behavior-free move or rename of shared files is its own short lane: start it when no open lane touches them, land it first, then every lane merges `main`.
+- Before every merge, copy the work's `.scratch/<feature>` folder and handoff notes into the primary checkout's `.scratch/` and add an entry to `.scratch/changelog.md` there (date, PRs, what changed). Landing removes the worktree and its ignored files.
+- Leave `docs/HANDOFF.md` alone on a feature lane; write `.scratch/handoff-<branch>.md`. A docs pass folds them in after landing.
+- `submit` and `land` push (`--force-with-lease`, lane branches only) and merge. Run them only after approval, then pass `--yes`. On a rebase conflict, resolve in that lane's worktree and rerun.
 
 ## Agent skills
 
-### Issue tracker
-
-Local markdown under `.scratch/` (git-ignored). See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root, created lazily. See `docs/agents/domain.md`.
+- Issue tracker: local markdown under `.scratch/`, see `docs/agents/issue-tracker.md`.
+- Triage labels: `docs/agents/triage-labels.md`.
+- Domain docs: `GLOSSARY.md` and `docs/adr/`, see `docs/agents/domain.md`.
+- Project skills: `.agents/skills/catacomb-feature` and `.agents/skills/catacomb-review`.
