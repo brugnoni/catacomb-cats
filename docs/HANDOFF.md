@@ -102,7 +102,7 @@ Base HP: Miso 40, Luna 30, Pursian 40, Mei 36, Tuntun 42. Tuntun's initiative is
 
 - After the first boss victory, Ascension is fixed on entering from **Power** (`powerPoints()`): training ranks of the chosen party, plus Hearth rank, plus mastery level. Gold held does not change it.
 - `tier = min(14, floor(Power / 3))`, 0 before the first victory. Enemy HP × (1 + 0.13 × tier); power + ceil(tier / 2); initiative + floor(tier / 4); one reinforcement per room from tier 10; armor + floor(tier / 8), at most 2. Numbers live in `DIFFICULTY_TUNING` and `tierFacts()`.
-- Target: medium bot wins 75–85%, optimal bot 92–97%. Measurements are in `outputs/balance-report.md`; the simulator is `src/sim.ts`.
+- Target: medium bot wins 75–85%, optimal bot 92–97%. Measurements are in `outputs/BALANCE_REPORT.md`; the simulator is `src/sim.ts`.
 
 ## Expeditions
 
@@ -142,11 +142,11 @@ Historical measurements, not re-measured for this document.
 
 ## Visual state and limits
 
-Backgrounds and atlases are generated raster pixel art, reviewed and integrated; art direction is in `public/art/ART-DIRECTION.md`. Pixel fonts are bundled. No accounts, server, telemetry or cloud. Mobile is not a target.
+Backgrounds and atlases are generated raster pixel art, reviewed and integrated; art direction is in `public/art/ART_DIRECTION.md`. Pixel fonts are bundled. No accounts, server, telemetry or cloud. Mobile is not a target.
 
 ## Next work
 
 1. Playtest balance with humans and tune absolute difficulty step by step. Mei still spends about half her turns idle with the competent bot.
-2. Recalibrate bots, enemies, the boss and `outputs/balance-report.md` for Relics and Trinkets.
+2. Recalibrate bots, enemies, the boss and `outputs/BALANCE_REPORT.md` for Relics and Trinkets.
 3. Decide whether the jump between Expeditions needs hardening, without touching the Ascension formula.
 4. Own sprites and backgrounds for Moss Warrens and Bone Vault; more rooms per Expedition; optional unlock goals.

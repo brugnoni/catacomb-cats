@@ -20,7 +20,7 @@ const average = (values: number[]) =>
   values.reduce((a, b) => a + b, 0) / values.length;
 
 /**
- * Targets from the balance review (see outputs/balance-report.md): a reasonable
+ * Targets from the balance review (see outputs/BALANCE_REPORT.md): a reasonable
  * player should win roughly 75-85% of expeditions at every stage, rooms must not
  * be a formality, and no team may be hopeless. Bounds are wider than the targets
  * to absorb seed noise.

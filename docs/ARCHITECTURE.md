@@ -39,4 +39,4 @@ Enemy marks use the seeded `Run.rng`, crits `Run.critRng` and Relic offers `Run.
 
 ## Balance
 
-Values live in `DIFFICULTY_TUNING`, `ROOM_REWARD`, `ROOM_HEAL` and the enemy stats in `src/engine/units.ts`. Measure changes with `src/sim.ts` (`BALANCE_REPORT=1 SIM_OUT=file pnpm exec vitest run src/sim.test.ts`; vitest hides console output, so it writes to the file) and keep `outputs/balance-report.md` current.
+Values live in `DIFFICULTY_TUNING`, `ROOM_REWARD`, `ROOM_HEAL` and the enemy stats in `src/engine/units.ts`. Measure changes with `src/sim.ts` (`BALANCE_REPORT=1 SIM_OUT=file pnpm exec vitest run src/sim.test.ts`; vitest hides console output, so it writes to the file) and keep `outputs/BALANCE_REPORT.md` current.
